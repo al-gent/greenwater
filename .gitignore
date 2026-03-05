@@ -11,6 +11,10 @@ out/
 
 # local data files (migrated to Supabase)
 data/
+public/images/vessels/
+
+# scratch files
+fav.ico
 
 # misc
 .DS_Store
