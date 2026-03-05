@@ -1,0 +1,71 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        navy: {
+          DEFAULT: '#1B3A6B',
+          50: '#EEF2F9',
+          100: '#D5E0F0',
+          200: '#A8BFE0',
+          300: '#7A9ED0',
+          400: '#4D7DC0',
+          500: '#1B3A6B',
+          600: '#162F56',
+          700: '#112440',
+          800: '#0C192B',
+          900: '#070E15',
+        },
+        gold: {
+          DEFAULT: '#F5A623',
+          50: '#FEF6E7',
+          100: '#FDEBC4',
+          200: '#FBD78A',
+          300: '#F9C350',
+          400: '#F5A623',
+          500: '#D4880A',
+          600: '#A36808',
+          700: '#724905',
+          800: '#412903',
+          900: '#100A01',
+        },
+        teal: {
+          DEFAULT: '#2A7B6F',
+          50: '#E8F4F2',
+          100: '#C5E4E0',
+          200: '#8BCAC2',
+          300: '#51AFA4',
+          400: '#2A7B6F',
+          500: '#21625A',
+          600: '#194A44',
+          700: '#11312D',
+          800: '#081917',
+          900: '#030808',
+        },
+        lightblue: {
+          DEFAULT: '#B8D9E8',
+          50: '#F0F8FC',
+          100: '#D8EDF6',
+          200: '#B8D9E8',
+          300: '#92C4DA',
+          400: '#6CAFCB',
+          500: '#4699BD',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      boxShadow: {
+        card: '0 2px 16px rgba(27, 58, 107, 0.08)',
+        'card-hover': '0 8px 32px rgba(27, 58, 107, 0.16)',
+        modal: '0 20px 60px rgba(0, 0, 0, 0.3)',
+      },
+    },
+  },
+  plugins: [],
+}
