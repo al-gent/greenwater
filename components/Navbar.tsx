@@ -1,7 +1,58 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase-browser'
+import type { User } from '@supabase/supabase-js'
+
+type Profile = { role: string; vessel_id: number | null }
 
 export default function Navbar() {
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      if (user) {
+        supabase
+          .from('profiles')
+          .select('role, vessel_id')
+          .eq('id', user.id)
+          .single()
+          .then(({ data }) => setProfile(data))
+      }
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('role, vessel_id')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => setProfile(data))
+      } else {
+        setProfile(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
+  }
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,11 +93,46 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Sign In */}
+          {/* Auth section */}
           <div className="flex items-center gap-3">
-            <button className="bg-navy text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors">
-              Sign In
-            </button>
+            {user ? (
+              <>
+                {profile?.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden sm:block"
+                  >
+                    Admin
+                  </Link>
+                )}
+                {profile?.role === 'operator' && (
+                  <Link
+                    href="/dashboard"
+                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden sm:block"
+                  >
+                    My Vessel
+                  </Link>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 hidden sm:block truncate max-w-[140px]">
+                    {user.email}
+                  </span>
+                  <button
+                    onClick={handleSignOut}
+                    className="text-sm font-medium text-gray-500 hover:text-navy transition-colors border border-gray-200 px-3 py-1.5 rounded-full hover:border-gray-300"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </>
+            ) : (
+              <Link
+                href="/auth/signin"
+                className="bg-navy text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>

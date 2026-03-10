@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import RequestModal from './RequestModal'
 
-export default function RequestButton({ vesselName }: { vesselName: string }) {
+export default function RequestButton({ vesselId, vesselName }: { vesselId: number; vesselName: string }) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -13,7 +13,7 @@ export default function RequestButton({ vesselName }: { vesselName: string }) {
       >
         Connect with this Vessel
       </button>
-      {open && <RequestModal vesselName={vesselName} onClose={() => setOpen(false)} />}
+      {open && <RequestModal vesselId={vesselId} vesselName={vesselName} onClose={() => setOpen(false)} />}
     </>
   )
 }

@@ -2,7 +2,9 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { getVesselById, fmt, stripHtml, getPhotoUrl } from '@/lib/vessels'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import RequestButton from '@/components/RequestButton'
+import ClaimButton from '@/components/ClaimButton'
 
 const VesselDetailMap = dynamic(() => import('@/components/VesselDetailMap'), {
   ssr: false,
@@ -33,18 +35,28 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const vessel = await getVesselById(id)
   if (!vessel) notFound()
 
+  const { data: claimant } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('vessel_id', id)
+    .maybeSingle()
+  const isClaimed = !!claimant
+
   const activity = stripHtml(vessel.Main_Activity)
   const photoUrl = getPhotoUrl(vessel)
   const lat = vessel.primaryLatitude ? parseFloat(vessel.primaryLatitude) : null
   const lng = vessel.primaryLongitude ? parseFloat(vessel.primaryLongitude) : null
   const hasCoords = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)
 
+  const n = (v: number | null | undefined, decimals = 1) =>
+    v != null ? parseFloat(v.toFixed(decimals)) : null
+
   const specs = [
-    { label: 'Length', value: vessel.length != null ? `${vessel.length} m` : null, icon: <IconRuler /> },
-    { label: 'Cruise Speed', value: vessel.Speed_Cruise != null ? `${vessel.Speed_Cruise} kn` : null, icon: <IconBolt /> },
+    { label: 'Length', value: n(vessel.length) != null ? `${n(vessel.length)} m` : null, icon: <IconRuler /> },
+    { label: 'Cruise Speed', value: n(vessel.Speed_Cruise) != null ? `${n(vessel.Speed_Cruise)} kn` : null, icon: <IconBolt /> },
     { label: 'Research Bunks', value: vessel.scientists, icon: <IconUsers /> },
-    { label: 'Beam', value: vessel.beam != null ? `${vessel.beam} m` : null, icon: <IconArrows /> },
-    { label: 'Draft', value: vessel.draft != null ? `${vessel.draft} m` : null, icon: <IconDown /> },
+    { label: 'Beam', value: n(vessel.beam) != null ? `${n(vessel.beam)} m` : null, icon: <IconArrows /> },
+    { label: 'Draft', value: n(vessel.draft) != null ? `${n(vessel.draft)} m` : null, icon: <IconDown /> },
     { label: 'Crew', value: vessel.crew, icon: <IconPerson /> },
     { label: 'Year Built', value: vessel.Year_Built, icon: <IconCalendar /> },
     { label: 'Home Port', value: vessel.homeport, icon: <IconPin /> },
@@ -206,11 +218,22 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
                   )}
                 </div>
 
-                <RequestButton vesselName={vessel.name} />
+                <RequestButton vesselId={vessel.id} vesselName={vessel.name} />
 
                 <p className="text-center text-xs text-gray-400 mt-3">
                   Messages are handled through Greenwater — your contact details stay private until you both agree to connect.
                 </p>
+
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  {!isClaimed && (
+                    <>
+                      <ClaimButton vesselId={vessel.id} vesselName={vessel.name} />
+                      <p className="text-center text-xs text-gray-400 mt-2">
+                        Are you the operator of this vessel?
+                      </p>
+                    </>
+                  )}
+                </div>
 
                 {/* Summary facts */}
                 {specs.filter(s => ['Length','Cruise Speed','Year Built','Country'].includes(s.label)).length > 0 && (
