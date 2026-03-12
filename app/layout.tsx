@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Navbar from '@/components/Navbar'
+import AuthHashHandler from '@/components/AuthHashHandler'
 import { Analytics } from '@vercel/analytics/react'
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body>
+        <AuthHashHandler />
         <Navbar />
         <main className="min-h-screen">{children}</main>
 
