@@ -16,7 +16,7 @@ export const getAllVessels = unstable_cache(
     if (error) throw error
     return data as Vessel[]
   },
-  ['all-vessels'],
+  ['all-vessels-v2'],
   { revalidate: 3600 }
 )
 

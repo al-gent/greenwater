@@ -29,18 +29,8 @@ export default function SearchBar({ countries, value, onChange }: SearchBarProps
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const ALIASES: Record<string, string[]> = {
-    USA: ['united states', 'america', 'us', 'u.s.', 'u.s.a'],
-    UK: ['united kingdom', 'britain', 'great britain', 'england'],
-  }
-
   const filtered = value.where
-    ? countries.filter((c) => {
-        const q = value.where.toLowerCase()
-        if (c.toLowerCase().includes(q)) return true
-        const aliases = ALIASES[c] ?? []
-        return aliases.some((a) => a.includes(q) || q.includes(a))
-      })
+    ? countries.filter((c) => c.toLowerCase().includes(value.where.toLowerCase()))
     : countries
 
   return (

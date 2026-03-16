@@ -50,7 +50,6 @@ export default function RootLayout({
                 <ul className="space-y-2 text-sm opacity-80">
                   <li><a href="/" className="hover:text-gold transition-colors">Find a Vessel</a></li>
                   <li><a href="/list" className="hover:text-gold transition-colors">List Your Vessel</a></li>
-                  <li><a href="#" className="hover:text-gold transition-colors">How It Works</a></li>
                 </ul>
               </div>
               <div>
@@ -58,9 +57,9 @@ export default function RootLayout({
                   Organization
                 </h3>
                 <ul className="space-y-2 text-sm opacity-80">
-                  <li><a href="#" className="hover:text-gold transition-colors">About Us</a></li>
-                  <li><a href="#" className="hover:text-gold transition-colors">Contact</a></li>
-                  <li><a href="#" className="hover:text-gold transition-colors">Privacy Policy</a></li>
+                  <li><a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">About Us</a></li>
+                  <li><a href="mailto:info@greenwaterfoundation.org" className="hover:text-gold transition-colors">Contact</a></li>
+                  <li><a href="/privacy" className="hover:text-gold transition-colors">Privacy Policy</a></li>
                 </ul>
               </div>
             </div>

@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { getVesselById, fmt, stripHtml, getPhotoUrl } from '@/lib/vessels'
+import { getVesselById, fmt, stripHtml } from '@/lib/vessels'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import RequestButton from '@/components/RequestButton'
 import ClaimButton from '@/components/ClaimButton'
+import VesselPhotoGallery from '@/components/VesselPhotoGallery'
 
 const VesselDetailMap = dynamic(() => import('@/components/VesselDetailMap'), {
   ssr: false,
@@ -43,7 +44,16 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const isClaimed = !!claimant
 
   const activity = stripHtml(vessel.Main_Activity)
-  const photoUrl = getPhotoUrl(vessel)
+  const photos = vessel.photo_urls ?? (vessel.photo_url ? [vessel.photo_url] : [])
+  const docFiles = (vessel.files ?? []).filter(
+    (f) => f.contentType === 'shipDoc' && f.fileType === 'doc'
+  )
+  const docs = (vessel.doc_urls ?? []).map((url: string, i: number) => ({
+    url,
+    name: docFiles[i]?.name ?? '',
+    description: docFiles[i]?.description ?? null,
+    contentLength: (docFiles[i] as any)?.contentLength ?? null,
+  }))
   const lat = vessel.primaryLatitude ? parseFloat(vessel.primaryLatitude) : null
   const lng = vessel.primaryLongitude ? parseFloat(vessel.primaryLongitude) : null
   const hasCoords = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)
@@ -82,18 +92,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
           <div className="lg:col-span-2 space-y-6">
 
             {/* Hero photo */}
-            <div className="relative rounded-3xl overflow-hidden bg-gray-100" style={{ aspectRatio: '16/9' }}>
-              <img
-                src={photoUrl}
-                alt={vessel.name}
-                className="w-full h-full object-cover"
-              />
-              {vessel.country && (
-                <span className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-navy text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm">
-                  {vessel.country}
-                </span>
-              )}
-            </div>
+            <VesselPhotoGallery photos={photos} vesselName={vessel.name} country={vessel.country} />
 
             {/* Title + quick badges */}
             <div>
@@ -144,6 +143,40 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
               </div>
             )}
 
+            {/* Documents */}
+            {docs.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-navy mb-3">Documents</h2>
+                <div className="space-y-2">
+                  {docs.map((doc, i) => {
+                    const label = doc.description
+                      ?? doc.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
+                    const kb = doc.contentLength ? `${Math.round(doc.contentLength / 1024)} KB` : null
+                    return (
+                      <a
+                        key={i}
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal/40 hover:bg-gray-50 transition-colors group"
+                      >
+                        <div className="w-9 h-9 bg-red-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <IconPDF />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-navy truncate group-hover:text-teal transition-colors">{label}</p>
+                          {kb && <p className="text-xs text-gray-400">{kb}</p>}
+                        </div>
+                        <svg className="w-4 h-4 text-gray-300 group-hover:text-teal flex-shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Operator */}
             {(vessel.Affiliation || vessel.Operator_Name) && (
               <div className="border border-gray-100 rounded-2xl p-5">
@@ -178,12 +211,6 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
                       </svg>
                     </a>
                   )}
-                  <a href="#" className="text-sm font-medium text-teal hover:underline flex items-center gap-1">
-                    View operator profile
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
                 </div>
               </div>
             )}
@@ -298,4 +325,11 @@ function IconSignal() {
 }
 function IconGlobe() {
   return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+}
+function IconPDF() {
+  return (
+    <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM8.5 15.5h-.75v1.25H7v-3.5h1.5c.69 0 1.25.56 1.25 1.25S9.19 15.5 8.5 15.5zm3.75 1.25h-1.5v-3.5H12.25c.96 0 1.75.79 1.75 1.75s-.79 1.75-1.75 1.75zm4.25-2.5h-1v.75h.875v.75H15.5v.75H14.5v-3.5H17v.75h-1.5v.5z"/>
+    </svg>
+  )
 }

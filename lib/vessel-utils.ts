@@ -41,6 +41,138 @@ export interface Vessel {
   Endurance: string | null
   DPos: string | null
   photo_url: string | null
+  port_city: string | null
+  port_state: string | null
+
+  // Extended fields (backfilled from vessel_details JSONs)
+  photo_urls: string[] | null
+  doc_urls: string[] | null
+  last_updated: string | null
+
+  // Contact & metadata
+  Owner: string | null
+  Contact: string | null
+  contact_email: string | null
+  Operator_Add1: string | null
+  Operator_Add2: string | null
+  Operator_Add3: string | null
+  phone: string | null
+  fax: string | null
+  email: string | null
+  url_schedule: string | null
+  NODC_Code: string | null
+  ISM_Cert: string | null
+  Unols: boolean | null
+  Euro: boolean | null
+
+  // Physical specs
+  Hull_Material: string | null
+  officers: number | null
+  Gross_Tons: number | null
+  Power_HP: number | null
+  range: number | null
+
+  // Facilities
+  Capacity_dry: number | null
+  Capacity_fuel: number | null
+  Area_wetlab: number | null
+  Area_drylab: number | null
+  Water_gen: number | null
+  Water_capacity: number | null
+  Water_clean: string | null
+  Freeboard_deck: number | null
+  Free_deck_area: number | null
+  Space_cont_lab: string | null
+  Air_Cond: number | null
+  Operating_grids: string | null
+
+  // Power & propulsion
+  Engine_number: number | null
+  Engine_make: string | null
+  Engine_power: string | null
+  Prop_diam: number | null
+  Prop_maxrpm: number | null
+  Aux_Diesel_pwr: number | null
+
+  // Electrical
+  AC_Voltage: string | null
+  AC_Voltage_kVA: string | null
+  AC_Voltage_phases: string | null
+  AC_Voltage_freq: string | null
+  AC_Voltage_Stabilized: string | null
+  AC_Amps_Stabilized: string | null
+  AC_Freq_Stabilized: string | null
+  DC_Voltages: string | null
+  DC_Voltage_max: string | null
+
+  // Navigation & comms
+  Nav_Equipment: string | null
+  Nav_Communications: string | null
+  Nav_Satcomm: string | null
+  Nav_GPS: string | null
+
+  // Acoustics
+  Acoustic_echosound: string | null
+  Acoustic_sonar: string | null
+  Acoustic_silent: string | null
+
+  // Oceanographic winches
+  OC_winches: number | null
+  OC_steelwire_len: number | null
+  OC_steelwire_load: number | null
+  OC_condcable_len: number | null
+  OC_condcable_load: number | null
+  OC_trawl_len: number | null
+  OC_trawl_load: number | null
+  OC_Other_len: number | null
+  OC_Other_load: number | null
+
+  // Cranes & gantries
+  Gantry_pos: string | null
+  Gantry_abovedeck: number | null
+  Gantry_outboard_ext: number | null
+  Gantry_load: number | null
+  Crane_pos: string | null
+  Crane_abovedeck: number | null
+  Crane_outboard_ext: number | null
+  Crane_load: number | null
+  Winch_other: string | null
+
+  // Data processing
+  DP_Equip: string | null
+  DP_Equip_printing: string | null
+
+  // Science equipment
+  Radioactive: string | null
+  Core_capable: string | null
+  Core_grab: string | null
+  Core_box: string | null
+  Core_gravity: string | null
+  Core_piston: string | null
+  Core_multi: string | null
+  CTD_cap: string | null
+  CTD_make: string | null
+  CTD_towed: string | null
+  CTD_oxy: string | null
+  CTD_trans: string | null
+  CTD_fluor: string | null
+  CTD_rosette: string | null
+  Aquis_SMS: string | null
+  Aquis_Multibeam: string | null
+  Aquis_sidescan: string | null
+  Aquis_ADCP: string | null
+  Underwater_vehicles: string | null
+  Underwater_vehicles_rov: string | null
+  Underwater_vehicles_auv: string | null
+  Underwater_vehicles_sub: string | null
+  Diving_cap: string | null
+
+  // Classification & notes
+  Vessel_construct: string | null
+  Vessel_class: string | null
+  Vessel_other: string | null
+  notes: string | null
+  amenities: string | null
 }
 
 export interface FilterState {
@@ -100,9 +232,9 @@ export function getPhotoUrl(vessel: Vessel): string {
   return getFallbackPhotoUrl(vessel)
 }
 
-/** Fallback photo URL (deterministic ocean placeholder) */
-export function getFallbackPhotoUrl(vessel: Vessel): string {
-  return `https://picsum.photos/seed/vessel${vessel.id}/800/600`
+/** Fallback photo URL */
+export function getFallbackPhotoUrl(_vessel: Vessel): string {
+  return 'https://jmpxcsihkmyotidxjuyv.supabase.co/storage/v1/object/public/vessel-photos/placeholder.jpg'
 }
 
 export function filterVessels(vessels: Vessel[], filters: FilterState): Vessel[] {
