@@ -1,25 +1,31 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import type { User } from '@supabase/supabase-js'
+
+interface Profile {
+  first_name: string | null
+  last_name: string | null
+  institution: string | null
+  title: string | null
+}
 
 interface RequestModalProps {
   vesselId: number
   vesselName: string
+  user: User
+  profile: Profile
   onClose: () => void
 }
 
-export default function RequestModal({ vesselId, vesselName, onClose }: RequestModalProps) {
+export default function RequestModal({ vesselId, vesselName, user: _user, profile, onClose }: RequestModalProps) {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    institution: '',
-    startDate: '',
-    endDate: '',
-    message: '',
-  })
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [message, setMessage] = useState('')
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -32,18 +38,14 @@ export default function RequestModal({ vesselId, vesselName, onClose }: RequestM
     setLoading(true)
     setError(null)
 
-    const res = await fetch('/api/vessel-inquiries', {
+    const res = await fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         vessel_id: vesselId,
-        vessel_name: vesselName,
-        scientist_name: form.name,
-        scientist_email: form.email,
-        institution: form.institution,
-        start_date: form.startDate || null,
-        end_date: form.endDate || null,
-        message: form.message,
+        body: message,
+        start_date: startDate || null,
+        end_date: endDate || null,
       }),
     })
 
@@ -55,6 +57,8 @@ export default function RequestModal({ vesselId, vesselName, onClose }: RequestM
       setError(data.error ?? 'Failed to send. Please try again.')
     }
   }
+
+  const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
 
   return (
     <div
@@ -88,13 +92,11 @@ export default function RequestModal({ vesselId, vesselName, onClose }: RequestM
               </svg>
             </div>
             <h3 className="text-xl font-semibold text-navy mb-2">Message Sent!</h3>
-            <p className="text-gray-500 mb-2 max-w-sm">
-              Your message about <strong>{vesselName}</strong> has been delivered to the operator
-              through Greenwater.
-            </p>
-            <p className="text-sm text-gray-400 mb-6 max-w-sm">
-              You'll receive their response in your Greenwater inbox. Most operators reply within
-              2–5 business days.
+            <p className="text-gray-500 mb-6 max-w-sm">
+              Your message has been sent.{' '}
+              <Link href="/inbox" className="text-teal font-medium hover:underline" onClick={onClose}>
+                View your messages →
+              </Link>
             </p>
             <button
               onClick={onClose}
@@ -105,15 +107,14 @@ export default function RequestModal({ vesselId, vesselName, onClose }: RequestM
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-            {/* Platform trust note */}
-            <div className="mx-6 mt-5 bg-lightblue-100 rounded-xl px-4 py-3 flex gap-2.5 text-sm text-navy">
-              <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <span className="opacity-80">
-                Messages are handled securely through Greenwater. Your contact details are only
-                shared once both parties agree to connect.
-              </span>
+            {/* Sending as banner */}
+            <div className="mx-6 mt-5 bg-lightblue-100 rounded-xl px-4 py-3 text-sm text-navy">
+              <p className="font-medium">Sending as</p>
+              <p className="text-gray-600 mt-0.5">
+                {displayName}
+                {profile.institution ? ` · ${profile.institution}` : ''}
+                {profile.title ? ` · ${profile.title}` : ''}
+              </p>
             </div>
 
             <div className="px-6 py-5 space-y-4">
@@ -122,47 +123,6 @@ export default function RequestModal({ vesselId, vesselName, onClose }: RequestM
                   {error}
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Your Name <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Dr. Jane Smith"
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Your Email <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="you@institution.edu"
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Institution <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.institution}
-                  onChange={(e) => setForm({ ...form, institution: e.target.value })}
-                  placeholder="WHOI / MIT / NOAA..."
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                />
-              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -171,8 +131,8 @@ export default function RequestModal({ vesselId, vesselName, onClose }: RequestM
                   </label>
                   <input
                     type="date"
-                    value={form.startDate}
-                    onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
                   />
                 </div>
@@ -182,8 +142,8 @@ export default function RequestModal({ vesselId, vesselName, onClose }: RequestM
                   </label>
                   <input
                     type="date"
-                    value={form.endDate}
-                    onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
                   />
                 </div>
@@ -191,13 +151,13 @@ export default function RequestModal({ vesselId, vesselName, onClose }: RequestM
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Your Message <span className="text-red-400">*</span>
+                  Message <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   required
-                  rows={4}
-                  value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  rows={5}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                   placeholder="Introduce yourself and your research. Include your team size, scientific goals, equipment needs, and any questions about this vessel's capabilities..."
                   className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition resize-none"
                 />

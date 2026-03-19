@@ -3,13 +3,19 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function POST(request: Request) {
-  // Require authentication
   const serverClient = createServerSupabaseClient()
   const { data: { user } } = await serverClient.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'You must be signed in to claim a vessel.' }, { status: 401 })
   }
+
+  // Pull identity from profile — not from request body
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('first_name, last_name, institution, title, email')
+    .eq('id', user.id)
+    .single()
 
   let body: Record<string, unknown>
   try {
@@ -18,26 +24,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { vessel_id, vessel_name, claimant_name, email, role, organization, message } =
-    body as Record<string, string>
+  const { vessel_id, vessel_name, message, document_url } = body as Record<string, string>
 
-  if (!vessel_id || !vessel_name?.trim() || !claimant_name?.trim() || !email?.trim() || !role?.trim() || !organization?.trim()) {
-    return NextResponse.json({ error: 'All required fields must be filled.' }, { status: 400 })
+  if (!vessel_id || !vessel_name?.trim() || !message?.trim()) {
+    return NextResponse.json({ error: 'vessel_id, vessel_name, and message are required.' }, { status: 400 })
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: 'Invalid email address.' }, { status: 400 })
-  }
+  const claimantName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Unknown'
+  const email = profile?.email ?? user.email ?? ''
 
   const { error } = await supabaseAdmin.from('vessel_claims').insert({
     vessel_id: parseInt(String(vessel_id), 10),
     vessel_name: vessel_name.trim(),
     user_id: user.id,
-    claimant_name: claimant_name.trim(),
-    email: email.trim().toLowerCase(),
-    role: role.trim(),
-    organization: organization.trim(),
-    message: message?.trim() ?? null,
+    claimant_name: claimantName,
+    email,
+    role: profile?.title ?? '',
+    organization: profile?.institution ?? '',
+    message: message.trim(),
+    document_url: document_url ?? null,
   })
 
   if (error) {

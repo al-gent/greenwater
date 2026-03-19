@@ -1,25 +1,34 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase-browser'
+
+interface Profile {
+  first_name: string | null
+  last_name: string | null
+  institution: string | null
+  title: string | null
+  email: string | null
+}
 
 interface ClaimModalProps {
   vesselId: number
   vesselName: string
-  userEmail: string
+  profile: Profile | null
   onClose: () => void
 }
 
-export default function ClaimModal({ vesselId, vesselName, userEmail, onClose }: ClaimModalProps) {
+const ACCEPTED = '.pdf,.jpg,.jpeg,.png,.webp'
+const MAX_MB = 10
+
+export default function ClaimModal({ vesselId, vesselName, profile, onClose }: ClaimModalProps) {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({
-    claimant_name: '',
-    email: userEmail,
-    role: '',
-    organization: '',
-    message: '',
-  })
+  const [relationship, setRelationship] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [docUrl, setDocUrl] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -27,15 +36,58 @@ export default function ClaimModal({ vesselId, vesselName, userEmail, onClose }:
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null
+    if (f && f.size > MAX_MB * 1024 * 1024) {
+      setError(`File must be under ${MAX_MB} MB.`)
+      e.target.value = ''
+      return
+    }
+    setError(null)
+    setFile(f)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!relationship.trim()) {
+      setError('Please describe your relationship to this vessel.')
+      return
+    }
     setLoading(true)
     setError(null)
+
+    let uploadedUrl = docUrl.trim() || null
+
+    // Upload file to Supabase Storage if provided
+    if (file) {
+      const supabase = createClient()
+      const ext = file.name.split('.').pop()
+      const path = `claims/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { data: upload, error: uploadError } = await supabase.storage
+        .from('claim-documents')
+        .upload(path, file)
+
+      if (uploadError) {
+        setError('File upload failed. Try linking a document URL instead.')
+        setLoading(false)
+        return
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('claim-documents')
+        .getPublicUrl(upload.path)
+      uploadedUrl = publicUrl
+    }
 
     const res = await fetch('/api/vessel-claims', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, vessel_id: vesselId, vessel_name: vesselName }),
+      body: JSON.stringify({
+        vessel_id: vesselId,
+        vessel_name: vesselName,
+        message: relationship.trim(),
+        document_url: uploadedUrl,
+      }),
     })
 
     setLoading(false)
@@ -46,6 +98,8 @@ export default function ClaimModal({ vesselId, vesselName, userEmail, onClose }:
       setError(data.error ?? 'Submission failed. Please try again.')
     }
   }
+
+  const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ')
 
   return (
     <div
@@ -80,8 +134,8 @@ export default function ClaimModal({ vesselId, vesselName, userEmail, onClose }:
             </div>
             <h3 className="text-xl font-semibold text-navy mb-2">Claim Submitted</h3>
             <p className="text-gray-500 mb-2 max-w-sm">
-              We&apos;ll review your relationship to <strong>{vesselName}</strong> and follow up at{' '}
-              <strong>{form.email}</strong>.
+              We&apos;ll review your claim for <strong>{vesselName}</strong> and follow up at{' '}
+              <strong>{profile?.email}</strong>.
             </p>
             <p className="text-sm text-gray-400 mb-6">Most reviews take 3–5 business days.</p>
             <button
@@ -93,92 +147,90 @@ export default function ClaimModal({ vesselId, vesselName, userEmail, onClose }:
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-            {/* Trust note */}
-            <div className="mx-6 mt-5 bg-lightblue-100 rounded-xl px-4 py-3 flex gap-2.5 text-sm text-navy">
-              <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span className="opacity-80">
-                Your claim will be reviewed by the Greenwater Foundation team. We verify operator relationships before granting access.
-              </span>
+            {/* Claiming as banner */}
+            <div className="mx-6 mt-5 bg-lightblue-100 rounded-xl px-4 py-3 text-sm text-navy">
+              <p className="font-medium">Claiming as</p>
+              <p className="text-gray-600 mt-0.5">
+                {displayName || profile?.email}
+                {profile?.institution ? ` · ${profile.institution}` : ''}
+                {profile?.title ? ` · ${profile.title}` : ''}
+              </p>
             </div>
 
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-6 py-5 space-y-5">
               {error && (
                 <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
                   {error}
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Your Name <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.claimant_name}
-                    onChange={(e) => setForm({ ...form, claimant_name: e.target.value })}
-                    placeholder="Capt. Jane Smith"
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Contact Email <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="you@institution.org"
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Your Role / Title <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.role}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                    placeholder="Fleet Manager, Captain…"
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Organization <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.organization}
-                    onChange={(e) => setForm({ ...form, organization: e.target.value })}
-                    placeholder="WHOI, CSIRO, NOAA…"
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                  />
-                </div>
-              </div>
-
+              {/* Relationship */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Supporting Information <span className="text-gray-400 font-normal">(optional)</span>
+                  Your relationship to this vessel <span className="text-red-400">*</span>
                 </label>
                 <textarea
-                  rows={3}
-                  value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  placeholder="Describe your relationship to this vessel and why you are the authorized operator or representative…"
+                  required
+                  rows={4}
+                  value={relationship}
+                  onChange={(e) => setRelationship(e.target.value)}
+                  placeholder="e.g. I am the Chief Scientist and have operated this vessel since 2019 under the University of Washington's research fleet…"
                   className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition resize-none"
                 />
+              </div>
+
+              {/* Document upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Supporting documentation <span className="text-gray-400 font-normal">(optional but recommended)</span>
+                </label>
+                <p className="text-xs text-gray-400 mb-2.5">
+                  Upload a registration certificate, crew manifest, employment letter, or port authority document. PDF or image, max 10 MB.
+                </p>
+
+                <div
+                  onClick={() => fileRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl px-4 py-5 text-center cursor-pointer transition-colors ${
+                    file ? 'border-teal bg-teal-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {file ? (
+                    <div className="flex items-center justify-center gap-2 text-sm text-teal font-medium">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      {file.name}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setFile(null); if (fileRef.current) fileRef.current.value = '' }}
+                        className="ml-1 text-gray-400 hover:text-red-500"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400">
+                      <svg className="w-6 h-6 mx-auto mb-1.5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      Click to upload a file
+                    </div>
+                  )}
+                  <input ref={fileRef} type="file" accept={ACCEPTED} className="hidden" onChange={handleFile} />
+                </div>
+
+                {!file && (
+                  <div className="mt-3">
+                    <label className="block text-xs text-gray-400 mb-1">Or paste a link to your document</label>
+                    <input
+                      type="url"
+                      value={docUrl}
+                      onChange={(e) => setDocUrl(e.target.value)}
+                      placeholder="https://drive.google.com/…"
+                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -198,10 +250,6 @@ export default function ClaimModal({ vesselId, vesselName, userEmail, onClose }:
                   </>
                 ) : 'Submit Claim'}
               </button>
-              <p className="text-center text-xs text-gray-400 mt-3">
-                By submitting you agree to our{' '}
-                <a href="#" className="underline">Terms of Service</a>.
-              </p>
             </div>
           </form>
         )}

@@ -50,6 +50,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect /inbox — must be authenticated
+  if (pathname.startsWith('/inbox')) {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/signin'
+      url.searchParams.set('next', pathname)
+      return NextResponse.redirect(url)
+    }
+  }
+
   return supabaseResponse
 }
 

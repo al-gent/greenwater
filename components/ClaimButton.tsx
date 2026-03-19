@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import ClaimModal from './ClaimModal'
 
+interface Profile {
+  first_name: string | null
+  last_name: string | null
+  institution: string | null
+  title: string | null
+  email: string | null
+}
+
 interface ClaimButtonProps {
   vesselId: number
   vesselName: string
@@ -13,17 +21,25 @@ interface ClaimButtonProps {
 export default function ClaimButton({ vesselId, vesselName }: ClaimButtonProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
-      setUserEmail(user?.email ?? null)
+      if (!user) return
+      setUserId(user.id)
+      supabase
+        .from('profiles')
+        .select('first_name, last_name, institution, title, email')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => setProfile(data))
     })
   }, [])
 
   const handleClick = () => {
-    if (!userEmail) {
+    if (!userId) {
       router.push(`/auth/signin?next=/vessels/${vesselId}`)
       return
     }
@@ -38,11 +54,11 @@ export default function ClaimButton({ vesselId, vesselName }: ClaimButtonProps) 
       >
         Claim This Vessel
       </button>
-      {open && userEmail && (
+      {open && userId && (
         <ClaimModal
           vesselId={vesselId}
           vesselName={vesselName}
-          userEmail={userEmail}
+          profile={profile}
           onClose={() => setOpen(false)}
         />
       )}

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import type { User } from '@supabase/supabase-js'
 
-type Profile = { role: string; vessel_id: number | null }
+type Profile = { role: string; vessel_id: number | null; verified?: boolean }
 
 export default function Navbar() {
   const router = useRouter()
@@ -22,7 +22,7 @@ export default function Navbar() {
       if (user) {
         supabase
           .from('profiles')
-          .select('role, vessel_id')
+          .select('role, vessel_id, verified')
           .eq('id', user.id)
           .single()
           .then(({ data }) => setProfile(data))
@@ -34,7 +34,7 @@ export default function Navbar() {
       if (session?.user) {
         supabase
           .from('profiles')
-          .select('role, vessel_id')
+          .select('role, vessel_id, verified')
           .eq('id', session.user.id)
           .single()
           .then(({ data }) => setProfile(data))
@@ -106,11 +106,27 @@ export default function Navbar() {
                   </Link>
                 )}
                 {profile?.role === 'operator' && (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden sm:block"
+                    >
+                      My Vessel
+                    </Link>
+                    <Link
+                      href="/dashboard#inquiries"
+                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden sm:block"
+                    >
+                      Messages
+                    </Link>
+                  </>
+                )}
+                {profile?.role === 'scientist' && profile?.verified && (
                   <Link
-                    href="/dashboard"
+                    href="/inbox"
                     className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden sm:block"
                   >
-                    My Vessel
+                    Inbox
                   </Link>
                 )}
                 <div className="flex items-center gap-2">

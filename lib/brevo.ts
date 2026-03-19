@@ -114,3 +114,82 @@ export function claimRejectedEmail(vesselName: string, notes: string) {
     </p>
   `)
 }
+
+export function scientistApprovedEmail(firstName: string, notes?: string) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">Your Greenwater account has been verified!</h2>
+    <p>Hi ${firstName},</p>
+    <p>
+      Your account has been reviewed and approved by the Greenwater Foundation team.
+      You can now contact vessel operators directly through the platform.
+    </p>
+    ${notes ? `<p><strong>Note from our team:</strong></p><p style="background: #f5f5f5; padding: 16px; border-radius: 8px;">${notes}</p>` : ''}
+    <p>
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        Browse Research Vessels
+      </a>
+    </p>
+  `)
+}
+
+export function scientistRejectedEmail(firstName: string, notes?: string) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">Update on your Greenwater verification</h2>
+    <p>Hi ${firstName},</p>
+    <p>
+      Thank you for signing up for Greenwater. After review, we were unable to approve your
+      account at this time.
+    </p>
+    ${notes ? `<p><strong>Notes from our team:</strong></p><p style="background: #f5f5f5; padding: 16px; border-radius: 8px;">${notes}</p>` : ''}
+    <p style="color: #666;">
+      If you believe this is an error or would like to provide additional information,
+      please reply to this email.
+    </p>
+  `)
+}
+
+export function newInquiryOperatorEmail(
+  firstName: string,
+  lastName: string,
+  institution: string,
+  title: string,
+  vesselName: string,
+  body: string,
+  dashboardUrl: string,
+) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">New inquiry for ${vesselName}</h2>
+    <p>
+      <strong>${firstName} ${lastName}</strong> (${title}, ${institution}) has sent a message
+      about <strong>${vesselName}</strong>.
+    </p>
+    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+      <p style="margin: 0; white-space: pre-wrap;">${body}</p>
+    </div>
+    <p>
+      <a href="${dashboardUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        View &amp; Reply in Dashboard
+      </a>
+    </p>
+  `)
+}
+
+export function operatorReplyEmail(
+  vesselName: string,
+  operatorName: string,
+  replyBody: string,
+  inboxUrl: string,
+) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">${operatorName} replied about ${vesselName}</h2>
+    <p>You have a new reply regarding your inquiry about <strong>${vesselName}</strong>.</p>
+    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+      <p style="margin: 0; white-space: pre-wrap;">${replyBody}</p>
+    </div>
+    <p>
+      <a href="${inboxUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        View Conversation in Inbox
+      </a>
+    </p>
+  `)
+}
