@@ -40,7 +40,7 @@ export default async function InboxPage() {
     : { data: [] }
   const vesselMap = Object.fromEntries((vessels ?? []).map((v: { id: number; name: string }) => [v.id, v.name]))
 
-  const rootsWithVesselName = myRoots.map((r: { vessel_id: number }) => ({
+  const rootsWithVesselName = myRoots.map((r) => ({
     ...r,
     vessel_name: vesselMap[r.vessel_id] ?? `Vessel #${r.vessel_id}`,
   }))
