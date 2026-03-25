@@ -3,15 +3,6 @@
  * No Node.js / fs usage here.
  */
 
-export interface VesselFile {
-  id: number
-  name: string
-  ext: string
-  fileType: string
-  contentType: string
-  description: string | null
-  credit: string | null
-}
 
 export interface VesselDoc {
   url: string
@@ -38,7 +29,6 @@ export interface Vessel {
   url_operator: string | null
   primaryLatitude: string | null
   primaryLongitude: string | null
-  files: VesselFile[]
   beam: number | null
   draft: number | null
   crew: number | null
@@ -53,7 +43,6 @@ export interface Vessel {
 
   // Extended fields (backfilled from vessel_details JSONs)
   photo_urls: string[] | null
-  doc_urls: string[] | null       // legacy — superseded by doc_details
   doc_details: VesselDoc[] | null
   last_updated: string | null
 
@@ -210,12 +199,6 @@ export function fmt(value: string | number | null | undefined, suffix = ''): str
   return `${value}${suffix}`
 }
 
-/** Get the photo file for a vessel (shipPhoto type only) */
-export function getShipPhoto(vessel: Vessel): VesselFile | null {
-  return vessel.files?.find(
-    (f) => f.contentType === 'shipPhoto' && f.fileType === 'image'
-  ) ?? null
-}
 
 /**
  * Apply the same filename sanitization used by scripts/fetch_vessels.py.
