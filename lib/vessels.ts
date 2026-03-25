@@ -29,7 +29,7 @@ export const getAllVessels = unstable_cache(
   async (): Promise<Vessel[]> => {
     const { data, error } = await supabase.from('vessels').select(LISTING_COLUMNS).order('id')
     if (error) throw error
-    return data as Vessel[]
+    return data as unknown as Vessel[]
   },
   ['all-vessels-v3'],
   { revalidate: 3600 }
