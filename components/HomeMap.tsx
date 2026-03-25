@@ -98,6 +98,7 @@ export default function HomeMap({ vessels, onVesselClick }: HomeMapProps) {
                   <img
                     src={photoSrc}
                     alt={vessel.name}
+                    loading="lazy"
                     className="w-full h-full object-cover"
                     onError={() => setImgErrors((prev) => ({ ...prev, [vessel.id]: true }))}
                   />

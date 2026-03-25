@@ -104,7 +104,7 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-2xl shadow-card overflow-hidden mb-8">
           <div className="grid grid-cols-1 sm:grid-cols-3">
             <div className="relative" style={{ minHeight: '180px' }}>
-              <img src={photoUrl} alt={v.name} className="w-full h-full object-cover absolute inset-0" />
+              <img src={photoUrl} alt={v.name} loading="lazy" className="w-full h-full object-cover absolute inset-0" />
             </div>
             <div className="sm:col-span-2 p-6">
               <div className="flex items-start justify-between">

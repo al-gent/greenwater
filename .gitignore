@@ -13,8 +13,16 @@ out/
 data/
 public/images/vessels/
 
-# scratch files
+# scratch / local-only scripts and data
 fav.ico
+scripts/fetch_vessels.py
+scripts/backfill_vessel_details.mjs
+scripts/normalize_homeports.mjs
+data_dump.sql
+temp.csv
+test.ipynb
+test.js
+data_scraping/
 
 # misc
 .DS_Store

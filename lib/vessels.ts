@@ -10,13 +10,28 @@ import { stripHtml } from './vessel-utils'
 // Re-export everything from vessel-utils for convenience in server components
 export * from './vessel-utils'
 
+// Only the columns needed for listing, filtering, and the map.
+// Excludes files[], doc_urls, contact info, and all rarely-used spec columns
+// to keep the payload well under Next.js's 2MB unstable_cache limit.
+const LISTING_COLUMNS = [
+  'id', 'name', 'country', 'homeport', 'port_city', 'port_state',
+  'photo_url', 'photo_urls',
+  'scientists', 'Main_Activity', 'length', 'Speed_Cruise', 'Year_Built',
+  'primaryLatitude', 'primaryLongitude',
+  // Advanced search feature filters
+  'Ice_breaking', 'Area_wetlab', 'Area_drylab',
+  'CTD_cap', 'Aquis_Multibeam',
+  'Underwater_vehicles_rov', 'Underwater_vehicles_auv',
+  'Diving_cap', 'DPos', 'Core_capable',
+].join(', ')
+
 export const getAllVessels = unstable_cache(
   async (): Promise<Vessel[]> => {
-    const { data, error } = await supabase.from('vessels').select('*').order('id')
+    const { data, error } = await supabase.from('vessels').select(LISTING_COLUMNS).order('id')
     if (error) throw error
     return data as Vessel[]
   },
-  ['all-vessels-v2'],
+  ['all-vessels-v3'],
   { revalidate: 3600 }
 )
 

@@ -13,6 +13,13 @@ export interface VesselFile {
   credit: string | null
 }
 
+export interface VesselDoc {
+  url: string
+  name: string
+  description: string | null
+  contentLength: number | null
+}
+
 export interface Vessel {
   id: number
   name: string
@@ -46,7 +53,8 @@ export interface Vessel {
 
   // Extended fields (backfilled from vessel_details JSONs)
   photo_urls: string[] | null
-  doc_urls: string[] | null
+  doc_urls: string[] | null       // legacy — superseded by doc_details
+  doc_details: VesselDoc[] | null
   last_updated: string | null
 
   // Contact & metadata
@@ -225,7 +233,7 @@ export function safeFilename(name: string): string {
 
 /**
  * Return the photo URL for a vessel.
- * Uses the Supabase Storage URL stored in photo_url, falling back to picsum.
+ * Uses the Supabase Storage URL stored in photo_url, falling back to placeholder.
  */
 export function getPhotoUrl(vessel: Vessel): string {
   if (vessel.photo_url) return vessel.photo_url
@@ -235,6 +243,19 @@ export function getPhotoUrl(vessel: Vessel): string {
 /** Fallback photo URL */
 export function getFallbackPhotoUrl(_vessel: Vessel): string {
   return 'https://jmpxcsihkmyotidxjuyv.supabase.co/storage/v1/object/public/vessel-photos/placeholder.jpg'
+}
+
+/**
+ * Convert a Supabase Storage URL to a resized thumbnail via the image transform API.
+ * Non-Supabase URLs (e.g. picsum fallbacks) are returned unchanged.
+ */
+export function toThumbnailUrl(url: string, width = 400, quality = 75): string {
+  const marker = '/storage/v1/object/public/'
+  const idx = url.indexOf(marker)
+  if (idx === -1) return url
+  const path = url.slice(idx + marker.length)
+  const base = url.slice(0, idx)
+  return `${base}/storage/v1/render/image/public/${path}?width=${width}&quality=${quality}`
 }
 
 export function filterVessels(vessels: Vessel[], filters: FilterState): Vessel[] {

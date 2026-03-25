@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, stripHtml, getFallbackPhotoUrl } from '@/lib/vessel-utils'
+import { fmt, stripHtml, getFallbackPhotoUrl, toThumbnailUrl } from '@/lib/vessel-utils'
 
 interface VesselCardProps {
   vessel: Vessel
@@ -11,7 +11,7 @@ interface VesselCardProps {
 }
 
 export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
-  const [imgSrc, setImgSrc] = useState(photoUrl)
+  const [imgSrc, setImgSrc] = useState(() => toThumbnailUrl(photoUrl))
 
   const activity = stripHtml(vessel.Main_Activity)
 
@@ -25,6 +25,7 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
         <img
           src={imgSrc}
           alt={vessel.name}
+          loading="lazy"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={() => setImgSrc(getFallbackPhotoUrl(vessel))}
         />

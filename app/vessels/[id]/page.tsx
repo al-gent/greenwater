@@ -45,15 +45,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
 
   const activity = stripHtml(vessel.Main_Activity)
   const photos = vessel.photo_urls ?? (vessel.photo_url ? [vessel.photo_url] : [])
-  const docFiles = (vessel.files ?? []).filter(
-    (f) => f.contentType === 'shipDoc' && f.fileType === 'doc'
-  )
-  const docs = (vessel.doc_urls ?? []).map((url: string, i: number) => ({
-    url,
-    name: docFiles[i]?.name ?? '',
-    description: docFiles[i]?.description ?? null,
-    contentLength: (docFiles[i] as any)?.contentLength ?? null,
-  }))
+  const docs = vessel.doc_details ?? []
   const lat = vessel.primaryLatitude ? parseFloat(vessel.primaryLatitude) : null
   const lng = vessel.primaryLongitude ? parseFloat(vessel.primaryLongitude) : null
   const hasCoords = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)
