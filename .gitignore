@@ -18,6 +18,8 @@ fav.ico
 scripts/fetch_vessels.py
 scripts/backfill_vessel_details.mjs
 scripts/normalize_homeports.mjs
+scripts/load_gfw_data.mjs
+scripts/sync_gfw.mjs
 data_dump.sql
 temp.csv
 test.ipynb

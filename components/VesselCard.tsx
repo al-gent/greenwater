@@ -3,7 +3,16 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, stripHtml, getFallbackPhotoUrl, toThumbnailUrl } from '@/lib/vessel-utils'
+import { fmt, stripHtml, getFallbackPhotoUrl, toThumbnailUrl, toTitleCase } from '@/lib/vessel-utils'
+
+function relativeDate(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (days < 1) return 'today'
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months}mo ago`
+  return `${Math.floor(months / 12)}yr ago`
+}
 
 interface VesselCardProps {
   vessel: Vessel
@@ -52,15 +61,17 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
           {vessel.name}
         </h3>
 
-        {/* Homeport */}
+        {/* Location — last known port if available, else static homeport */}
         <p className="text-gray-500 text-sm flex items-center gap-1 mb-3">
           <svg className="w-3.5 h-3.5 text-teal flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          {(vessel.port_city || vessel.port_state)
-            ? [vessel.port_city, vessel.port_state].filter(Boolean).join(', ')
-            : fmt(vessel.homeport)}
+          {vessel.last_port_name
+            ? <>{toTitleCase(vessel.last_port_name)}{vessel.last_port_flag ? `, ${vessel.last_port_flag}` : ''}<span className="text-gray-400"> · {relativeDate(vessel.last_port_date!)}</span></>
+            : (vessel.port_city || vessel.port_state)
+              ? [vessel.port_city, vessel.port_state].filter(Boolean).join(', ')
+              : fmt(vessel.homeport)}
         </p>
 
         {/* Activity */}

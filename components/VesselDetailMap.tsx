@@ -17,12 +17,11 @@ function FixLeafletIcons() {
   return null
 }
 
-function createPortMarker() {
+function makeMarker(color: string) {
   return L.divIcon({
     html: `<div style="
-      width:18px;
-      height:18px;
-      background:#F5A623;
+      width:18px;height:18px;
+      background:${color};
       border:3px solid white;
       border-radius:50%;
       box-shadow:0 2px 8px rgba(0,0,0,0.3);
@@ -39,9 +38,18 @@ interface VesselDetailMapProps {
   lng: number
   homeport: string | null
   vesselName: string
+  portCallLat?: number | null
+  portCallLng?: number | null
+  portCallName?: string | null
+  portCallDate?: string | null
 }
 
-export default function VesselDetailMap({ lat, lng, homeport, vesselName }: VesselDetailMapProps) {
+export default function VesselDetailMap({
+  lat, lng, homeport, vesselName,
+  portCallLat, portCallLng, portCallName, portCallDate,
+}: VesselDetailMapProps) {
+  const hasPortCall = portCallLat != null && portCallLng != null
+
   return (
     <MapContainer
       center={[lat, lng]}
@@ -56,14 +64,35 @@ export default function VesselDetailMap({ lat, lng, homeport, vesselName }: Vess
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         maxZoom={19}
       />
-      <Marker position={[lat, lng]} icon={createPortMarker()}>
-        <Popup>
-          <div className="font-sans text-sm">
-            <p className="font-semibold text-navy">{vesselName}</p>
-            {homeport && <p className="text-gray-500 text-xs">Home port: {homeport}</p>}
-          </div>
-        </Popup>
-      </Marker>
+
+      {/* Last known port call — gold marker */}
+      {hasPortCall && (
+        <Marker position={[portCallLat!, portCallLng!]} icon={makeMarker('#F5A623')}>
+          <Popup>
+            <div className="font-sans text-sm">
+              <p className="font-semibold text-navy">{vesselName}</p>
+              {portCallName && <p className="text-gray-700 text-xs">{portCallName}</p>}
+              {portCallDate && (
+                <p className="text-gray-400 text-xs">
+                  {new Date(portCallDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              )}
+            </div>
+          </Popup>
+        </Marker>
+      )}
+
+      {/* Static homeport coords — teal marker, only if different location */}
+      {!hasPortCall && (
+        <Marker position={[lat, lng]} icon={makeMarker('#2A7B6F')}>
+          <Popup>
+            <div className="font-sans text-sm">
+              <p className="font-semibold text-navy">{vesselName}</p>
+              {homeport && <p className="text-gray-500 text-xs">{homeport}</p>}
+            </div>
+          </Popup>
+        </Marker>
+      )}
     </MapContainer>
   )
 }

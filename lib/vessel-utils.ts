@@ -46,6 +46,14 @@ export interface Vessel {
   doc_details: VesselDoc[] | null
   last_updated: string | null
 
+  // GFW identity + last known port (populated by getAllVessels join; null on getVesselById)
+  vessel_id_gfw: string | null
+  last_port_name: string | null
+  last_port_flag: string | null
+  last_port_lat: number | null
+  last_port_lon: number | null
+  last_port_date: string | null
+
   // Contact & metadata
   Owner: string | null
   Contact: string | null
@@ -191,6 +199,11 @@ export function stripHtml(html: string | null | undefined): string {
     .replace(/&#039;/g, "'")
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/** Title-case a string (handles ALL-CAPS GFW port names) */
+export function toTitleCase(s: string): string {
+  return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 /** Display helper — returns value or em dash */

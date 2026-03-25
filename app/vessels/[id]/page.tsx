@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { getVesselById, fmt, stripHtml } from '@/lib/vessels'
+import { getVesselById, fmt, stripHtml, toTitleCase } from '@/lib/vessels'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import RequestButton from '@/components/RequestButton'
 import ClaimButton from '@/components/ClaimButton'
@@ -36,11 +36,10 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const vessel = await getVesselById(id)
   if (!vessel) notFound()
 
-  const { data: claimant } = await supabaseAdmin
-    .from('profiles')
-    .select('id')
-    .eq('vessel_id', id)
-    .maybeSingle()
+  const [{ data: claimant }, { data: lastPort }] = await Promise.all([
+    supabaseAdmin.from('profiles').select('id').eq('vessel_id', id).maybeSingle(),
+    supabaseAdmin.from('vessel_last_port').select('port_name, port_flag, lat, lon, arrived_at').eq('vessel_id', id).maybeSingle(),
+  ])
   const isClaimed = !!claimant
 
   const activity = stripHtml(vessel.Main_Activity)
@@ -49,6 +48,12 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const lat = vessel.primaryLatitude ? parseFloat(vessel.primaryLatitude) : null
   const lng = vessel.primaryLongitude ? parseFloat(vessel.primaryLongitude) : null
   const hasCoords = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)
+  const portCallLat = lastPort?.lat != null ? Number(lastPort.lat) : null
+  const portCallLng = lastPort?.lon != null ? Number(lastPort.lon) : null
+  const hasPortCall = portCallLat !== null && portCallLng !== null && !isNaN(portCallLat) && !isNaN(portCallLng)
+  const mapLat = hasPortCall ? portCallLat! : lat
+  const mapLng = hasPortCall ? portCallLng! : lng
+  const showMap = mapLat !== null && mapLng !== null
 
   const n = (v: number | null | undefined, decimals = 1) =>
     v != null ? parseFloat(v.toFixed(decimals)) : null
@@ -208,11 +213,22 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             )}
 
             {/* Map */}
-            {hasCoords && (
+            {showMap && (
               <div>
-                <h2 className="text-lg font-semibold text-navy mb-3">Home Port Location</h2>
+                <h2 className="text-lg font-semibold text-navy mb-3">
+                  {hasPortCall ? 'Last Known Location' : 'Home Port Location'}
+                </h2>
                 <div className="rounded-2xl overflow-hidden border border-gray-100" style={{ height: '280px' }}>
-                  <VesselDetailMap lat={lat!} lng={lng!} homeport={vessel.homeport} vesselName={vessel.name} />
+                  <VesselDetailMap
+                    lat={mapLat!}
+                    lng={mapLng!}
+                    homeport={vessel.homeport}
+                    vesselName={vessel.name}
+                    portCallLat={hasPortCall ? portCallLat : null}
+                    portCallLng={hasPortCall ? portCallLng : null}
+                    portCallName={lastPort?.port_name ? toTitleCase(lastPort.port_name) : null}
+                    portCallDate={lastPort?.arrived_at ?? null}
+                  />
                 </div>
               </div>
             )}

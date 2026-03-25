@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, stripHtml, getFallbackPhotoUrl } from '@/lib/vessel-utils'
+import { stripHtml, getFallbackPhotoUrl, toTitleCase } from '@/lib/vessel-utils'
 import Link from 'next/link'
 import L from 'leaflet'
 
@@ -52,11 +52,14 @@ interface HomeMapProps {
 export default function HomeMap({ vessels, onVesselClick }: HomeMapProps) {
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({})
 
-  const validVessels = vessels.filter(
-    (v) => v.primaryLatitude && v.primaryLongitude &&
-      !isNaN(parseFloat(v.primaryLatitude)) &&
-      !isNaN(parseFloat(v.primaryLongitude))
-  )
+  const validVessels = vessels
+    .map((v) => {
+      // Prefer last port call coords; fall back to static homeport coords
+      const lat = v.last_port_lat ?? (v.primaryLatitude ? parseFloat(v.primaryLatitude) : null)
+      const lng = v.last_port_lon ?? (v.primaryLongitude ? parseFloat(v.primaryLongitude) : null)
+      return { ...v, _lat: lat, _lng: lng }
+    })
+    .filter((v) => v._lat !== null && v._lng !== null && !isNaN(v._lat) && !isNaN(v._lng))
 
   return (
     <MapContainer
@@ -74,17 +77,18 @@ export default function HomeMap({ vessels, onVesselClick }: HomeMapProps) {
         maxZoom={19}
       />
       {validVessels.map((vessel) => {
-        const lat = parseFloat(vessel.primaryLatitude!)
-        const lng = parseFloat(vessel.primaryLongitude!)
         const activity = stripHtml(vessel.Main_Activity)
         const photoSrc = imgErrors[vessel.id]
           ? getFallbackPhotoUrl(vessel)
           : vessel.photoUrl
+        const locationLabel = vessel.last_port_name
+          ? toTitleCase(vessel.last_port_name) + (vessel.last_port_flag ? `, ${vessel.last_port_flag}` : '')
+          : vessel.homeport
 
         return (
           <Marker
             key={vessel.id}
-            position={[lat, lng]}
+            position={[vessel._lat!, vessel._lng!]}
             icon={createVesselMarker()}
           >
             <Popup
@@ -109,12 +113,12 @@ export default function HomeMap({ vessels, onVesselClick }: HomeMapProps) {
                   <h3 className="font-bold text-navy text-sm leading-tight mb-1">
                     {vessel.name}
                   </h3>
-                  {vessel.homeport && (
+                  {locationLabel && (
                     <p className="text-xs text-gray-500 flex items-center gap-1 mb-1">
                       <svg className="w-3 h-3 text-teal flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       </svg>
-                      {vessel.homeport}
+                      {locationLabel}
                     </p>
                   )}
                   {vessel.scientists != null && (
