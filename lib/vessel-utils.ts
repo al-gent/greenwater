@@ -206,6 +206,70 @@ export function toTitleCase(s: string): string {
   return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+// ISO 3166-1 alpha-3 → alpha-2 for the vessel flag codes GFW returns.
+// Covers the countries most likely to appear in the fleet; unknown codes return null.
+const ALPHA3_TO_ALPHA2: Record<string, string> = {
+  ABW:'AW',AFG:'AF',AGO:'AO',ALB:'AL',AND:'AD',ARE:'AE',ARG:'AR',ARM:'AM',ATG:'AG',
+  AUS:'AU',AUT:'AT',AZE:'AZ',BDI:'BI',BEL:'BE',BEN:'BJ',BFA:'BF',BGD:'BD',BGR:'BG',
+  BHR:'BH',BHS:'BS',BIH:'BA',BLR:'BY',BLZ:'BZ',BMU:'BM',BOL:'BO',BRA:'BR',BRB:'BB',
+  BRN:'BN',BTN:'BT',BWA:'BW',CAF:'CF',CAN:'CA',CHE:'CH',CHL:'CL',CHN:'CN',CIV:'CI',
+  CMR:'CM',COD:'CD',COG:'CG',COL:'CO',COM:'KM',CPV:'CV',CRI:'CR',CUB:'CU',CYP:'CY',
+  CZE:'CZ',DEU:'DE',DJI:'DJ',DMA:'DM',DNK:'DK',DOM:'DO',DZA:'DZ',ECU:'EC',EGY:'EG',
+  ERI:'ER',ESP:'ES',EST:'EE',ETH:'ET',FIN:'FI',FJI:'FJ',FRA:'FR',FSM:'FM',GAB:'GA',
+  GBR:'GB',GEO:'GE',GHA:'GH',GIN:'GN',GMB:'GM',GNB:'GW',GNQ:'GQ',GRC:'GR',GRD:'GD',
+  GTM:'GT',GUM:'GU',GUY:'GY',HND:'HN',HRV:'HR',HTI:'HT',HUN:'HU',IDN:'ID',IND:'IN',IRL:'IE',
+  IRN:'IR',IRQ:'IQ',ISL:'IS',ISR:'IL',ITA:'IT',JAM:'JM',JOR:'JO',JPN:'JP',KAZ:'KZ',
+  KEN:'KE',KGZ:'KG',KHM:'KH',KIR:'KI',KNA:'KN',KOR:'KR',KWT:'KW',LAO:'LA',LBN:'LB',
+  LBR:'LR',LBY:'LY',LCA:'LC',LIE:'LI',LKA:'LK',LSO:'LS',LTU:'LT',LUX:'LU',LVA:'LV',
+  MAR:'MA',MDA:'MD',MDG:'MG',MDV:'MV',MEX:'MX',MHL:'MH',MKD:'MK',MLI:'ML',MLT:'MT',
+  MMR:'MM',MNE:'ME',MNG:'MN',MOZ:'MZ',MRT:'MR',MUS:'MU',MWI:'MW',MYS:'MY',NAM:'NA',
+  NER:'NE',NGA:'NG',NIC:'NI',NLD:'NL',NOR:'NO',NPL:'NP',NRU:'NR',NZL:'NZ',OMN:'OM',
+  PAK:'PK',PAN:'PA',PER:'PE',PHL:'PH',PLW:'PW',PNG:'PG',POL:'PL',PRK:'KP',PRT:'PT',
+  PRY:'PY',PSE:'PS',PYF:'PF',QAT:'QA',ROU:'RO',RUS:'RU',RWA:'RW',SAU:'SA',SDN:'SD',
+  SEN:'SN',SGP:'SG',SLB:'SB',SLE:'SL',SLV:'SV',SMR:'SM',SOM:'SO',SRB:'RS',STP:'ST',
+  SUR:'SR',SVK:'SK',SVN:'SI',SWE:'SE',SWZ:'SZ',SYC:'SC',SYR:'SY',TCD:'TD',TGO:'TG',
+  THA:'TH',TJK:'TJ',TKM:'TM',TLS:'TL',TON:'TO',TTO:'TT',TUN:'TN',TUR:'TR',TUV:'TV',
+  TWN:'TW',TZA:'TZ',UGA:'UG',UKR:'UA',URY:'UY',USA:'US',UZB:'UZ',VCT:'VC',VEN:'VE',
+  VNM:'VN',VUT:'VU',WSM:'WS',YEM:'YE',ZAF:'ZA',ZMB:'ZM',ZWE:'ZW',
+}
+
+/** Convert an ISO 3166-1 alpha-3 code (e.g. "USA") to a flag emoji (e.g. "🇺🇸"). */
+export function iso3ToFlag(alpha3: string | null | undefined): string | null {
+  if (!alpha3) return null
+  const a2 = ALPHA3_TO_ALPHA2[alpha3.toUpperCase()]
+  if (!a2) return null
+  return [...a2.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('')
+}
+
+const COUNTRY_NAME_TO_ALPHA2: Record<string, string> = {
+  // Common abbreviations / alternate spellings actually present in the DB
+  'usa': 'US', 'uk': 'GB', 'korea': 'KR',
+  // Full names
+  'united states': 'US', 'united kingdom': 'GB', 'south korea': 'KR',
+  'canada': 'CA', 'germany': 'DE', 'france': 'FR', 'norway': 'NO',
+  'australia': 'AU', 'new zealand': 'NZ', 'russia': 'RU', 'japan': 'JP',
+  'china': 'CN', 'spain': 'ES', 'italy': 'IT', 'netherlands': 'NL',
+  'sweden': 'SE', 'denmark': 'DK', 'finland': 'FI', 'portugal': 'PT',
+  'brazil': 'BR', 'india': 'IN', 'south africa': 'ZA', 'argentina': 'AR',
+  'chile': 'CL', 'mexico': 'MX', 'taiwan': 'TW', 'singapore': 'SG',
+  'indonesia': 'ID', 'philippines': 'PH', 'thailand': 'TH',
+  'belgium': 'BE', 'bulgaria': 'BG', 'croatia': 'HR', 'ecuador': 'EC',
+  'greece': 'GR', 'greenland': 'GL', 'iceland': 'IS', 'ireland': 'IE',
+  'israel': 'IL', 'kenya': 'KE', 'libya': 'LY', 'monaco': 'MC',
+  'pakistan': 'PK', 'panama': 'PA', 'peru': 'PE', 'poland': 'PL',
+  'romania': 'RO', 'saudi arabia': 'SA', 'turkey': 'TR', 'ukraine': 'UA',
+  'united arab emirates': 'AE', 'uruguay': 'UY', 'vanuatu': 'VU',
+  'faroe islands': 'FO', 'cook islands': 'CK', 'cayman islands': 'KY',
+}
+
+/** Convert a full country name (e.g. "United States") to a flag emoji (e.g. "🇺🇸"). */
+export function countryNameToFlag(name: string | null | undefined): string | null {
+  if (!name) return null
+  const a2 = COUNTRY_NAME_TO_ALPHA2[name.toLowerCase().trim()]
+  if (!a2) return null
+  return [...a2].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('')
+}
+
 /** Display helper — returns value or em dash */
 export function fmt(value: string | number | null | undefined, suffix = ''): string {
   if (value === null || value === undefined || value === '') return '—'

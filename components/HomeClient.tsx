@@ -222,7 +222,7 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
           {rows.map(({ country, vessels: rowVessels }) => (
             <VesselRow
               key={country}
-              title={`Research vessels in ${country}`}
+              title={`Research vessels from ${country}`}
               subtitle={COUNTRY_SUBTITLES[country]}
               vessels={rowVessels}
             />

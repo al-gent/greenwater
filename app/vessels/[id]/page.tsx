@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { getVesselById, fmt, stripHtml, toTitleCase } from '@/lib/vessels'
+import { getVesselById, fmt, stripHtml, toTitleCase, iso3ToFlag, countryNameToFlag } from '@/lib/vessels'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import RequestButton from '@/components/RequestButton'
 import ClaimButton from '@/components/ClaimButton'
@@ -95,15 +95,31 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             <div>
               <h1 className="text-3xl font-bold text-navy leading-tight">{vessel.name}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                {vessel.homeport && (
-                  <span className="flex items-center gap-1 text-sm text-gray-500">
-                    <svg className="w-4 h-4 text-teal flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    {vessel.homeport}
-                  </span>
-                )}
+                {(lastPort?.port_name || vessel.port_city || vessel.homeport) && (() => {
+                  const flag = lastPort?.port_name
+                    ? (iso3ToFlag(lastPort.port_flag) ?? lastPort.port_flag ?? '')
+                    : (countryNameToFlag(vessel.country) ?? '')
+                  const city = lastPort?.port_name
+                    ? toTitleCase(lastPort.port_name)
+                    : vessel.port_city ?? vessel.homeport!
+                  const days = lastPort?.arrived_at
+                    ? Math.floor((Date.now() - new Date(lastPort.arrived_at).getTime()) / 86400000)
+                    : null
+                  const age = days === null ? null
+                    : days < 1 ? 'today'
+                    : days < 30 ? `${days}d ago`
+                    : days < 365 ? `${Math.floor(days / 30)}mo ago`
+                    : `${Math.floor(days / 365)}yr ago`
+                  return (
+                    <span className="flex items-center gap-1 text-sm text-gray-500">
+                      <svg className="w-4 h-4 text-teal flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {city}{flag ? ` ${flag}` : ''}{age ? <span className="text-gray-400"> · {age}</span> : null}
+                    </span>
+                  )
+                })()}
                 {vessel.scientists != null && (
                   <span className="bg-teal text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                     {vessel.scientists} research bunks

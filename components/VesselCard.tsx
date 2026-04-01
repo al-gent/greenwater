@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, stripHtml, getFallbackPhotoUrl, toThumbnailUrl, toTitleCase } from '@/lib/vessel-utils'
+import { fmt, stripHtml, getFallbackPhotoUrl, toThumbnailUrl, toTitleCase, iso3ToFlag, countryNameToFlag } from '@/lib/vessel-utils'
 
 function relativeDate(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
@@ -68,9 +68,9 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           {vessel.last_port_name
-            ? <>{toTitleCase(vessel.last_port_name)}{vessel.last_port_flag ? `, ${vessel.last_port_flag}` : ''}<span className="text-gray-400"> · {relativeDate(vessel.last_port_date!)}</span></>
+            ? <>{toTitleCase(vessel.last_port_name)}{iso3ToFlag(vessel.last_port_flag) ? ` ${iso3ToFlag(vessel.last_port_flag)}` : vessel.last_port_flag ? ` ${vessel.last_port_flag}` : ''}<span className="text-gray-400"> · {relativeDate(vessel.last_port_date!)}</span></>
             : (vessel.port_city || vessel.port_state)
-              ? [vessel.port_city, vessel.port_state].filter(Boolean).join(', ')
+              ? <>{vessel.port_city ?? vessel.port_state}{countryNameToFlag(vessel.country) ? ` ${countryNameToFlag(vessel.country)}` : ''}</>
               : fmt(vessel.homeport)}
         </p>
 

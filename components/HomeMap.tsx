@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import type { Vessel } from '@/lib/vessel-utils'
-import { stripHtml, getFallbackPhotoUrl, toTitleCase } from '@/lib/vessel-utils'
+import { stripHtml, getFallbackPhotoUrl, toTitleCase, iso3ToFlag, countryNameToFlag } from '@/lib/vessel-utils'
 import Link from 'next/link'
 import L from 'leaflet'
 
@@ -82,8 +82,10 @@ export default function HomeMap({ vessels, onVesselClick }: HomeMapProps) {
           ? getFallbackPhotoUrl(vessel)
           : vessel.photoUrl
         const locationLabel = vessel.last_port_name
-          ? toTitleCase(vessel.last_port_name) + (vessel.last_port_flag ? `, ${vessel.last_port_flag}` : '')
-          : vessel.homeport
+          ? toTitleCase(vessel.last_port_name) + (vessel.last_port_flag ? ` ${iso3ToFlag(vessel.last_port_flag) ?? vessel.last_port_flag}` : '')
+          : vessel.port_city
+            ? vessel.port_city + (countryNameToFlag(vessel.country) ? ` ${countryNameToFlag(vessel.country)}` : '')
+            : vessel.homeport
 
         return (
           <Marker
