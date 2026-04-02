@@ -74,6 +74,8 @@ export default function RootLayout({
           </div>
         </footer>
         <Analytics />
+        {/* Kill-switch: unregister any lingering service worker from the old site */}
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister();})});if('caches'in window){caches.keys().then(function(k){Promise.all(k.map(function(c){return caches.delete(c)}))})}}` }} />
       </body>
     </html>
   )
