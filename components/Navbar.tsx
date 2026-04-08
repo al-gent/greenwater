@@ -69,10 +69,10 @@ export default function Navbar() {
             </div>
             <div>
               <span className="font-bold text-navy text-lg leading-tight block">
-                Greenwater
+                Vessel
               </span>
               <span className="text-xs text-teal font-medium tracking-wide uppercase leading-tight block -mt-0.5">
-                Foundation
+                Connect
               </span>
             </div>
           </Link>
