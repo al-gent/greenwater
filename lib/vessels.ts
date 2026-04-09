@@ -16,13 +16,13 @@ export * from './vessel-utils'
 const LISTING_COLUMNS = [
   'id', 'name', 'country', 'homeport', 'port_city', 'port_state',
   'photo_url', 'photo_urls',
-  'scientists', 'Main_Activity', 'length', 'Speed_Cruise', 'Year_Built',
-  'primaryLatitude', 'primaryLongitude',
+  'scientists', 'main_activity', 'length', 'speed_cruise', 'year_built',
+  'primary_latitude', 'primary_longitude',
   // Advanced search feature filters
-  'Ice_breaking', 'Area_wetlab', 'Area_drylab',
-  'CTD_cap', 'Aquis_Multibeam',
-  'Underwater_vehicles_rov', 'Underwater_vehicles_auv',
-  'Diving_cap', 'DPos', 'Core_capable',
+  'ice_breaking', 'area_wetlab', 'area_drylab',
+  'ctd_cap', 'aquis_multibeam',
+  'underwater_vehicles_rov', 'underwater_vehicles_auv',
+  'diving_cap', 'dpos', 'core_capable',
 ].join(', ')
 
 export const getAllVessels = unstable_cache(
@@ -69,8 +69,8 @@ export async function getUniqueActivities(): Promise<string[]> {
   const vessels = await getAllVessels()
   const set = new Set<string>()
   for (const v of vessels) {
-    if (!v.Main_Activity) continue
-    const cleaned = stripHtml(v.Main_Activity)
+    if (!v.main_activity) continue
+    const cleaned = stripHtml(v.main_activity)
     if (cleaned.length > 0 && cleaned.length <= 80) {
       set.add(cleaned)
     }

@@ -55,8 +55,8 @@ export default function HomeMap({ vessels, onVesselClick }: HomeMapProps) {
   const validVessels = vessels
     .map((v) => {
       // Prefer last port call coords; fall back to static homeport coords
-      const lat = v.last_port_lat ?? (v.primaryLatitude ? parseFloat(v.primaryLatitude) : null)
-      const lng = v.last_port_lon ?? (v.primaryLongitude ? parseFloat(v.primaryLongitude) : null)
+      const lat = v.last_port_lat ?? (v.primary_latitude ? parseFloat(v.primary_latitude) : null)
+      const lng = v.last_port_lon ?? (v.primary_longitude ? parseFloat(v.primary_longitude) : null)
       return { ...v, _lat: lat, _lng: lng }
     })
     .filter((v) => v._lat !== null && v._lng !== null && !isNaN(v._lat) && !isNaN(v._lng))
@@ -77,7 +77,7 @@ export default function HomeMap({ vessels, onVesselClick }: HomeMapProps) {
         maxZoom={19}
       />
       {validVessels.map((vessel) => {
-        const activity = stripHtml(vessel.Main_Activity)
+        const activity = stripHtml(vessel.main_activity)
         const photoSrc = imgErrors[vessel.id]
           ? getFallbackPhotoUrl(vessel)
           : vessel.photoUrl

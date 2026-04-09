@@ -42,11 +42,11 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   ])
   const isClaimed = !!claimant
 
-  const activity = stripHtml(vessel.Main_Activity)
+  const activity = stripHtml(vessel.main_activity)
   const photos = vessel.photo_urls ?? (vessel.photo_url ? [vessel.photo_url] : [])
   const docs = vessel.doc_details ?? []
-  const lat = vessel.primaryLatitude ? parseFloat(vessel.primaryLatitude) : null
-  const lng = vessel.primaryLongitude ? parseFloat(vessel.primaryLongitude) : null
+  const lat = vessel.primary_latitude ? parseFloat(vessel.primary_latitude) : null
+  const lng = vessel.primary_longitude ? parseFloat(vessel.primary_longitude) : null
   const hasCoords = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)
   const portCallLat = lastPort?.lat != null ? Number(lastPort.lat) : null
   const portCallLng = lastPort?.lon != null ? Number(lastPort.lon) : null
@@ -60,15 +60,15 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
 
   const specs = [
     { label: 'Length', value: n(vessel.length) != null ? `${n(vessel.length)} m` : null, icon: <IconRuler /> },
-    { label: 'Cruise Speed', value: n(vessel.Speed_Cruise) != null ? `${n(vessel.Speed_Cruise)} kn` : null, icon: <IconBolt /> },
+    { label: 'Cruise Speed', value: n(vessel.speed_cruise) != null ? `${n(vessel.speed_cruise)} kn` : null, icon: <IconBolt /> },
     { label: 'Research Bunks', value: vessel.scientists, icon: <IconUsers /> },
     { label: 'Beam', value: n(vessel.beam) != null ? `${n(vessel.beam)} m` : null, icon: <IconArrows /> },
     { label: 'Draft', value: n(vessel.draft) != null ? `${n(vessel.draft)} m` : null, icon: <IconDown /> },
     { label: 'Crew', value: vessel.crew, icon: <IconPerson /> },
-    { label: 'Year Built', value: vessel.Year_Built, icon: <IconCalendar /> },
+    { label: 'Year Built', value: vessel.year_built, icon: <IconCalendar /> },
     { label: 'Home Port', value: vessel.homeport, icon: <IconPin /> },
-    { label: 'Call Sign', value: vessel.Call_sign, icon: <IconSignal /> },
-    { label: 'Operating Area', value: vessel.Operating_area, icon: <IconGlobe /> },
+    { label: 'Call Sign', value: vessel.call_sign, icon: <IconSignal /> },
+    { label: 'Operating Area', value: vessel.operating_area, icon: <IconGlobe /> },
   ].filter((s) => s.value !== null && s.value !== undefined && s.value !== '')
 
   return (
@@ -191,7 +191,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             )}
 
             {/* Operator */}
-            {(vessel.Affiliation || vessel.Operator_Name) && (
+            {(vessel.affiliation || vessel.operator_name) && (
               <div className="border border-gray-100 rounded-2xl p-5">
                 <h2 className="text-lg font-semibold text-navy mb-4 flex items-center gap-2">
                   <svg className="w-5 h-5 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -201,8 +201,8 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
                 </h2>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                   {[
-                    ['Affiliation', vessel.Affiliation],
-                    ['Operator', vessel.Operator_Name],
+                    ['Affiliation', vessel.affiliation],
+                    ['Operator', vessel.operator_name],
                     ['Country', vessel.country],
                     ['Home Port', vessel.homeport],
                   ]

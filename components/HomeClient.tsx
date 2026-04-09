@@ -24,15 +24,15 @@ const HomeMap = dynamic(() => import('./HomeMap'), {
 const ICE_NO_VALUES = new Set(['no', 'none', 'none.', 'negative', 'n/a', '-', ''])
 
 const FEATURE_CHECKS: Record<string, (v: Vessel) => boolean> = {
-  wetlab:    (v) => (v.Area_wetlab ?? 0) > 0,
-  drylab:    (v) => (v.Area_drylab ?? 0) > 0,
-  ctd:       (v) => !!v.CTD_cap,
-  multibeam: (v) => !!v.Aquis_Multibeam,
-  rov:       (v) => !!v.Underwater_vehicles_rov,
-  auv:       (v) => !!v.Underwater_vehicles_auv,
-  diving:    (v) => !!v.Diving_cap,
-  dp:        (v) => !!v.DPos,
-  coring:    (v) => !!v.Core_capable,
+  wetlab:    (v) => (v.area_wetlab ?? 0) > 0,
+  drylab:    (v) => (v.area_drylab ?? 0) > 0,
+  ctd:       (v) => !!v.ctd_cap,
+  multibeam: (v) => !!v.aquis_multibeam,
+  rov:       (v) => !!v.underwater_vehicles_rov,
+  auv:       (v) => !!v.underwater_vehicles_auv,
+  diving:    (v) => !!v.diving_cap,
+  dp:        (v) => !!v.dpos,
+  coring:    (v) => !!v.core_capable,
 }
 
 function applySearch(vessels: Vessel[], search: SearchState, advanced: AdvancedFilters): Vessel[] {
@@ -42,7 +42,7 @@ function applySearch(vessels: Vessel[], search: SearchState, advanced: AdvancedF
     if (advanced.name && !v.name.toLowerCase().includes(advanced.name.toLowerCase())) return false
     if (advanced.minBerths > 0 && (!v.scientists || v.scientists < advanced.minBerths)) return false
     if (advanced.iceBreaking) {
-      const ice = (v.Ice_breaking ?? '').trim().toLowerCase()
+      const ice = (v.ice_breaking ?? '').trim().toLowerCase()
       if (!ice || ICE_NO_VALUES.has(ice)) return false
     }
     for (const key of advanced.features) {

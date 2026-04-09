@@ -77,7 +77,7 @@ export default async function DashboardPage() {
 
   const v = vessel as Vessel
   const photoUrl = getPhotoUrl(v)
-  const activity = stripHtml(v.Main_Activity ?? '')
+  const activity = stripHtml(v.main_activity ?? '')
   const newCount = roots.filter((m) => m.status === 'new').length
 
   return (
@@ -126,9 +126,9 @@ export default async function DashboardPage() {
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: 'Length', value: v.length ? `${v.length} m` : null },
-                  { label: 'Cruise Speed', value: v.Speed_Cruise ? `${v.Speed_Cruise} kn` : null },
+                  { label: 'Cruise Speed', value: v.speed_cruise ? `${v.speed_cruise} kn` : null },
                   { label: 'Research Bunks', value: v.scientists },
-                  { label: 'Year Built', value: v.Year_Built },
+                  { label: 'Year Built', value: v.year_built },
                 ].filter(s => s.value !== null && s.value !== undefined).map((s) => (
                   <div key={s.label} className="bg-gray-50 rounded-xl p-3">
                     <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-0.5">{s.label}</p>

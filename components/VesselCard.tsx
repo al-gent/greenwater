@@ -22,7 +22,7 @@ interface VesselCardProps {
 export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
   const [imgSrc, setImgSrc] = useState(() => toThumbnailUrl(photoUrl))
 
-  const activity = stripHtml(vessel.Main_Activity)
+  const activity = stripHtml(vessel.main_activity)
 
   return (
     <Link
@@ -89,16 +89,16 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
               <span>length</span>
             </span>
           )}
-          {vessel.Speed_Cruise != null && (
+          {vessel.speed_cruise != null && (
             <span className="flex items-center gap-1">
-              <span className="font-medium text-gray-700">{vessel.Speed_Cruise}kn</span>
+              <span className="font-medium text-gray-700">{vessel.speed_cruise}kn</span>
               <span>cruise</span>
             </span>
           )}
-          {vessel.Year_Built != null && (
+          {vessel.year_built != null && (
             <span className="flex items-center gap-1">
               <span>Built</span>
-              <span className="font-medium text-gray-700">{vessel.Year_Built}</span>
+              <span className="font-medium text-gray-700">{vessel.year_built}</span>
             </span>
           )}
         </div>

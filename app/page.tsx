@@ -11,7 +11,7 @@ export default async function HomePage() {
   const vesselActivities = Array.from(
     new Set(
       allVessels
-        .map((v) => stripHtml(v.Main_Activity))
+        .map((v) => stripHtml(v.main_activity))
         .filter((a) => a.length > 0 && a.length <= 80)
     )
   ).sort()

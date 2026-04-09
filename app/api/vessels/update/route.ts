@@ -30,8 +30,8 @@ export async function PATCH(request: Request) {
 
   // Allowlist of editable fields
   const allowed = [
-    'name', 'port_city', 'port_state', 'Operator_Name', 'Affiliation', 'url_ship',
-    'Main_Activity', 'scientists', 'Speed_Cruise', 'length', 'Operating_area',
+    'name', 'port_city', 'port_state', 'operator_name', 'affiliation', 'url_ship',
+    'main_activity', 'scientists', 'speed_cruise', 'length', 'operating_area',
   ]
 
   const safeUpdates: Record<string, unknown> = {}

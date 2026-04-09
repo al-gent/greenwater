@@ -9,28 +9,28 @@ interface VesselEditForm {
   name: string
   port_city: string
   port_state: string
-  Operator_Name: string
-  Affiliation: string
+  operator_name: string
+  affiliation: string
   url_ship: string
-  Main_Activity: string
+  main_activity: string
   scientists: string
-  Speed_Cruise: string
+  speed_cruise: string
   length: string
-  Operating_area: string
+  operating_area: string
 }
 
 const emptyForm: VesselEditForm = {
   name: '',
   port_city: '',
   port_state: '',
-  Operator_Name: '',
-  Affiliation: '',
+  operator_name: '',
+  affiliation: '',
   url_ship: '',
-  Main_Activity: '',
+  main_activity: '',
   scientists: '',
-  Speed_Cruise: '',
+  speed_cruise: '',
   length: '',
-  Operating_area: '',
+  operating_area: '',
 }
 
 export default function EditVesselPage() {
@@ -62,7 +62,7 @@ export default function EditVesselPage() {
 
       const { data: vessel } = await supabase
         .from('vessels')
-        .select('name,port_city,port_state,Operator_Name,Affiliation,url_ship,Main_Activity,scientists,Speed_Cruise,length,Operating_area')
+        .select('name,port_city,port_state,operator_name,affiliation,url_ship,main_activity,scientists,speed_cruise,length,operating_area')
         .eq('id', profile.vessel_id)
         .single()
 
@@ -71,14 +71,14 @@ export default function EditVesselPage() {
           name: vessel.name ?? '',
           port_city: vessel.port_city ?? '',
           port_state: vessel.port_state ?? '',
-          Operator_Name: vessel.Operator_Name ?? '',
-          Affiliation: vessel.Affiliation ?? '',
+          operator_name: vessel.operator_name ?? '',
+          affiliation: vessel.affiliation ?? '',
           url_ship: vessel.url_ship ?? '',
-          Main_Activity: vessel.Main_Activity ?? '',
+          main_activity: vessel.main_activity ?? '',
           scientists: vessel.scientists != null ? String(vessel.scientists) : '',
-          Speed_Cruise: vessel.Speed_Cruise != null ? String(vessel.Speed_Cruise) : '',
+          speed_cruise: vessel.speed_cruise != null ? String(vessel.speed_cruise) : '',
           length: vessel.length != null ? String(vessel.length) : '',
-          Operating_area: vessel.Operating_area ?? '',
+          operating_area: vessel.operating_area ?? '',
         })
       }
       setLoading(false)
@@ -100,14 +100,14 @@ export default function EditVesselPage() {
         name: form.name.trim() || undefined,
         port_city: form.port_city.trim() || undefined,
         port_state: form.port_state.trim() || undefined,
-        Operator_Name: form.Operator_Name.trim() || undefined,
-        Affiliation: form.Affiliation.trim() || undefined,
+        operator_name: form.operator_name.trim() || undefined,
+        affiliation: form.affiliation.trim() || undefined,
         url_ship: form.url_ship.trim() || undefined,
-        Main_Activity: form.Main_Activity.trim() || undefined,
+        main_activity: form.main_activity.trim() || undefined,
         scientists: form.scientists ? parseInt(form.scientists, 10) : undefined,
-        Speed_Cruise: form.Speed_Cruise ? parseFloat(form.Speed_Cruise) : undefined,
+        speed_cruise: form.speed_cruise ? parseFloat(form.speed_cruise) : undefined,
         length: form.length ? parseFloat(form.length) : undefined,
-        Operating_area: form.Operating_area.trim() || undefined,
+        operating_area: form.operating_area.trim() || undefined,
       }),
     })
 
@@ -178,11 +178,11 @@ export default function EditVesselPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {field('State / Province', 'port_state')}
-              {field('Operator Name', 'Operator_Name')}
+              {field('Operator Name', 'operator_name')}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {field('Affiliation / Institution', 'Affiliation')}
+              {field('Affiliation / Institution', 'affiliation')}
             </div>
 
             {field('Official Website', 'url_ship', 'url', 'Full URL including https://')}
@@ -193,18 +193,18 @@ export default function EditVesselPage() {
               </label>
               <textarea
                 rows={4}
-                value={form.Main_Activity}
-                onChange={(e) => setForm({ ...form, Main_Activity: e.target.value })}
+                value={form.main_activity}
+                onChange={(e) => setForm({ ...form, main_activity: e.target.value })}
                 placeholder="Describe the vessel's research capabilities and typical activities…"
                 className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition resize-none"
               />
             </div>
 
-            {field('Operating Area', 'Operating_area')}
+            {field('Operating Area', 'operating_area')}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               {field('Research Bunks', 'scientists', 'number')}
-              {field('Cruise Speed (kn)', 'Speed_Cruise', 'number')}
+              {field('Cruise Speed (kn)', 'speed_cruise', 'number')}
               {field('Length (m)', 'length', 'number')}
             </div>
 
