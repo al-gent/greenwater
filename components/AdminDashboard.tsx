@@ -286,7 +286,7 @@ export default function AdminDashboard() {
               {pendingSubs} pending submission{pendingSubs !== 1 ? 's' : ''} · {pendingClaims} pending claim{pendingClaims !== 1 ? 's' : ''} · {pendingScientists} unverified scientist{pendingScientists !== 1 ? 's' : ''}
             </p>
           </div>
-          <a href="/" className="text-sm text-gray-500 hover:text-navy transition-colors">← Back to site</a>
+          <a href="/admin/vessels/new" className="bg-navy text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-navy-600 transition-colors">+ Add Vessel</a>
         </div>
 
         {/* Tabs */}

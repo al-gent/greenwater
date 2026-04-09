@@ -50,11 +50,12 @@ function formToPayload(form: FormState, vesselId: number): Record<string, unknow
 
 interface Props {
   vessel: Partial<EditableVessel> & { name: string; photo_urls?: string[] | null }
-  vesselId: number
+  vesselId?: number
   backHref: string
+  createMode?: boolean
 }
 
-export default function VesselEditForm({ vessel, vesselId, backHref }: Props) {
+export default function VesselEditForm({ vessel, vesselId, backHref, createMode }: Props) {
   const router = useRouter()
   const [form, setForm] = useState<FormState>(() => vesselToForm(vessel))
   const [photos, setPhotos] = useState<string[]>(() => vessel.photo_urls ?? [])
@@ -112,10 +113,33 @@ export default function VesselEditForm({ vessel, vesselId, backHref }: Props) {
     setSaving(true)
     setError(null)
 
+    if (createMode) {
+      const payload: Record<string, unknown> = {}
+      for (const [key, raw] of Object.entries(form)) {
+        const trimmed = raw.trim()
+        if (trimmed !== '') payload[key] = NUM_FIELDS.has(key) ? Number(trimmed) : trimmed
+      }
+      const res = await fetch('/api/vessels/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      setSaving(false)
+      if (res.ok) {
+        const { id } = await res.json()
+        setSaved(true)
+        setTimeout(() => router.push(`/admin/vessels/${id}/edit`), 1500)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error ?? 'Create failed. Please try again.')
+      }
+      return
+    }
+
     const res = await fetch('/api/vessels/update', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formToPayload(form, vesselId)),
+      body: JSON.stringify(formToPayload(form, vesselId!)),
     })
 
     setSaving(false)
@@ -175,13 +199,13 @@ export default function VesselEditForm({ vessel, vesselId, backHref }: Props) {
               </svg>
             </div>
             <p className="text-navy font-semibold text-lg">Saved!</p>
-            <p className="text-sm text-gray-400">Redirecting to vessel page…</p>
+            <p className="text-sm text-gray-400">{createMode ? 'Redirecting to edit page…' : 'Redirecting to vessel page…'}</p>
           </div>
         </div>
       )}
 
-      {sec('Photos')}
-      <div className="space-y-3">
+      {!createMode && sec('Photos')}
+      {!createMode && <div className="space-y-3">
         {photos.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {photos.map((url) => (
@@ -230,7 +254,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref }: Props) {
             onChange={handlePhotoUpload}
           />
         </label>
-      </div>
+      </div>}
 
       {sec('Identity')}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -371,7 +395,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref }: Props) {
               </svg>
               Saving…
             </>
-          ) : 'Save Changes'}
+          ) : createMode ? 'Create Vessel' : 'Save Changes'}
         </button>
       </div>
     </form>
