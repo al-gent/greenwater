@@ -97,7 +97,7 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
   const advancedActive = !!(advanced.name || advanced.minBerths > 0 || advanced.iceBreaking || advanced.features.length > 0)
   const hasSearch = !!(search.where || search.when || search.bunks > 0 || advancedActive)
 
-  const withPhotos = useMemo(() => vessels.filter((v) => v.photo_url || v.photo_urls?.length), [vessels])
+  const withPhotos = useMemo(() => vessels.filter((v) => v.photo_urls?.length), [vessels])
   const filtered = useMemo(() => applySearch(vessels, search, advanced), [vessels, search, advanced])
   const rows = useMemo(() => groupByCountry(withPhotos), [withPhotos])
   const mapVessels = useMemo(

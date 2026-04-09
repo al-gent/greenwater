@@ -71,7 +71,7 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
             ? <>{toTitleCase(vessel.last_port_name)}{iso3ToFlag(vessel.last_port_flag) ? ` ${iso3ToFlag(vessel.last_port_flag)}` : vessel.last_port_flag ? ` ${vessel.last_port_flag}` : ''}<span className="text-gray-400"> · {relativeDate(vessel.last_port_date!)}</span></>
             : (vessel.port_city || vessel.port_state)
               ? <>{vessel.port_city ?? vessel.port_state}{countryNameToFlag(vessel.country) ? ` ${countryNameToFlag(vessel.country)}` : ''}</>
-              : fmt(vessel.homeport)}
+              : fmt(vessel.country)}
         </p>
 
         {/* Activity */}

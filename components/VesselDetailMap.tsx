@@ -36,7 +36,6 @@ function makeMarker(color: string) {
 interface VesselDetailMapProps {
   lat: number
   lng: number
-  homeport: string | null
   vesselName: string
   portCallLat?: number | null
   portCallLng?: number | null
@@ -45,7 +44,7 @@ interface VesselDetailMapProps {
 }
 
 export default function VesselDetailMap({
-  lat, lng, homeport, vesselName,
+  lat, lng, vesselName,
   portCallLat, portCallLng, portCallName, portCallDate,
 }: VesselDetailMapProps) {
   const hasPortCall = portCallLat != null && portCallLng != null
@@ -82,13 +81,12 @@ export default function VesselDetailMap({
         </Marker>
       )}
 
-      {/* Static homeport coords — teal marker, only if different location */}
+      {/* Static home coords — teal marker */}
       {!hasPortCall && (
         <Marker position={[lat, lng]} icon={makeMarker('#2A7B6F')}>
           <Popup>
             <div className="font-sans text-sm">
               <p className="font-semibold text-navy">{vesselName}</p>
-              {homeport && <p className="text-gray-500 text-xs">{homeport}</p>}
             </div>
           </Popup>
         </Marker>

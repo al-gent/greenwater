@@ -54,7 +54,7 @@ export default function HomeMap({ vessels, onVesselClick }: HomeMapProps) {
 
   const validVessels = vessels
     .map((v) => {
-      // Prefer last port call coords; fall back to static homeport coords
+      // Prefer last port call coords; fall back to static home coords
       const lat = v.last_port_lat ?? (v.primary_latitude ? parseFloat(v.primary_latitude) : null)
       const lng = v.last_port_lon ?? (v.primary_longitude ? parseFloat(v.primary_longitude) : null)
       return { ...v, _lat: lat, _lng: lng }
@@ -85,7 +85,7 @@ export default function HomeMap({ vessels, onVesselClick }: HomeMapProps) {
           ? toTitleCase(vessel.last_port_name) + (vessel.last_port_flag ? ` ${iso3ToFlag(vessel.last_port_flag) ?? vessel.last_port_flag}` : '')
           : vessel.port_city
             ? vessel.port_city + (countryNameToFlag(vessel.country) ? ` ${countryNameToFlag(vessel.country)}` : '')
-            : vessel.homeport
+            : vessel.country
 
         return (
           <Marker

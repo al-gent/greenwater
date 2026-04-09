@@ -14,8 +14,8 @@ export * from './vessel-utils'
 // Excludes files[], doc_urls, contact info, and all rarely-used spec columns
 // to keep the payload well under Next.js's 2MB unstable_cache limit.
 const LISTING_COLUMNS = [
-  'id', 'name', 'country', 'homeport', 'port_city', 'port_state',
-  'photo_url', 'photo_urls',
+  'id', 'name', 'country', 'port_city', 'port_state',
+  'photo_urls',
   'scientists', 'main_activity', 'length', 'speed_cruise', 'year_built',
   'primary_latitude', 'primary_longitude',
   // Advanced search feature filters

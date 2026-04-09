@@ -3,6 +3,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { getVesselById, fmt, stripHtml, toTitleCase, iso3ToFlag, countryNameToFlag } from '@/lib/vessels'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getServerUser } from '@/lib/supabase-server'
 import RequestButton from '@/components/RequestButton'
 import ClaimButton from '@/components/ClaimButton'
 import VesselPhotoGallery from '@/components/VesselPhotoGallery'
@@ -36,14 +37,20 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const vessel = await getVesselById(id)
   if (!vessel) notFound()
 
-  const [{ data: claimant }, { data: lastPort }] = await Promise.all([
+  const [{ data: claimant }, { data: lastPort }, user] = await Promise.all([
     supabaseAdmin.from('profiles').select('id').eq('vessel_id', id).maybeSingle(),
     supabaseAdmin.from('vessel_last_port').select('port_name, port_flag, lat, lon, arrived_at').eq('vessel_id', id).maybeSingle(),
+    getServerUser(),
   ])
   const isClaimed = !!claimant
 
+  const isAdmin = user
+    ? await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single()
+        .then(({ data }) => data?.role === 'admin')
+    : false
+
   const activity = stripHtml(vessel.main_activity)
-  const photos = vessel.photo_urls ?? (vessel.photo_url ? [vessel.photo_url] : [])
+  const photos = vessel.photo_urls ?? []
   const docs = vessel.doc_details ?? []
   const lat = vessel.primary_latitude ? parseFloat(vessel.primary_latitude) : null
   const lng = vessel.primary_longitude ? parseFloat(vessel.primary_longitude) : null
@@ -66,7 +73,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
     { label: 'Draft', value: n(vessel.draft) != null ? `${n(vessel.draft)} m` : null, icon: <IconDown /> },
     { label: 'Crew', value: vessel.crew, icon: <IconPerson /> },
     { label: 'Year Built', value: vessel.year_built, icon: <IconCalendar /> },
-    { label: 'Home Port', value: vessel.homeport, icon: <IconPin /> },
+
     { label: 'Call Sign', value: vessel.call_sign, icon: <IconSignal /> },
     { label: 'Operating Area', value: vessel.operating_area, icon: <IconGlobe /> },
   ].filter((s) => s.value !== null && s.value !== undefined && s.value !== '')
@@ -75,10 +82,23 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
     <div className="pt-16 bg-white min-h-screen">
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-2">
-        <nav className="flex items-center gap-2 text-sm text-gray-400">
-          <Link href="/" className="hover:text-navy transition-colors">Find a Vessel</Link>
-          <span>/</span>
-          <span className="text-gray-600 truncate max-w-xs">{vessel.name}</span>
+        <nav className="flex items-center justify-between gap-2 text-sm text-gray-400">
+          <div className="flex items-center gap-2">
+            <Link href="/" className="hover:text-navy transition-colors">Find a Vessel</Link>
+            <span>/</span>
+            <span className="text-gray-600 truncate max-w-xs">{vessel.name}</span>
+          </div>
+          {isAdmin && (
+            <Link
+              href={`/admin/vessels/${id}/edit`}
+              className="flex items-center gap-1.5 text-xs font-medium text-teal hover:text-teal/80 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit vessel
+            </Link>
+          )}
         </nav>
       </div>
 
@@ -95,13 +115,13 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             <div>
               <h1 className="text-3xl font-bold text-navy leading-tight">{vessel.name}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                {(lastPort?.port_name || vessel.port_city || vessel.homeport) && (() => {
+                {(lastPort?.port_name || vessel.port_city) && (() => {
                   const flag = lastPort?.port_name
                     ? (iso3ToFlag(lastPort.port_flag) ?? lastPort.port_flag ?? '')
                     : (countryNameToFlag(vessel.country) ?? '')
                   const city = lastPort?.port_name
                     ? toTitleCase(lastPort.port_name)
-                    : vessel.port_city ?? vessel.homeport!
+                    : vessel.port_city!
                   const days = lastPort?.arrived_at
                     ? Math.floor((Date.now() - new Date(lastPort.arrived_at).getTime()) / 86400000)
                     : null
@@ -204,7 +224,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
                     ['Affiliation', vessel.affiliation],
                     ['Operator', vessel.operator_name],
                     ['Country', vessel.country],
-                    ['Home Port', vessel.homeport],
+
                   ]
                     .filter(([, v]) => v)
                     .map(([label, value]) => (
@@ -238,7 +258,6 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
                   <VesselDetailMap
                     lat={mapLat!}
                     lng={mapLng!}
-                    homeport={vessel.homeport}
                     vesselName={vessel.name}
                     portCallLat={hasPortCall ? portCallLat : null}
                     portCallLng={hasPortCall ? portCallLng : null}

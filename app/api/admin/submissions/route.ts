@@ -60,14 +60,9 @@ export async function PATCH(request: Request) {
 
   // On approval: insert a new row into vessels
   if (status === 'approved') {
-    const homeport = submission.port_state
-      ? `${submission.port_city}, ${submission.port_state}`
-      : submission.port_city
-
     const { error: insertError } = await supabaseAdmin.from('vessels').insert({
       name: submission.vessel_name,
       operator_name: submission.operator_name,
-      homeport,
       port_city: submission.port_city,
       port_state: submission.port_state ?? null,
       country: submission.country ?? null,

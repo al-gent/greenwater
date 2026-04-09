@@ -10,43 +10,46 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Verify operator owns this vessel
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('role, vessel_id')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'operator' || !profile.vessel_id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
   const body = await request.json()
   const { vessel_id, ...updates } = body
 
-  if (vessel_id !== profile.vessel_id) {
+  // Admins can edit any vessel; operators can only edit their own
+  if (profile?.role === 'admin') {
+    if (!vessel_id) {
+      return NextResponse.json({ error: 'vessel_id required' }, { status: 400 })
+    }
+  } else if (profile?.role === 'operator' && profile.vessel_id) {
+    if (vessel_id !== profile.vessel_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  } else {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Allowlist of editable fields
-  const allowed = [
-    'name', 'port_city', 'port_state', 'operator_name', 'affiliation', 'url_ship',
-    'main_activity', 'scientists', 'speed_cruise', 'length', 'operating_area',
-  ]
+  // Strip system-managed fields that should never be user-edited
+  const denied = new Set([
+    'id', 'vessel_id_gfw', 'doc_details', 'last_updated',
+  ])
 
   const safeUpdates: Record<string, unknown> = {}
-  for (const key of allowed) {
-    if (key in updates) safeUpdates[key] = updates[key]
+  for (const [key, value] of Object.entries(updates)) {
+    if (!denied.has(key)) safeUpdates[key] = value
   }
 
   const { error } = await supabaseAdmin
     .from('vessels')
     .update(safeUpdates)
-    .eq('id', profile.vessel_id)
+    .eq('id', vessel_id)
 
   if (error) {
     console.error('vessel update error:', error)
-    return NextResponse.json({ error: 'Update failed.' }, { status: 500 })
+    return NextResponse.json({ error: `Update failed: ${error.message}` }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

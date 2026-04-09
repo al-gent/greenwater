@@ -15,7 +15,6 @@ export interface Vessel {
   id: number
   name: string
   country: string | null
-  homeport: string | null
   affiliation: string | null
   operator_name: string | null
   length: number | null
@@ -25,6 +24,8 @@ export interface Vessel {
   year_built: number | null
   year_refit: number | null
   call_sign: string | null
+  mmsi: string | null
+  imo_number: string | null
   url_ship: string | null
   url_operator: string | null
   primary_latitude: string | null
@@ -37,7 +38,6 @@ export interface Vessel {
   operating_area: string | null
   endurance: string | null
   dpos: string | null
-  photo_url: string | null
   port_city: string | null
   port_state: string | null
 
@@ -293,10 +293,10 @@ export function safeFilename(name: string): string {
 
 /**
  * Return the photo URL for a vessel.
- * Uses the Supabase Storage URL stored in photo_url, falling back to placeholder.
+ * Returns the first URL from photo_urls, falling back to placeholder.
  */
 export function getPhotoUrl(vessel: Vessel): string {
-  if (vessel.photo_url) return vessel.photo_url
+  if (vessel.photo_urls?.length) return vessel.photo_urls[0]
   return getFallbackPhotoUrl(vessel)
 }
 

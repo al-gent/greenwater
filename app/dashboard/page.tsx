@@ -110,7 +110,7 @@ export default async function DashboardPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-navy">{v.name}</h2>
-                  {v.homeport && <p className="text-gray-500 text-sm mt-0.5">{v.homeport}</p>}
+                  {v.port_city && <p className="text-gray-500 text-sm mt-0.5">{v.port_city}{v.port_state ? `, ${v.port_state}` : ''}</p>}
                 </div>
                 <Link
                   href={`/vessels/${v.id}`}
