@@ -47,11 +47,11 @@ function SignUpForm() {
   const next = searchParams.get('next') ?? '/'
 
   const [accountType, setAccountType] = useState<AccountType>(null)
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(searchParams.get('email') ?? '')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState(searchParams.get('first_name') ?? '')
+  const [lastName, setLastName] = useState(searchParams.get('last_name') ?? '')
   // researcher fields
   const [institution, setInstitution] = useState('')
   const [title, setTitle] = useState('')
