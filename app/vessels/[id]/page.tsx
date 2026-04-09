@@ -52,15 +52,13 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const activity = stripHtml(vessel.main_activity)
   const photos = vessel.photo_urls ?? []
   const docs = vessel.doc_details ?? []
-  const lat = vessel.primary_latitude ? parseFloat(vessel.primary_latitude) : null
-  const lng = vessel.primary_longitude ? parseFloat(vessel.primary_longitude) : null
-  const hasCoords = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)
+  const homeLat = vessel.primary_latitude ? parseFloat(vessel.primary_latitude) : null
+  const homeLng = vessel.primary_longitude ? parseFloat(vessel.primary_longitude) : null
+  const hasCoords = homeLat !== null && homeLng !== null && !isNaN(homeLat) && !isNaN(homeLng)
   const portCallLat = lastPort?.lat != null ? Number(lastPort.lat) : null
   const portCallLng = lastPort?.lon != null ? Number(lastPort.lon) : null
   const hasPortCall = portCallLat !== null && portCallLng !== null && !isNaN(portCallLat) && !isNaN(portCallLng)
-  const mapLat = hasPortCall ? portCallLat! : lat
-  const mapLng = hasPortCall ? portCallLng! : lng
-  const showMap = mapLat !== null && mapLng !== null
+  const showMap = hasCoords || hasPortCall
 
   const n = (v: number | null | undefined, decimals = 1) =>
     v != null ? parseFloat(v.toFixed(decimals)) : null
@@ -76,6 +74,11 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
 
     { label: 'Call Sign', value: vessel.call_sign, icon: <IconSignal /> },
     { label: 'Operating Area', value: vessel.operating_area, icon: <IconGlobe /> },
+    {
+      label: 'Home Port',
+      value: [vessel.port_city, vessel.port_state, vessel.country].filter(Boolean).join(', ') || null,
+      icon: <IconAnchor />,
+    },
   ].filter((s) => s.value !== null && s.value !== undefined && s.value !== '')
 
   return (
@@ -115,14 +118,10 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             <div>
               <h1 className="text-3xl font-bold text-navy leading-tight">{vessel.name}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                {(lastPort?.port_name || vessel.port_city) && (() => {
-                  const flag = lastPort?.port_name
-                    ? (iso3ToFlag(lastPort.port_flag) ?? lastPort.port_flag ?? '')
-                    : (countryNameToFlag(vessel.country) ?? '')
-                  const city = lastPort?.port_name
-                    ? toTitleCase(lastPort.port_name)
-                    : vessel.port_city!
-                  const days = lastPort?.arrived_at
+                {lastPort?.port_name && (() => {
+                  const flag = iso3ToFlag(lastPort.port_flag) ?? lastPort.port_flag ?? ''
+                  const city = toTitleCase(lastPort.port_name)
+                  const days = lastPort.arrived_at
                     ? Math.floor((Date.now() - new Date(lastPort.arrived_at).getTime()) / 86400000)
                     : null
                   const age = days === null ? null
@@ -251,14 +250,12 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             {/* Map */}
             {showMap && (
               <div>
-                <h2 className="text-lg font-semibold text-navy mb-3">
-                  {hasPortCall ? 'Last Known Location' : 'Home Port Location'}
-                </h2>
+                <h2 className="text-lg font-semibold text-navy mb-3">Location</h2>
                 <div className="rounded-2xl overflow-hidden border border-gray-100" style={{ height: '280px' }}>
                   <VesselDetailMap
-                    lat={mapLat!}
-                    lng={mapLng!}
                     vesselName={vessel.name}
+                    homeLat={hasCoords ? homeLat : null}
+                    homeLng={hasCoords ? homeLng : null}
                     portCallLat={hasPortCall ? portCallLat : null}
                     portCallLng={hasPortCall ? portCallLng : null}
                     portCallName={lastPort?.port_name ? toTitleCase(lastPort.port_name) : null}
@@ -368,6 +365,9 @@ function IconSignal() {
 }
 function IconGlobe() {
   return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+}
+function IconAnchor() {
+  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3a2 2 0 100 4 2 2 0 000-4zm0 4v14M5 10h14M5 20c0-2 2.686-3.5 7-3.5S19 18 19 20" /></svg>
 }
 function IconPDF() {
   return (
