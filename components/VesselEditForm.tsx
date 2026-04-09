@@ -63,6 +63,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
 
   const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }))
 
@@ -110,7 +111,6 @@ export default function VesselEditForm({ vessel, vesselId, backHref }: Props) {
     e.preventDefault()
     setSaving(true)
     setError(null)
-    setSaved(false)
 
     const res = await fetch('/api/vessels/update', {
       method: 'PATCH',
