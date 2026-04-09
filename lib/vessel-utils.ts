@@ -48,8 +48,9 @@ export interface Vessel {
 
   // GFW identity + last known port (populated by getAllVessels join; null on getVesselById)
   vessel_id_gfw: string | null
-  last_port_name: string | null
-  last_port_flag: string | null
+  last_port_city: string | null
+  last_port_state: string | null
+  last_port_country: string | null
   last_port_lat: number | null
   last_port_lon: number | null
   last_port_date: string | null

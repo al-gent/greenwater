@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, stripHtml, getFallbackPhotoUrl, toThumbnailUrl, toTitleCase, iso3ToFlag, countryNameToFlag } from '@/lib/vessel-utils'
+import { fmt, stripHtml, getFallbackPhotoUrl, toThumbnailUrl, countryNameToFlag } from '@/lib/vessel-utils'
 
 function relativeDate(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
@@ -38,10 +38,10 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={() => setImgSrc(getFallbackPhotoUrl(vessel))}
         />
-        {/* Country badge */}
-        {vessel.country && (
-          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-navy text-xs font-semibold px-2.5 py-1 rounded-full">
-            {vessel.country}
+        {/* Country flag */}
+        {countryNameToFlag(vessel.country) && (
+          <div className="absolute top-3 left-3 text-2xl drop-shadow">
+            {countryNameToFlag(vessel.country)}
           </div>
         )}
         {/* Scientists badge */}
@@ -67,11 +67,9 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          {vessel.last_port_name
-            ? <>{toTitleCase(vessel.last_port_name)}{iso3ToFlag(vessel.last_port_flag) ? ` ${iso3ToFlag(vessel.last_port_flag)}` : vessel.last_port_flag ? ` ${vessel.last_port_flag}` : ''}<span className="text-gray-400"> · {relativeDate(vessel.last_port_date!)}</span></>
-            : (vessel.port_city || vessel.port_state)
-              ? <>{vessel.port_city ?? vessel.port_state}{countryNameToFlag(vessel.country) ? ` ${countryNameToFlag(vessel.country)}` : ''}</>
-              : fmt(vessel.country)}
+          {vessel.last_port_city
+            ? <>{[vessel.last_port_city, vessel.last_port_state].filter(Boolean).join(', ')}<span className="text-gray-400"> · {relativeDate(vessel.last_port_date!)}</span></>
+            : vessel.port_city ?? vessel.port_state ?? fmt(vessel.country)}
         </p>
 
         {/* Activity */}

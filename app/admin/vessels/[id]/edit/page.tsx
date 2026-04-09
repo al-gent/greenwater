@@ -68,7 +68,7 @@ export default function AdminEditVesselPage() {
         </p>
 
         <div className="bg-white rounded-2xl shadow-card p-6 sm:p-8">
-          <VesselEditForm vessel={vessel} vesselId={vesselId} backHref="/admin" />
+          <VesselEditForm vessel={vessel} vesselId={vesselId} backHref={`/vessels/${vesselId}`} />
         </div>
       </div>
     </div>

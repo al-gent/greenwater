@@ -29,17 +29,18 @@ export const getAllVessels = unstable_cache(
   async (): Promise<Vessel[]> => {
     const [{ data, error }, { data: ports }] = await Promise.all([
       supabase.from('vessels').select(LISTING_COLUMNS).order('id'),
-      supabase.from('vessel_last_port').select('vessel_id, port_name, port_flag, lat, lon, arrived_at'),
+      supabase.from('vessel_last_port').select('vessel_id, port_city, port_state, port_country, lat, lon, arrived_at'),
     ])
     if (error) throw error
-    const portMap = new Map<number, { port_name: string | null; port_flag: string | null; lat: number | null; lon: number | null; arrived_at: string | null }>()
+    const portMap = new Map<number, { port_city: string | null; port_state: string | null; port_country: string | null; lat: number | null; lon: number | null; arrived_at: string | null }>()
     for (const p of ports ?? []) {
-      portMap.set(p.vessel_id, { port_name: p.port_name, port_flag: p.port_flag, lat: p.lat, lon: p.lon, arrived_at: p.arrived_at })
+      portMap.set(p.vessel_id, { port_city: p.port_city, port_state: p.port_state, port_country: p.port_country, lat: p.lat, lon: p.lon, arrived_at: p.arrived_at })
     }
     return (data as unknown as Vessel[]).map((v) => ({
       ...v,
-      last_port_name: portMap.get(v.id)?.port_name ?? null,
-      last_port_flag: portMap.get(v.id)?.port_flag ?? null,
+      last_port_city: portMap.get(v.id)?.port_city ?? null,
+      last_port_state: portMap.get(v.id)?.port_state ?? null,
+      last_port_country: portMap.get(v.id)?.port_country ?? null,
       last_port_lat: portMap.get(v.id)?.lat ?? null,
       last_port_lon: portMap.get(v.id)?.lon ?? null,
       last_port_date: portMap.get(v.id)?.arrived_at ?? null,

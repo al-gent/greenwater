@@ -42,6 +42,27 @@ export async function PATCH(request: Request) {
     if (!denied.has(key)) safeUpdates[key] = value
   }
 
+  // Auto-geocode if location fields changed
+  const locationChanged = ['port_city', 'port_state', 'country'].some((f) => f in safeUpdates)
+  if (locationChanged) {
+    const parts = [safeUpdates.port_city, safeUpdates.port_state, safeUpdates.country].filter(Boolean)
+    if (parts.length > 0) {
+      try {
+        const q = encodeURIComponent((parts as string[]).join(', '))
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+          headers: { 'User-Agent': 'Greenwater Foundation vessel database (contact@greenwater.org)' },
+        })
+        const geo = await res.json()
+        if (geo[0]) {
+          safeUpdates.primary_latitude = geo[0].lat
+          safeUpdates.primary_longitude = geo[0].lon
+        }
+      } catch {
+        // Non-fatal — proceed without geocoding
+      }
+    }
+  }
+
   const { error } = await supabaseAdmin
     .from('vessels')
     .update(safeUpdates)

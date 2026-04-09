@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase-browser'
 
 type EditableVessel = Omit<Vessel,
   'id' | 'vessel_id_gfw' | 'photo_urls' | 'doc_details' | 'last_updated' |
-  'last_port_name' | 'last_port_flag' | 'last_port_lat' | 'last_port_lon' | 'last_port_date'
+  'last_port_city' | 'last_port_state' | 'last_port_country' | 'last_port_lat' | 'last_port_lon' | 'last_port_date'
 >
 
 type FormState = Record<string, string>

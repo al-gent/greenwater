@@ -17,6 +17,29 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+async function reverseGeocode(lat: number, lon: number): Promise<{ city: string | null; state: string | null; country: string | null } | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Greenwater Foundation vessel database (contact@greenwater.org)',
+        'Accept-Language': 'en',
+      },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const a = data.address
+    if (!a) return null
+    return {
+      city: a.city ?? a.town ?? a.village ?? a.suburb ?? a.municipality ?? a.district ?? a.county ?? null,
+      state: a.state ?? a.region ?? a.province ?? null,
+      country: a.country ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function syncGfw(limit?: number): Promise<SyncResult> {
   const apiKey = process.env.GLOBAL_FISHING_WATCH_API_KEY
   if (!apiKey) throw new Error('GLOBAL_FISHING_WATCH_API_KEY not set')
@@ -57,7 +80,8 @@ export async function syncGfw(limit?: number): Promise<SyncResult> {
 
       const json = await res.json()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const events = (json.entries ?? []).map((e: any) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawEvents = (json.entries ?? []).map((e: any) => ({
         vessel_id: vessel.id,
         port_name: e.port_visit?.endAnchorage?.name ?? null,
         port_flag: e.port_visit?.endAnchorage?.flag ?? null,
@@ -66,6 +90,17 @@ export async function syncGfw(limit?: number): Promise<SyncResult> {
         arrived_at: e.start,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       })).filter((p: any) => p.arrived_at)
+
+      // Reverse geocode each event to get structured location fields
+      const events = []
+      for (const raw of rawEvents) {
+        let geo = null
+        if (raw.lat != null && raw.lon != null) {
+          geo = await reverseGeocode(raw.lat, raw.lon)
+          await sleep(1100)
+        }
+        events.push({ ...raw, port_city: geo?.city ?? null, port_state: geo?.state ?? null, port_country: geo?.country ?? null })
+      }
 
       if (events.length > 0) {
         const { error: upsertError } = await supabaseAdmin

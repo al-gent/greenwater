@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { getVesselById, fmt, stripHtml, toTitleCase, iso3ToFlag, countryNameToFlag } from '@/lib/vessels'
+import { getVesselById, fmt, stripHtml, countryNameToFlag } from '@/lib/vessels'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getServerUser } from '@/lib/supabase-server'
 import RequestButton from '@/components/RequestButton'
 import ClaimButton from '@/components/ClaimButton'
 import VesselPhotoGallery from '@/components/VesselPhotoGallery'
+import VesselDetailSpecs from '@/components/VesselDetailSpecs'
 
 const VesselDetailMap = dynamic(() => import('@/components/VesselDetailMap'), {
   ssr: false,
@@ -39,7 +40,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
 
   const [{ data: claimant }, { data: lastPort }, user] = await Promise.all([
     supabaseAdmin.from('profiles').select('id').eq('vessel_id', id).maybeSingle(),
-    supabaseAdmin.from('vessel_last_port').select('port_name, port_flag, lat, lon, arrived_at').eq('vessel_id', id).maybeSingle(),
+    supabaseAdmin.from('vessel_last_port').select('port_city, port_state, port_country, lat, lon, arrived_at').eq('vessel_id', id).maybeSingle(),
     getServerUser(),
   ])
   const isClaimed = !!claimant
@@ -57,7 +58,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const hasCoords = homeLat !== null && homeLng !== null && !isNaN(homeLat) && !isNaN(homeLng)
   const portCallLat = lastPort?.lat != null ? Number(lastPort.lat) : null
   const portCallLng = lastPort?.lon != null ? Number(lastPort.lon) : null
-  const hasPortCall = portCallLat !== null && portCallLng !== null && !isNaN(portCallLat) && !isNaN(portCallLng)
+  const hasPortCall = !!lastPort?.port_city && portCallLat !== null && portCallLng !== null && !isNaN(portCallLat) && !isNaN(portCallLng)
   const showMap = hasCoords || hasPortCall
 
   const n = (v: number | null | undefined, decimals = 1) =>
@@ -76,7 +77,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
     { label: 'Operating Area', value: vessel.operating_area, icon: <IconGlobe /> },
     {
       label: 'Home Port',
-      value: [vessel.port_city, vessel.port_state, vessel.country].filter(Boolean).join(', ') || null,
+      value: [vessel.port_city, vessel.port_state].filter(Boolean).join(', ') || null,
       icon: <IconAnchor />,
     },
   ].filter((s) => s.value !== null && s.value !== undefined && s.value !== '')
@@ -118,9 +119,9 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             <div>
               <h1 className="text-3xl font-bold text-navy leading-tight">{vessel.name}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                {lastPort?.port_name && (() => {
-                  const flag = iso3ToFlag(lastPort.port_flag) ?? lastPort.port_flag ?? ''
-                  const city = toTitleCase(lastPort.port_name)
+                {lastPort?.port_city && (() => {
+                  const flag = countryNameToFlag(lastPort.port_country) ?? ''
+                  const city = lastPort.port_city
                   const days = lastPort.arrived_at
                     ? Math.floor((Date.now() - new Date(lastPort.arrived_at).getTime()) / 86400000)
                     : null
@@ -135,7 +136,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      {city}{flag ? ` ${flag}` : ''}{age ? <span className="text-gray-400"> · {age}</span> : null}
+                      {[lastPort.port_city, lastPort.port_state, lastPort.port_country].filter(Boolean).join(', ')}{flag ? ` ${flag}` : ''}{age ? <span className="text-gray-400"> · {age}</span> : null}
                     </span>
                   )
                 })()}
@@ -163,17 +164,8 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
               </div>
             )}
 
-            {/* Specs grid — only populated fields */}
-            {specs.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold text-navy mb-3">Specifications</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {specs.map((s) => (
-                    <SpecCard key={s.label} label={s.label} value={s.value} icon={s.icon} />
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Specs */}
+            <VesselDetailSpecs vessel={vessel} />
 
             {/* Documents */}
             {docs.length > 0 && (
@@ -258,10 +250,18 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
                     homeLng={hasCoords ? homeLng : null}
                     portCallLat={hasPortCall ? portCallLat : null}
                     portCallLng={hasPortCall ? portCallLng : null}
-                    portCallName={lastPort?.port_name ? toTitleCase(lastPort.port_name) : null}
+                    portCallName={lastPort?.port_city ?? null}
                     portCallDate={lastPort?.arrived_at ?? null}
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Operating area */}
+            {vessel.operating_area && (
+              <div>
+                <h2 className="text-lg font-semibold text-navy mb-1">Operating Area</h2>
+                <p className="text-gray-600 text-sm">{vessel.operating_area}</p>
               </div>
             )}
           </div>
