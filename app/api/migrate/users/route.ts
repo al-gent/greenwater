@@ -131,11 +131,20 @@ export async function POST(request: NextRequest) {
   }
 
   // Send welcome email
-  await sendEmail({
-    to: body.email,
-    subject: 'Set up your Greenwater Foundation account',
-    html: migrationWelcomeEmail(body.firstName, linkData.properties.action_link),
-  })
+  try {
+    await sendEmail({
+      to: body.email,
+      subject: 'Set up your Greenwater Foundation account',
+      html: migrationWelcomeEmail(body.firstName, linkData.properties.action_link),
+    })
+  } catch (emailError) {
+    const detail = emailError instanceof Error ? emailError.message : String(emailError)
+    await supabaseAdmin
+      .from('user_migrations')
+      .update({ migration_status: 'failed', migration_error: `Email failed: ${detail}` })
+      .eq('id', migrationRow.id)
+    return NextResponse.json({ error: 'Failed to send email.', detail }, { status: 500 })
+  }
 
   // Mark migration complete
   await supabaseAdmin

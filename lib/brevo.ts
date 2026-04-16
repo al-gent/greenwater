@@ -27,6 +27,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
   if (!res.ok) {
     const text = await res.text()
     console.error('Brevo email failed:', res.status, text)
+    throw new Error(`Brevo error ${res.status}: ${text}`)
   }
 }
 
