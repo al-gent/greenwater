@@ -23,16 +23,10 @@ export default function AuthHashHandler() {
     const hashParams = new URLSearchParams(window.location.hash.slice(1))
     const type = hashParams.get('type')
 
-    // Recovery link — redirect to password reset page
+    // Recovery link — redirect immediately to password reset page
     if (type === 'recovery') {
-      const supabase = createClient()
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          subscription.unsubscribe()
-          router.replace('/auth/reset-password')
-        }
-      })
-      return () => subscription.unsubscribe()
+      router.replace('/auth/reset-password')
+      return
     }
 
     const supabase = createClient()
