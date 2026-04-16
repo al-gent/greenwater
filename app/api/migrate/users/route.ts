@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to store user.' }, { status: 500 })
   }
 
-  // Create Supabase auth user
+  // Create Supabase auth user (or look up existing)
+  let supabaseUserId: string
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: body.email,
     email_confirm: true,
@@ -90,12 +91,28 @@ export async function POST(request: NextRequest) {
   })
 
   if (authError) {
-    await supabaseAdmin
-      .from('user_migrations')
-      .update({ migration_status: 'failed', migration_error: authError.message })
-      .eq('id', migrationRow.id)
-    console.error('createUser error:', authError)
-    return NextResponse.json({ error: 'Failed to create auth user.', detail: authError.message }, { status: 500 })
+    if (authError.message.includes('already been registered')) {
+      // User exists — look them up
+      const { data: userList } = await supabaseAdmin.auth.admin.listUsers()
+      const existingUser = userList?.users.find((u) => u.email === body.email)
+      if (!existingUser) {
+        await supabaseAdmin
+          .from('user_migrations')
+          .update({ migration_status: 'failed', migration_error: authError.message })
+          .eq('id', migrationRow.id)
+        return NextResponse.json({ error: 'Failed to create auth user.', detail: authError.message }, { status: 500 })
+      }
+      supabaseUserId = existingUser.id
+    } else {
+      await supabaseAdmin
+        .from('user_migrations')
+        .update({ migration_status: 'failed', migration_error: authError.message })
+        .eq('id', migrationRow.id)
+      console.error('createUser error:', authError)
+      return NextResponse.json({ error: 'Failed to create auth user.', detail: authError.message }, { status: 500 })
+    }
+  } else {
+    supabaseUserId = authData.user.id
   }
 
   // Generate password setup link
@@ -125,7 +142,7 @@ export async function POST(request: NextRequest) {
     .from('user_migrations')
     .update({
       migration_status: 'done',
-      supabase_user_id: authData.user.id,
+      supabase_user_id: supabaseUserId,
       migrated_at: new Date().toISOString(),
     })
     .eq('id', migrationRow.id)
