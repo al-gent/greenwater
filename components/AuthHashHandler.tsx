@@ -20,15 +20,6 @@ export default function AuthHashHandler() {
     // Implicit flow: access_token in hash
     if (!window.location.hash.includes('access_token')) return
 
-    const hashParams = new URLSearchParams(window.location.hash.slice(1))
-    const type = hashParams.get('type')
-
-    // Recovery link — redirect immediately to password reset page
-    if (type === 'recovery') {
-      router.replace('/auth/reset-password')
-      return
-    }
-
     const supabase = createClient()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
