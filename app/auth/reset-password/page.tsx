@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 
@@ -10,18 +10,6 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    const supabase = createClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
-        setReady(true)
-        subscription.unsubscribe()
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,9 +45,6 @@ export default function ResetPasswordPage() {
           <p className="text-gray-500 text-sm">Choose a password to complete your account setup.</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-          {!ready && (
-            <p className="text-sm text-gray-400 text-center mb-4">Setting up your session…</p>
-          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">New password</label>
@@ -86,7 +71,7 @@ export default function ResetPasswordPage() {
             {error && <p className="text-sm text-red-500">{error}</p>}
             <button
               type="submit"
-              disabled={loading || !ready}
+              disabled={loading}
               className="w-full bg-navy text-white py-2.5 rounded-xl text-sm font-medium hover:bg-navy/90 transition-colors disabled:opacity-50"
             >
               {loading ? 'Saving…' : 'Set password'}
