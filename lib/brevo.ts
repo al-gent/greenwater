@@ -132,6 +132,25 @@ export function scientistApprovedEmail(firstName: string, notes?: string) {
   `)
 }
 
+export function migrationWelcomeEmail(firstName: string, setupLink: string) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">Welcome to Greenwater Foundation</h2>
+    <p>Hi ${firstName},</p>
+    <p>
+      Your account has been created on the Greenwater Foundation vessel marketplace.
+      Click the button below to set your password and get started.
+    </p>
+    <p>
+      <a href="${setupLink}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        Set Up Your Account
+      </a>
+    </p>
+    <p style="color: #666; font-size: 14px; margin-top: 24px;">
+      This link expires in 24 hours. If you weren't expecting this email, you can safely ignore it.
+    </p>
+  `)
+}
+
 export function scientistRejectedEmail(firstName: string, notes?: string) {
   return base(`
     <h2 style="color: #1B3A6B; margin-top: 0;">Update on your Greenwater verification</h2>
