@@ -54,9 +54,14 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
+    <>
+    <div className="fixed top-0 left-0 right-0 z-50">
+      <a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="bg-navy py-1 text-center text-xs text-white/80 font-medium tracking-widest uppercase hover:bg-teal hover:text-white transition-colors duration-200 block whitespace-nowrap overflow-hidden">
+        Greenwater Foundation
+      </a>
+    <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="relative flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 flex-shrink-0">
             <div className="relative w-10 h-10">
@@ -77,8 +82,8 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Nav links */}
-          <div className="hidden md:flex items-center gap-8">
+          {/* Nav links — absolutely centered relative to the navbar */}
+          <div className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
             <Link
               href="/"
               className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
@@ -153,5 +158,7 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+    </div>
+    </>
   )
 }

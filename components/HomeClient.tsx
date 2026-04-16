@@ -106,12 +106,19 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
   )
 
   return (
-    <div className="pt-16 bg-white min-h-screen">
+    <div className="pt-[88px] bg-white min-h-screen">
 
       {/* Search bar */}
       <div className="border-b border-gray-100 bg-white py-8 px-4">
-        <SearchBar countries={countries} value={search} onChange={setSearch} />
-        <div className="flex justify-center mt-3">
+        <SearchBar
+          countries={countries}
+          value={search}
+          onChange={setSearch}
+          advancedValue={advanced}
+          onAdvancedChange={setAdvanced}
+          advancedActive={advancedActive}
+        />
+        <div className="sm:flex justify-center mt-3 hidden">
           <button
             onClick={() => setShowAdvanced((v) => !v)}
             className={`flex items-center gap-1.5 text-sm transition-colors ${
@@ -136,11 +143,13 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
           </button>
         </div>
         {showAdvanced && (
-          <AdvancedSearch
-            value={advanced}
-            onChange={setAdvanced}
-            onClear={() => setAdvanced(EMPTY_ADVANCED)}
-          />
+          <div className="hidden sm:block">
+            <AdvancedSearch
+              value={advanced}
+              onChange={setAdvanced}
+              onClear={() => setAdvanced(EMPTY_ADVANCED)}
+            />
+          </div>
         )}
       </div>
 

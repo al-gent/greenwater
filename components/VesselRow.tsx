@@ -82,7 +82,7 @@ export default function VesselRow({ title, subtitle, vessels }: VesselRowProps) 
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {vessels.map((vessel) => (
-          <div key={vessel.id} className="flex-shrink-0" style={{ width: '280px' }}>
+          <div key={vessel.id} className="flex-shrink-0 w-40 sm:w-[280px]">
             <VesselCard vessel={vessel} photoUrl={getPhotoUrl(vessel)} />
           </div>
         ))}

@@ -35,7 +35,7 @@ export default function AdminEditVesselPage() {
 
   if (loading) {
     return (
-      <div className="pt-16 min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="pt-[88px] min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-400">Loading vessel data…</div>
       </div>
     )
@@ -43,14 +43,14 @@ export default function AdminEditVesselPage() {
 
   if (!vessel) {
     return (
-      <div className="pt-16 min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="pt-[88px] min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-400">Vessel not found.</div>
       </div>
     )
   }
 
   return (
-    <div className="pt-16 min-h-screen bg-gray-50">
+    <div className="pt-[88px] min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center gap-3 mb-1">
           <Link href="/admin" className="text-gray-400 hover:text-navy transition-colors">

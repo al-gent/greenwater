@@ -20,7 +20,7 @@ export default async function DashboardPage() {
 
   if (!profile || profile.role !== 'operator' || !profile.vessel_id) {
     return (
-      <div className="pt-16 min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="pt-[88px] min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md px-4">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
   const newCount = roots.filter((m) => m.status === 'new').length
 
   return (
-    <div className="pt-16 min-h-screen bg-gray-50">
+    <div className="pt-[88px] min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

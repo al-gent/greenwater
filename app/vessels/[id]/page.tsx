@@ -83,7 +83,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   ].filter((s) => s.value !== null && s.value !== undefined && s.value !== '')
 
   return (
-    <div className="pt-16 bg-white min-h-screen">
+    <div className="pt-[88px] bg-white min-h-screen">
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-2">
         <nav className="flex items-center justify-between gap-2 text-sm text-gray-400">
