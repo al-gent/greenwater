@@ -117,6 +117,14 @@ export async function POST(request: NextRequest) {
     supabaseUserId = authData.user.id
   }
 
+  // If user has ships, set them as operator linked to the first vessel
+  if (body.shipIds.length > 0) {
+    await supabaseAdmin
+      .from('profiles')
+      .update({ role: 'operator', vessel_id: body.shipIds[0] })
+      .eq('id', supabaseUserId)
+  }
+
   // Generate password setup link
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'recovery',
