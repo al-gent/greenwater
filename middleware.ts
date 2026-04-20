@@ -60,6 +60,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect /profile — must be authenticated
+  if (pathname.startsWith('/profile')) {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/signin'
+      url.searchParams.set('next', pathname)
+      return NextResponse.redirect(url)
+    }
+  }
+
   return supabaseResponse
 }
 

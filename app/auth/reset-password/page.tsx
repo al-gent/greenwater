@@ -53,7 +53,7 @@ export default function ResetPasswordPage() {
       return
     }
 
-    router.replace('/')
+    router.replace('/profile/edit')
   }
 
   return (

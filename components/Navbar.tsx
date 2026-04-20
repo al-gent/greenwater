@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import type { User } from '@supabase/supabase-js'
 
-type Profile = { role: string; vessel_id: number | null; verified?: boolean }
+type Profile = { role: string; vessel_id: number | null; verified?: boolean; first_name?: string | null; last_name?: string | null }
 
 export default function Navbar() {
   const router = useRouter()
@@ -22,7 +22,7 @@ export default function Navbar() {
       if (user) {
         supabase
           .from('profiles')
-          .select('role, vessel_id, verified')
+          .select('role, vessel_id, verified, first_name, last_name')
           .eq('id', user.id)
           .single()
           .then(({ data }) => setProfile(data))
@@ -34,7 +34,7 @@ export default function Navbar() {
       if (session?.user) {
         supabase
           .from('profiles')
-          .select('role, vessel_id, verified')
+          .select('role, vessel_id, verified, first_name, last_name')
           .eq('id', session.user.id)
           .single()
           .then(({ data }) => setProfile(data))
@@ -135,9 +135,17 @@ export default function Navbar() {
                   </Link>
                 )}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 hidden sm:block truncate max-w-[140px]">
-                    {user.email}
-                  </span>
+                  <Link
+                    href="/profile/edit"
+                    title={user.email ?? 'Your profile'}
+                    className="w-8 h-8 rounded-full bg-navy text-white hover:bg-navy/80 transition-colors flex items-center justify-center text-xs font-semibold tracking-wide"
+                  >
+                    {(() => {
+                      const f = (user.user_metadata?.first_name as string)?.[0] ?? ''
+                      const l = (user.user_metadata?.last_name as string)?.[0] ?? ''
+                      return (f + l).toUpperCase() || user.email?.[0].toUpperCase() || '?'
+                    })()}
+                  </Link>
                   <button
                     onClick={handleSignOut}
                     className="text-sm font-medium text-gray-500 hover:text-navy transition-colors border border-gray-200 px-3 py-1.5 rounded-full hover:border-gray-300"
