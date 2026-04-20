@@ -28,7 +28,7 @@ const LISTING_COLUMNS = [
 export const getAllVessels = unstable_cache(
   async (): Promise<Vessel[]> => {
     const [{ data, error }, { data: ports }] = await Promise.all([
-      supabase.from('vessels').select(LISTING_COLUMNS).order('id'),
+      supabase.from('vessels').select(LISTING_COLUMNS).eq('status', 'active').order('id'),
       supabase.from('vessel_last_port').select('vessel_id, port_city, port_state, port_country, lat, lon, arrived_at'),
     ])
     if (error) throw error

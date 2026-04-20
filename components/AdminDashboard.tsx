@@ -64,7 +64,34 @@ interface Scientist {
   created_at: string
 }
 
-type Tab = 'submissions' | 'claims' | 'scientists'
+interface VesselRow {
+  id: number
+  name: string
+  country: string | null
+  port_city: string | null
+  status: 'active' | 'retired' | 'inactive' | 'deleted'
+  year_built: number | null
+  scientists: number | null
+  length: number | null
+  speed_cruise: number | null
+  operator_name: string | null
+}
+
+type VesselStatusFilter = 'all' | 'active' | 'retired' | 'inactive' | 'deleted'
+
+type VesselColKey = 'country' | 'port_city' | 'operator_name' | 'year_built' | 'length' | 'speed_cruise' | 'scientists'
+
+const VESSEL_COLS: { key: VesselColKey; label: string }[] = [
+  { key: 'country', label: 'Country' },
+  { key: 'port_city', label: 'Port' },
+  { key: 'operator_name', label: 'Operator' },
+  { key: 'year_built', label: 'Built' },
+  { key: 'length', label: 'Length (m)' },
+  { key: 'speed_cruise', label: 'Speed (kn)' },
+  { key: 'scientists', label: 'Scientists' },
+]
+
+type Tab = 'submissions' | 'claims' | 'scientists' | 'vessels'
 type Filter = 'all' | 'pending' | 'approved' | 'rejected'
 
 function StatusBadge({ status }: { status: string }) {
@@ -224,9 +251,16 @@ function ScientistActions({ scientist, onUpdate }: {
 export default function AdminDashboard() {
   const [tab, setTab] = useState<Tab>('submissions')
   const [filter, setFilter] = useState<Filter>('pending')
+  const [vesselFilter, setVesselFilter] = useState<VesselStatusFilter>('all')
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [claims, setClaims] = useState<Claim[]>([])
   const [scientists, setScientists] = useState<Scientist[]>([])
+  const [vessels, setVessels] = useState<VesselRow[]>([])
+  const [vesselStatusPending, setVesselStatusPending] = useState<Record<number, boolean>>({})
+  const [vesselSearch, setVesselSearch] = useState('')
+  const [vesselCols, setVesselCols] = useState<Set<VesselColKey>>(new Set(['country', 'port_city', 'year_built']))
+  const [vesselSort, setVesselSort] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'name', dir: 'asc' })
+  const [showColPicker, setShowColPicker] = useState(false)
   const [loading, setLoading] = useState(true)
   const [expandedDesc, setExpandedDesc] = useState<Set<string>>(new Set())
 
@@ -235,13 +269,32 @@ export default function AdminDashboard() {
       fetch('/api/admin/submissions').then((r) => r.json()),
       fetch('/api/admin/claims').then((r) => r.json()),
       fetch('/api/admin/scientists').then((r) => r.json()),
-    ]).then(([subs, cls, sci]) => {
+      fetch('/api/admin/vessels').then((r) => r.json()),
+    ]).then(([subs, cls, sci, vess]) => {
       setSubmissions(Array.isArray(subs) ? subs : [])
       setClaims(Array.isArray(cls) ? cls : [])
       setScientists(Array.isArray(sci) ? sci : [])
+      setVessels(Array.isArray(vess) ? vess : [])
       setLoading(false)
     })
   }, [])
+
+  const updateVesselStatus = async (id: number, status: VesselRow['status']) => {
+    setVesselStatusPending((prev) => ({ ...prev, [id]: true }))
+    try {
+      const res = await fetch('/api/admin/vessels', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      setVessels((prev) => prev.map((v) => v.id === id ? { ...v, status } : v))
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to update status')
+    } finally {
+      setVesselStatusPending((prev) => ({ ...prev, [id]: false }))
+    }
+  }
 
   const toggleDesc = (id: string) =>
     setExpandedDesc((prev) => {
@@ -291,7 +344,7 @@ export default function AdminDashboard() {
 
         {/* Tabs */}
         <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-card mb-4 w-fit">
-          {(['submissions', 'claims', 'scientists'] as Tab[]).map((t) => (
+          {(['submissions', 'claims', 'scientists', 'vessels'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -320,21 +373,40 @@ export default function AdminDashboard() {
         </div>
 
         {/* Filter pills */}
-        <div className="flex items-center gap-2 mb-6">
-          {(['all', 'pending', 'approved', 'rejected'] as Filter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                filter === f
-                  ? 'bg-navy text-white border-navy'
-                  : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
-              }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
+        {tab !== 'vessels' && (
+          <div className="flex items-center gap-2 mb-6">
+            {(['all', 'pending', 'approved', 'rejected'] as Filter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  filter === f
+                    ? 'bg-navy text-white border-navy'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                }`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
+        {tab === 'vessels' && (
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
+            {(['all', 'active', 'retired', 'inactive', 'deleted'] as VesselStatusFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setVesselFilter(f)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  vesselFilter === f
+                    ? 'bg-navy text-white border-navy'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                }`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-16 text-gray-400">Loading…</div>
@@ -510,6 +582,151 @@ export default function AdminDashboard() {
                 </div>
               ))
             )}
+
+            {tab === 'vessels' && (() => {
+              const vesselStatusStyles: Record<string, string> = {
+                active: 'bg-green-50 text-green-700 border-green-200',
+                retired: 'bg-gray-100 text-gray-600 border-gray-300',
+                inactive: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                deleted: 'bg-red-50 text-red-600 border-red-100',
+              }
+
+              const toggleSort = (col: string) =>
+                setVesselSort((s) => s.col === col ? { col, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' })
+
+              const SortIcon = ({ col }: { col: string }) => {
+                if (vesselSort.col !== col) return <span className="ml-1 text-gray-300">↕</span>
+                return <span className="ml-1">{vesselSort.dir === 'asc' ? '↑' : '↓'}</span>
+              }
+
+              const filtered = vessels
+                .filter((v) => vesselFilter === 'all' || v.status === vesselFilter)
+                .filter((v) => !vesselSearch || v.name.toLowerCase().includes(vesselSearch.toLowerCase()))
+                .sort((a, b) => {
+                  const col = vesselSort.col as keyof VesselRow
+                  const av = a[col] ?? ''
+                  const bv = b[col] ?? ''
+                  const cmp = av < bv ? -1 : av > bv ? 1 : 0
+                  return vesselSort.dir === 'asc' ? cmp : -cmp
+                })
+
+              const activeCols = VESSEL_COLS.filter((c) => vesselCols.has(c.key))
+
+              return (
+                <div className="space-y-3">
+                  {/* Search + column picker */}
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      value={vesselSearch}
+                      onChange={(e) => setVesselSearch(e.target.value)}
+                      placeholder="Search vessels…"
+                      className="flex-1 border border-gray-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+                    />
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowColPicker((p) => !p)}
+                        className="flex items-center gap-2 border border-gray-200 rounded-xl px-3.5 py-2 text-sm text-gray-600 hover:border-gray-400 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                        </svg>
+                        Columns
+                      </button>
+                      {showColPicker && (
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-10 min-w-[160px]">
+                          {VESSEL_COLS.map((c) => (
+                            <label key={c.key} className="flex items-center gap-2 py-1 cursor-pointer text-sm text-gray-700 hover:text-navy">
+                              <input
+                                type="checkbox"
+                                checked={vesselCols.has(c.key)}
+                                onChange={() => setVesselCols((prev) => {
+                                  const next = new Set(prev)
+                                  next.has(c.key) ? next.delete(c.key) : next.add(c.key)
+                                  return next
+                                })}
+                                className="rounded"
+                              />
+                              {c.label}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-400">{filtered.length} vessel{filtered.length !== 1 ? 's' : ''}</p>
+
+                  {filtered.length === 0 ? (
+                    <div className="text-center py-16 text-gray-400">No vessels match.</div>
+                  ) : (
+                    <div className="bg-white rounded-2xl shadow-card overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            <th
+                              className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide cursor-pointer hover:text-navy select-none whitespace-nowrap"
+                              onClick={() => toggleSort('name')}
+                            >
+                              Name <SortIcon col="name" />
+                            </th>
+                            {activeCols.map((c) => (
+                              <th
+                                key={c.key}
+                                className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide cursor-pointer hover:text-navy select-none whitespace-nowrap"
+                                onClick={() => toggleSort(c.key)}
+                              >
+                                {c.label} <SortIcon col={c.key} />
+                              </th>
+                            ))}
+                            <th
+                              className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide cursor-pointer hover:text-navy select-none whitespace-nowrap"
+                              onClick={() => toggleSort('status')}
+                            >
+                              Status <SortIcon col="status" />
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filtered.map((v) => (
+                            <tr key={v.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3">
+                                <a
+                                  href={`/admin/vessels/${v.id}/edit`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-navy hover:text-teal transition-colors"
+                                >
+                                  {v.name}
+                                </a>
+                              </td>
+                              {activeCols.map((c) => (
+                                <td key={c.key} className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                                  {v[c.key] ?? '—'}
+                                </td>
+                              ))}
+                              <td className="px-4 py-3">
+                                <select
+                                  value={v.status}
+                                  disabled={!!vesselStatusPending[v.id]}
+                                  onChange={(e) => updateVesselStatus(v.id, e.target.value as VesselRow['status'])}
+                                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border appearance-none cursor-pointer disabled:opacity-50 ${vesselStatusStyles[v.status] ?? ''}`}
+                                >
+                                  <option value="active">active</option>
+                                  <option value="retired">retired</option>
+                                  <option value="inactive">inactive</option>
+                                  <option value="deleted">deleted</option>
+                                </select>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {tab === 'scientists' && (
               filteredScientists.length === 0 ? (

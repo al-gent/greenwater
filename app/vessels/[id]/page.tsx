@@ -37,6 +37,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const id = parseInt(params.id, 10)
   const vessel = await getVesselById(id)
   if (!vessel) notFound()
+  if (vessel.status === 'deleted') notFound()
 
   const [{ data: claimant }, { data: lastPort }, user] = await Promise.all([
     supabaseAdmin.from('profiles').select('id').eq('vessel_id', id).maybeSingle(),
@@ -84,6 +85,22 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="pt-[88px] bg-white min-h-screen">
+      {/* Retired / inactive banner */}
+      {(vessel.status === 'retired' || vessel.status === 'inactive') && (
+        <div className="bg-amber-50 border-b border-amber-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-sm text-amber-800 font-medium">
+              {vessel.status === 'retired'
+                ? 'This vessel has been retired and is no longer in active service.'
+                : 'This vessel is currently inactive.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-2">
         <nav className="flex items-center justify-between gap-2 text-sm text-gray-400">

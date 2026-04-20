@@ -14,6 +14,7 @@ export interface VesselDoc {
 export interface Vessel {
   id: number
   name: string
+  status: string
   country: string | null
   affiliation: string | null
   operator_name: string | null
