@@ -18,6 +18,8 @@ export default function AuthHashHandler() {
     }
 
     // Implicit flow: access_token in hash
+    // Skip on reset-password — that page manages its own session setup
+    if (window.location.pathname === '/auth/reset-password') return
     if (!window.location.hash.includes('access_token')) return
 
     const supabase = createClient()
