@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const DC = 'us7'
-
 export async function POST(req: NextRequest) {
   const { email, fname, lname } = await req.json()
 
@@ -16,8 +14,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Newsletter not configured.' }, { status: 500 })
   }
 
+  const dc = apiKey.split('-').pop()
+
   const res = await fetch(
-    `https://${DC}.api.mailchimp.com/3.0/lists/${audienceId}/members`,
+    `https://${dc}.api.mailchimp.com/3.0/lists/${audienceId}/members`,
     {
       method: 'POST',
       headers: {
@@ -37,9 +37,10 @@ export async function POST(req: NextRequest) {
   }
 
   const data = await res.json()
+  console.error('Mailchimp error:', JSON.stringify(data))
   if (data.title === 'Member Exists') {
     return NextResponse.json({ error: 'You are already subscribed.' }, { status: 400 })
   }
 
-  return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
+  return NextResponse.json({ error: data.detail ?? 'Something went wrong. Please try again.' }, { status: 500 })
 }
