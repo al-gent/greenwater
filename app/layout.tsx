@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Navbar from '@/components/Navbar'
 import AuthHashHandler from '@/components/AuthHashHandler'
+import NewsletterForm from '@/components/NewsletterForm'
 import { Analytics } from '@vercel/analytics/react'
 
 export const metadata: Metadata = {
@@ -35,6 +36,10 @@ export default function RootLayout({
         {/* Footer */}
         <footer className="bg-navy text-white mt-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="mb-8 pb-8 border-b border-white/10 flex flex-col items-center gap-4">
+              <p className="text-sm font-semibold uppercase tracking-wider opacity-60">Stay up to date</p>
+              <NewsletterForm />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div className="md:col-span-2">
                 <a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="font-bold text-xl mb-2 hover:text-gold transition-colors inline-block">Greenwater Foundation</a>
