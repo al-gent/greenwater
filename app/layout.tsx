@@ -64,6 +64,7 @@ export default function RootLayout({
                 <ul className="space-y-2 text-sm opacity-80">
                   <li><a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">About Us</a></li>
                   <li><a href="mailto:info@greenwaterfoundation.org" className="hover:text-gold transition-colors">Contact</a></li>
+                  <li><a href="https://www.paypal.com/donate?hosted_button_id=MA7NA6JPF9PBQ" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">Donate</a></li>
                   <li><a href="/privacy" className="hover:text-gold transition-colors">Privacy Policy</a></li>
                 </ul>
               </div>

@@ -56,14 +56,14 @@ export default function Navbar() {
   return (
     <>
     <div className="fixed top-0 left-0 right-0 z-50">
-      <a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="bg-navy py-1 text-center text-xs text-white/80 font-medium tracking-widest uppercase hover:bg-teal hover:text-white transition-colors duration-200 block whitespace-nowrap overflow-hidden">
-        Greenwater Foundation
-      </a>
+      <div className="bg-navy py-1.5 text-center text-sm text-white font-medium tracking-wide whitespace-nowrap overflow-hidden" onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#2A7B6F')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#1B3A6B')}>
+        VesselConnect
+      </div>
     <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 flex-shrink-0">
+          <a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 flex-shrink-0">
             <div className="relative w-10 h-10">
               <Image
                 src="/logo.jpg"
@@ -72,15 +72,15 @@ export default function Navbar() {
                 className="object-contain"
               />
             </div>
-            <div>
-              <span className="font-bold text-navy text-lg leading-tight block">
-                Vessel
+            <div className="flex flex-col" style={{ lineHeight: 1.15 }}>
+              <span className="font-bold text-navy text-base" style={{ letterSpacing: '-0.01em' }}>
+                Greenwater
               </span>
-              <span className="text-xs text-teal font-medium tracking-wide uppercase leading-tight block -mt-0.5">
-                Connect
+              <span className="font-bold text-teal text-[13px] uppercase" style={{ letterSpacing: '0.1em' }}>
+                Foundation
               </span>
             </div>
-          </Link>
+          </a>
 
           {/* Nav links — absolutely centered relative to the navbar */}
           <div className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
