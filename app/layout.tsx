@@ -4,16 +4,33 @@ import Navbar from '@/components/Navbar'
 import AuthHashHandler from '@/components/AuthHashHandler'
 import NewsletterForm from '@/components/NewsletterForm'
 import { Analytics } from '@vercel/analytics/react'
+import PageViewTracker from '@/components/PageViewTracker'
 
 export const metadata: Metadata = {
-  title: 'Greenwater Foundation — Research Vessel Marketplace',
+  title: 'VesselConnect — Research Vessel Marketplace',
   description:
     'Connect marine scientists with research vessels worldwide. Find and book research ships for oceanographic expeditions.',
   keywords: 'research vessels, marine science, oceanography, ship charter, scientific research',
   openGraph: {
-    title: 'Greenwater Foundation',
+    title: 'VesselConnect by Greenwater Foundation',
     description: 'Connecting marine scientists with research vessels worldwide.',
     type: 'website',
+    url: 'https://vessels.greenwaterfoundation.org',
+    siteName: 'VesselConnect',
+    images: [
+      {
+        url: 'https://greenwaterfoundation.org/images/IMG_8300.jpeg',
+        width: 1536,
+        height: 800,
+        alt: 'VesselConnect by Greenwater Foundation',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'VesselConnect by Greenwater Foundation',
+    description: 'Connecting marine scientists with research vessels worldwide.',
+    images: ['https://greenwaterfoundation.org/images/IMG_8300.jpeg'],
   },
 }
 
@@ -30,6 +47,7 @@ export default function RootLayout({
       </head>
       <body>
         <AuthHashHandler />
+        <PageViewTracker />
         <Navbar />
         <main className="min-h-screen">{children}</main>
 

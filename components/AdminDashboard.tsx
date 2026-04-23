@@ -91,8 +91,27 @@ const VESSEL_COLS: { key: VesselColKey; label: string }[] = [
   { key: 'scientists', label: 'Scientists' },
 ]
 
-type Tab = 'submissions' | 'claims' | 'scientists' | 'vessels'
+type Tab = 'submissions' | 'claims' | 'scientists' | 'vessels' | 'analytics'
 type Filter = 'all' | 'pending' | 'approved' | 'rejected'
+
+interface AnalyticsData {
+  totals: {
+    today: number
+    last7d: number
+    last30d: number
+    todayBySite: { app: number; cms: number }
+    last7dBySite: { app: number; cms: number }
+    last30dBySite: { app: number; cms: number }
+    uniqueToday: number
+    uniqueLast7d: number
+    uniqueLast30d: number
+  }
+  topPages: { app: Array<{ path: string; views: number }>; cms: Array<{ path: string; views: number }> }
+  daily: Array<{ date: string; app: number; cms: number; unique: number }>
+  countries: Array<{ label: string; views: number }>
+  os: Array<{ label: string; views: number }>
+  referrers: Array<{ label: string; views: number }>
+}
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -263,6 +282,9 @@ export default function AdminDashboard() {
   const [showColPicker, setShowColPicker] = useState(false)
   const [loading, setLoading] = useState(true)
   const [expandedDesc, setExpandedDesc] = useState<Set<string>>(new Set())
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -278,6 +300,22 @@ export default function AdminDashboard() {
       setLoading(false)
     })
   }, [])
+
+  useEffect(() => {
+    if (tab !== 'analytics' || analytics !== null || analyticsLoading || analyticsError) return
+    setAnalyticsLoading(true)
+    fetch('/api/admin/analytics')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.totals) {
+          setAnalytics(data)
+        } else {
+          setAnalyticsError(data?.error ?? 'Failed to load analytics')
+        }
+        setAnalyticsLoading(false)
+      })
+      .catch(() => { setAnalyticsError('Failed to load analytics'); setAnalyticsLoading(false) })
+  }, [tab, analytics, analyticsLoading, analyticsError])
 
   const updateVesselStatus = async (id: number, status: VesselRow['status']) => {
     setVesselStatusPending((prev) => ({ ...prev, [id]: true }))
@@ -344,7 +382,7 @@ export default function AdminDashboard() {
 
         {/* Tabs */}
         <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-card mb-4 w-fit">
-          {(['submissions', 'claims', 'scientists', 'vessels'] as Tab[]).map((t) => (
+          {(['submissions', 'claims', 'scientists', 'vessels', 'analytics'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -373,7 +411,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Filter pills */}
-        {tab !== 'vessels' && (
+        {tab !== 'vessels' && tab !== 'analytics' && (
           <div className="flex items-center gap-2 mb-6">
             {(['all', 'pending', 'approved', 'rejected'] as Filter[]).map((f) => (
               <button
@@ -727,6 +765,137 @@ export default function AdminDashboard() {
                 </div>
               )
             })()}
+
+            {tab === 'analytics' && (
+              analyticsLoading ? (
+                <div className="text-center py-16 text-gray-400">Loading analytics…</div>
+              ) : analyticsError ? (
+                <div className="text-center py-16 text-gray-400">
+                  <p className="font-medium text-red-400 mb-1">Failed to load analytics</p>
+                  <p className="text-xs font-mono">{analyticsError}</p>
+                  {analyticsError.includes('page_views') && (
+                    <p className="text-xs mt-3">Run the SQL migration in the Supabase dashboard first.</p>
+                  )}
+                </div>
+              ) : !analytics ? (
+                <div className="text-center py-16 text-gray-400">Loading analytics…</div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {[
+                      { label: 'Today', views: analytics.totals.today, unique: analytics.totals.uniqueToday, sub: `${analytics.totals.todayBySite.app} app · ${analytics.totals.todayBySite.cms} site` },
+                      { label: 'Last 7 days', views: analytics.totals.last7d, unique: analytics.totals.uniqueLast7d, sub: `${analytics.totals.last7dBySite.app} app · ${analytics.totals.last7dBySite.cms} site` },
+                      { label: 'Last 30 days', views: analytics.totals.last30d, unique: analytics.totals.uniqueLast30d, sub: `${analytics.totals.last30dBySite.app} app · ${analytics.totals.last30dBySite.cms} site` },
+                    ].map(card => (
+                      <div key={card.label} className="bg-white rounded-2xl shadow-card p-5">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{card.label}</p>
+                        <p className="text-3xl font-bold text-navy">{card.views.toLocaleString()}</p>
+                        <p className="text-xs text-gold font-medium mt-0.5">{card.unique.toLocaleString()} unique</p>
+                        <p className="text-xs text-gray-400 mt-1">{card.sub}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 30-day bar chart */}
+                  <div className="bg-white rounded-2xl shadow-card p-5">
+                    <h3 className="text-sm font-semibold text-navy mb-4">Daily views — last 30 days</h3>
+                    {(() => {
+                      const maxVal = Math.max(...analytics.daily.map(d => d.app + d.cms), 1)
+                      return (
+                        <div className="flex items-end gap-[3px] overflow-x-auto pb-1" style={{ height: '96px' }}>
+                          {analytics.daily.map((d, i) => {
+                            const total = d.app + d.cms
+                            const appH = Math.round((d.app / maxVal) * 80)
+                            const cmsH = Math.round((d.cms / maxVal) * 80)
+                            const showLabel = i % 5 === 0
+                            return (
+                              <div
+                                key={d.date}
+                                className="flex flex-col items-center gap-1 flex-1 min-w-[12px]"
+                                title={`${d.date}: ${total} views (${d.app} app, ${d.cms} cms)`}
+                              >
+                                <div className="w-full flex flex-col justify-end" style={{ height: '80px' }}>
+                                  <div className="w-full bg-navy rounded-t-sm" style={{ height: `${appH}px` }} />
+                                  <div className="w-full bg-teal/40 rounded-b-sm" style={{ height: `${cmsH}px` }} />
+                                </div>
+                                {showLabel && (
+                                  <span className="text-[9px] text-gray-300 whitespace-nowrap">{d.date.slice(5)}</span>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
+                    <div className="flex items-center gap-4 mt-3">
+                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="inline-block w-3 h-3 rounded-sm bg-navy" /> App
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="inline-block w-3 h-3 rounded-sm bg-teal/40" /> Site
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Top pages tables */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {([['app', 'App'], ['cms', 'Site']] as const).map(([key, label]) => (
+                      <div key={key} className="bg-white rounded-2xl shadow-card p-5">
+                        <h3 className="text-sm font-semibold text-navy mb-3">Top pages — {label} (30d)</h3>
+                        {analytics.topPages[key].length === 0 ? (
+                          <p className="text-xs text-gray-400">No data yet.</p>
+                        ) : (
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-100">
+                                <th className="text-left py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Path</th>
+                                <th className="text-right py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Views</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {analytics.topPages[key].map(page => (
+                                <tr key={page.path} className="border-b border-gray-50 last:border-0">
+                                  <td className="py-1.5 text-gray-600 font-mono text-xs truncate max-w-[180px]">{page.path}</td>
+                                  <td className="py-1.5 text-right font-semibold text-navy">{page.views}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Countries, OS, Referrers */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {([
+                      { title: 'Countries', data: analytics.countries },
+                      { title: 'Operating systems', data: analytics.os },
+                      { title: 'Referrers', data: analytics.referrers },
+                    ]).map(({ title, data }) => (
+                      <div key={title} className="bg-white rounded-2xl shadow-card p-5">
+                        <h3 className="text-sm font-semibold text-navy mb-3">{title} (30d)</h3>
+                        {data.length === 0 ? (
+                          <p className="text-xs text-gray-400">No data yet.</p>
+                        ) : (
+                          <table className="w-full text-sm">
+                            <tbody>
+                              {data.map(row => (
+                                <tr key={row.label} className="border-b border-gray-50 last:border-0">
+                                  <td className="py-1.5 text-gray-600 text-xs truncate max-w-[140px]">{row.label}</td>
+                                  <td className="py-1.5 text-right font-semibold text-navy text-xs">{row.views}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
 
             {tab === 'scientists' && (
               filteredScientists.length === 0 ? (
