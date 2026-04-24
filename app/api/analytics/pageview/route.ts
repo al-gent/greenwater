@@ -10,6 +10,8 @@ function dailyVisitorHash(ip: string | null, ua: string | null): string {
     .slice(0, 16)
 }
 
+const BOT_PATTERN = /bot|crawl|spider|slurp|scraper|curl|wget|python|java|ruby|perl|php|go-http|headlesschrome|phantomjs|selenium|puppeteer|playwright/i
+
 export async function POST(request: NextRequest) {
   let body: { path?: string; referrer?: string | null; user_agent?: string | null }
   try {
@@ -21,6 +23,10 @@ export async function POST(request: NextRequest) {
   const { path, referrer, user_agent } = body
   if (!path || typeof path !== 'string') {
     return NextResponse.json({ error: 'path required' }, { status: 400 })
+  }
+
+  if (!user_agent || BOT_PATTERN.test(user_agent)) {
+    return NextResponse.json({ ok: true })
   }
 
   const country = request.headers.get('x-vercel-ip-country') || null
