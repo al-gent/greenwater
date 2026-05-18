@@ -8,6 +8,7 @@ import RequestButton from '@/components/RequestButton'
 import ClaimButton from '@/components/ClaimButton'
 import VesselPhotoGallery from '@/components/VesselPhotoGallery'
 import VesselDetailSpecs from '@/components/VesselDetailSpecs'
+import SignupNudge from '@/components/SignupNudge'
 
 const VesselDetailMap = dynamic(() => import('@/components/VesselDetailMap'), {
   ssr: false,
@@ -85,6 +86,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="pt-[88px] bg-white min-h-screen">
+      <SignupNudge vesselId={id} isAuthenticated={!!user} />
       {/* Retired / inactive banner */}
       {(vessel.status === 'retired' || vessel.status === 'inactive') && (
         <div className="bg-amber-50 border-b border-amber-200">
