@@ -18,6 +18,7 @@ const LISTING_COLUMNS = [
   'photo_urls',
   'scientists', 'main_activity', 'length', 'speed_cruise', 'year_built',
   'primary_latitude', 'primary_longitude',
+  'endurance',
   // Advanced search feature filters
   'ice_breaking', 'area_wetlab', 'area_drylab',
   'ctd_cap', 'aquis_multibeam',

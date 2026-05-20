@@ -72,10 +72,6 @@ export default function ListPage() {
     setError(null)
 
     // Client-side validation
-    if (!form.mmsi && !form.imo_number) {
-      setValidationError('Please provide at least one of: MMSI or IMO Number.')
-      return
-    }
     if (form.mmsi && !/^\d{9}$/.test(form.mmsi.trim())) {
       setValidationError('MMSI must be exactly 9 digits.')
       return
@@ -357,11 +353,10 @@ export default function ListPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Port City <span className="text-red-400">*</span>
+                        Home Port
                       </label>
                       <input
                         type="text"
-                        required
                         value={form.port_city}
                         onChange={(e) => setForm({ ...form, port_city: e.target.value })}
                         placeholder="e.g. Boston, Woods Hole, Hamburg"
@@ -430,7 +425,7 @@ export default function ListPage() {
                         />
                       </div>
                     </div>
-                    <p className="text-xs text-gray-400 -mt-1">At least one of MMSI or IMO Number is required.</p>
+                    <p className="text-xs text-gray-400 -mt-1">Optional — provide if available. Used for automatic position tracking.</p>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Call Sign</label>
                       <input
@@ -453,11 +448,10 @@ export default function ListPage() {
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                          Length (m) <span className="text-red-400">*</span>
+                          Length (m)
                         </label>
                         <input
                           type="number"
-                          required
                           min="0"
                           step="0.1"
                           value={form.length_m}
@@ -497,7 +491,6 @@ export default function ListPage() {
                         <input
                           type="number"
                           min="1900"
-                          max={new Date().getFullYear()}
                           value={form.year_built}
                           onChange={(e) => setForm({ ...form, year_built: e.target.value })}
                           placeholder="1998"
@@ -509,7 +502,6 @@ export default function ListPage() {
                         <input
                           type="number"
                           min="1900"
-                          max={new Date().getFullYear()}
                           value={form.year_refit}
                           onChange={(e) => setForm({ ...form, year_refit: e.target.value })}
                           placeholder="2019"
@@ -555,15 +547,14 @@ export default function ListPage() {
                     <div className="grid grid-cols-2 gap-5">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                          Research Bunks <span className="text-red-400">*</span>
+                          Research Bunks
                         </label>
                         <input
                           type="number"
-                          required
-                          min="1"
+                          min="0"
                           value={form.scientists}
                           onChange={(e) => setForm({ ...form, scientists: e.target.value })}
-                          placeholder="24"
+                          placeholder="24 (or 0 for day trips)"
                           className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
                         />
                       </div>
@@ -571,7 +562,7 @@ export default function ListPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Crew</label>
                         <input
                           type="number"
-                          min="1"
+                          min="0"
                           value={form.crew}
                           onChange={(e) => setForm({ ...form, crew: e.target.value })}
                           placeholder="18"

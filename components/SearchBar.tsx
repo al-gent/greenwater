@@ -156,7 +156,7 @@ export default function SearchBar({ countries, value, onChange, advancedValue, o
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Expedition length</p>
                   <input
                     autoFocus
-                    type="month"
+                    type="number"
                     value={value.when}
                     onChange={(e) => onChange({ ...value, when: e.target.value })}
                     className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none"
@@ -351,11 +351,14 @@ export default function SearchBar({ countries, value, onChange, advancedValue, o
         {/* WHEN dropdown */}
         {activePanel === 'when' && (
           <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 z-50">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Expedition length</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Expedition length (days)</p>
             <input
-              type="month"
+              type="number"
+              min={1}
+              inputMode="numeric"
               value={value.when}
               onChange={(e) => onChange({ ...value, when: e.target.value })}
+              placeholder="e.g. 14"
               className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
             />
             {value.when && (
@@ -363,7 +366,7 @@ export default function SearchBar({ countries, value, onChange, advancedValue, o
                 onClick={() => { onChange({ ...value, when: '' }); setActivePanel(null) }}
                 className="mt-2 text-xs text-gray-400 hover:text-gray-600 w-full text-center"
               >
-                Clear dates
+                Clear
               </button>
             )}
           </div>

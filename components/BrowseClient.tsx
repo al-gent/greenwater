@@ -7,7 +7,6 @@ import { getPhotoUrl, toThumbnailUrl } from '@/lib/vessel-utils'
 import SearchBar, { type SearchState } from './SearchBar'
 import AdvancedSearch, { type AdvancedFilters, EMPTY_ADVANCED } from './AdvancedSearch'
 import VesselCard from './VesselCard'
-import VesselRow from './VesselRow'
 
 const HomeMap = dynamic(() => import('./HomeMap'), {
   ssr: false,
@@ -57,64 +56,55 @@ function applySearch(vessels: Vessel[], search: SearchState, advanced: AdvancedF
   })
 }
 
-// Group vessels by country, return rows with ≥ 3 vessels, sorted by size desc
-function groupByCountry(vessels: Vessel[]): Array<{ country: string; vessels: Vessel[] }> {
-  const map = new Map<string, Vessel[]>()
-  for (const v of vessels) {
-    const c = v.country ?? 'Other'
-    if (!map.has(c)) map.set(c, [])
-    map.get(c)!.push(v)
-  }
-  return Array.from(map.entries())
-    .filter(([, vs]) => vs.length >= 3)
-    .sort((a, b) => b[1].length - a[1].length)
-    .map(([country, vs]) => ({ country, vessels: vs }))
-}
-
-const COUNTRY_SUBTITLES: Record<string, string> = {
-  USA: 'American research fleet',
-  UK: 'British research vessels',
-  Norway: 'Nordic ocean science',
-  Australia: 'Southern hemisphere fleet',
-  Germany: 'German research fleet',
-  France: 'French oceanographic vessels',
-  Canada: 'Canadian research fleet',
-  Russia: 'Russian oceanographic ships',
-  Netherlands: 'Dutch research vessels',
-  Spain: 'Spanish marine research',
-  Sweden: 'Swedish research fleet',
-  Denmark: 'Danish oceanographic vessels',
-  Italy: 'Italian research fleet',
-}
-
-interface HomeClientProps {
+interface BrowseClientProps {
   vessels: Vessel[]
   countries: string[]
-  activities: string[]
+  initialCountry?: string
 }
 
-export default function HomeClient({ vessels, countries }: HomeClientProps) {
-  const [search, setSearch] = useState<SearchState>({ where: '', when: '', bunks: 0 })
+export default function BrowseClient({ vessels, countries, initialCountry = '' }: BrowseClientProps) {
+  const [search, setSearch] = useState<SearchState>({ where: initialCountry, when: '', bunks: 0 })
   const [advanced, setAdvanced] = useState<AdvancedFilters>(EMPTY_ADVANCED)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showMap, setShowMap] = useState(false)
 
   const advancedActive = !!(advanced.name || advanced.minBerths > 0 || advanced.iceBreaking || advanced.features.length > 0)
-  const hasSearch = !!(search.where || search.when || search.bunks > 0 || advancedActive)
+  const hasFilters = !!(search.where || search.when || search.bunks > 0 || advancedActive)
 
-  const withPhotos = useMemo(() => vessels.filter((v) => v.photo_urls?.length), [vessels])
   const filtered = useMemo(() => applySearch(vessels, search, advanced), [vessels, search, advanced])
-  const rows = useMemo(() => groupByCountry(withPhotos), [withPhotos])
+
+  // Vessels with photos sort to the top so the grid looks good above the fold.
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const aHas = (a.photo_urls?.length ?? 0) > 0 ? 1 : 0
+      const bHas = (b.photo_urls?.length ?? 0) > 0 ? 1 : 0
+      if (aHas !== bHas) return bHas - aHas
+      return a.name.localeCompare(b.name)
+    })
+  }, [filtered])
+
   const mapVessels = useMemo(
-    () => (hasSearch ? filtered : vessels).map((v) => ({ ...v, photoUrl: toThumbnailUrl(getPhotoUrl(v), 400, 75) })),
-    [hasSearch, filtered, vessels]
+    () => filtered.map((v) => ({ ...v, photoUrl: toThumbnailUrl(getPhotoUrl(v), 400, 75) })),
+    [filtered]
   )
+
+  const heading = search.where
+    ? `Research vessels from ${search.where}`
+    : 'Browse all research vessels'
 
   return (
     <div className="pt-[88px] bg-white min-h-screen">
 
+      {/* Page heading */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-navy">{heading}</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          <span className="font-semibold text-navy">{filtered.length}</span> of {vessels.length} vessels shown
+        </p>
+      </div>
+
       {/* Search bar */}
-      <div className="border-b border-gray-100 bg-white py-8 px-4">
+      <div className="bg-white pt-6 pb-8 px-4">
         <SearchBar
           countries={countries}
           value={search}
@@ -157,6 +147,14 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
             </svg>
             {showMap ? 'Hide map' : 'Show map'}
           </button>
+          {hasFilters && (
+            <button
+              onClick={() => { setSearch({ where: '', when: '', bunks: 0 }); setAdvanced(EMPTY_ADVANCED) }}
+              className="text-sm text-gray-500 hover:text-navy underline transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
         {showAdvanced && (
           <div className="hidden sm:block">
@@ -176,66 +174,32 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
         </div>
       )}
 
-      {/* Result count + clear */}
-      {hasSearch && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 flex items-center justify-between">
-          <p className="text-sm text-gray-400">
-            <span className="font-semibold text-navy">{filtered.length}</span> vessel{filtered.length !== 1 ? 's' : ''} found
-            {search.bunks > 0 && ` · ${search.bunks}+ research bunks`}
-            {search.when && ` · ${search.when}+ days endurance`}
-          </p>
-          <button
-            onClick={() => { setSearch({ where: '', when: '', bunks: 0 }); setAdvanced(EMPTY_ADVANCED) }}
-            className="text-sm text-gray-500 hover:text-navy underline"
-          >
-            Clear
-          </button>
-        </div>
-      )}
-
-      {/* ── Search results (flat grid) ── */}
-      {hasSearch && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-navy mb-1">No vessels found</h3>
-              <p className="text-sm text-gray-400 mb-4">Try a different location or fewer bunks.</p>
-              <button
-                onClick={() => { setSearch({ where: '', when: '', bunks: 0 }); setAdvanced(EMPTY_ADVANCED) }}
-                className="bg-navy text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors"
-              >
-                Clear search
-              </button>
+      {/* Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {sorted.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filtered.map((v) => (
-                <VesselCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Default: rows by country ── */}
-      {!hasSearch && (
-        <div className="py-6">
-          {rows.slice(0, 5).map(({ country, vessels: rowVessels }) => (
-            <VesselRow
-              key={country}
-              title={`Research vessels from ${country}`}
-              subtitle={COUNTRY_SUBTITLES[country]}
-              vessels={rowVessels}
-              href={`/vessels?country=${encodeURIComponent(country)}`}
-            />
-          ))}
-        </div>
-      )}
+            <h3 className="font-semibold text-navy mb-1">No vessels match those filters</h3>
+            <p className="text-sm text-gray-400 mb-4">Try a different country or fewer bunks.</p>
+            <button
+              onClick={() => { setSearch({ where: '', when: '', bunks: 0 }); setAdvanced(EMPTY_ADVANCED) }}
+              className="bg-navy text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors"
+            >
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {sorted.map((v) => (
+              <VesselCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

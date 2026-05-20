@@ -38,7 +38,7 @@ create table vessel_submissions (
   vessel_name    text        not null,
   operator_name  text        not null,
   email          text        not null,
-  port_city      text        not null,
+  port_city      text,
   port_state     text,
   -- Identification
   country        text,

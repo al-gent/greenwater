@@ -10,9 +10,10 @@ interface VesselRowProps {
   title: string
   subtitle?: string
   vessels: Vessel[]
+  href?: string
 }
 
-export default function VesselRow({ title, subtitle, vessels }: VesselRowProps) {
+export default function VesselRow({ title, subtitle, vessels, href }: VesselRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canLeft, setCanLeft] = useState(false)
   const [canRight, setCanRight] = useState(true)
@@ -43,12 +44,26 @@ export default function VesselRow({ title, subtitle, vessels }: VesselRowProps) 
       {/* Row header */}
       <div className="flex items-start justify-between mb-4 px-4 sm:px-6 lg:px-8">
         <div>
-          <h2 className="text-xl font-semibold text-navy flex items-center gap-2">
-            {title}
-            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </h2>
+          {href ? (
+            <Link href={href} className="group inline-flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-navy group-hover:text-teal transition-colors">
+                {title}
+              </h2>
+              <svg
+                className="w-5 h-5 text-gray-400 group-hover:text-teal group-hover:translate-x-1 transition-all"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          ) : (
+            <h2 className="text-xl font-semibold text-navy flex items-center gap-2">
+              {title}
+              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </h2>
+          )}
           {subtitle && <p className="text-sm text-gray-400 mt-0.5">{subtitle}</p>}
         </div>
 
