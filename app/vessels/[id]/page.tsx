@@ -107,7 +107,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-2">
         <nav className="flex items-center justify-between gap-2 text-sm text-gray-400">
           <div className="flex items-center gap-2">
-            <Link href="/" className="hover:text-navy transition-colors">Find a Vessel</Link>
+            <Link href="/vessels" className="hover:text-navy transition-colors">Browse All</Link>
             <span>/</span>
             <span className="text-gray-600 truncate max-w-xs">{vessel.name}</span>
           </div>
