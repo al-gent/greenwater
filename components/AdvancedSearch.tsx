@@ -3,6 +3,8 @@
 export interface AdvancedFilters {
   name: string
   minBerths: number
+  minLength: number
+  maxLength: number
   iceBreaking: boolean
   features: string[]
 }
@@ -10,6 +12,8 @@ export interface AdvancedFilters {
 export const EMPTY_ADVANCED: AdvancedFilters = {
   name: '',
   minBerths: 0,
+  minLength: 0,
+  maxLength: 0,
   iceBreaking: false,
   features: [],
 }
@@ -43,6 +47,8 @@ export default function AdvancedSearch({ value, onChange, onClear }: Props) {
   const isActive =
     !!value.name ||
     value.minBerths > 0 ||
+    value.minLength > 0 ||
+    value.maxLength > 0 ||
     value.iceBreaking ||
     value.features.length > 0
 
@@ -50,7 +56,6 @@ export default function AdvancedSearch({ value, onChange, onClear }: Props) {
     <div className="w-full max-w-3xl mx-auto mt-3 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
       <div className="p-5 space-y-5">
 
-        {/* Row 1: Name */}
         <div>
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
             Vessel name
@@ -64,7 +69,6 @@ export default function AdvancedSearch({ value, onChange, onClear }: Props) {
           />
         </div>
 
-        {/* Row 2: Berths + Ice breaking */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
@@ -92,28 +96,54 @@ export default function AdvancedSearch({ value, onChange, onClear }: Props) {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-              Ice capability
+              Length (m)
             </label>
-            <button
-              onClick={() => onChange({ ...value, iceBreaking: !value.iceBreaking })}
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
-                value.iceBreaking
-                  ? 'border-teal bg-teal/5 text-teal'
-                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              <span>🧊</span>
-              Ice breaking / ice class
-              {value.iceBreaking && (
-                <svg className="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={value.minLength || ''}
+                onChange={(e) => onChange({ ...value, minLength: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                placeholder="Min"
+                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+              />
+              <span className="text-gray-400">–</span>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={value.maxLength || ''}
+                onChange={(e) => onChange({ ...value, maxLength: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                placeholder="Max"
+                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Row 3: Onboard features */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+            Ice capability
+          </label>
+          <button
+            onClick={() => onChange({ ...value, iceBreaking: !value.iceBreaking })}
+            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+              value.iceBreaking
+                ? 'border-teal bg-teal/5 text-teal'
+                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <span>🧊</span>
+            Ice breaking / ice class
+            {value.iceBreaking && (
+              <svg className="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        </div>
+
         <div>
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
             Onboard features

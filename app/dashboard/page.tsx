@@ -35,7 +35,7 @@ export default async function DashboardPage() {
             <Link href="/" className="bg-navy text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors">
               Browse Vessels
             </Link>
-            <Link href="/list" className="border border-gray-200 text-gray-600 px-5 py-2.5 rounded-full text-sm font-medium hover:border-gray-300 transition-colors">
+            <Link href="/list-your-vessel" className="border border-gray-200 text-gray-600 px-5 py-2.5 rounded-full text-sm font-medium hover:border-gray-300 transition-colors">
               List a Vessel
             </Link>
           </div>

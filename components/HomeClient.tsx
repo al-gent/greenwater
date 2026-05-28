@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import type { Vessel } from '@/lib/vessel-utils'
 import { getPhotoUrl, toThumbnailUrl } from '@/lib/vessel-utils'
@@ -46,6 +47,8 @@ function applySearch(vessels: Vessel[], search: SearchState, advanced: AdvancedF
     }
     if (advanced.name && !v.name.toLowerCase().includes(advanced.name.toLowerCase())) return false
     if (advanced.minBerths > 0 && (!v.scientists || v.scientists < advanced.minBerths)) return false
+    if (advanced.minLength > 0 && (!v.length || v.length < advanced.minLength)) return false
+    if (advanced.maxLength > 0 && (!v.length || v.length > advanced.maxLength)) return false
     if (advanced.iceBreaking) {
       const ice = (v.ice_breaking ?? '').trim().toLowerCase()
       if (!ice || ICE_NO_VALUES.has(ice)) return false
@@ -93,13 +96,63 @@ interface HomeClientProps {
   activities: string[]
 }
 
+function parseSearchFromParams(p: URLSearchParams): SearchState {
+  return {
+    where: p.get('where') ?? '',
+    when: p.get('when') ?? '',
+    bunks: parseInt(p.get('bunks') ?? '0', 10) || 0,
+  }
+}
+
+function parseAdvancedFromParams(p: URLSearchParams): AdvancedFilters {
+  const features = p.get('features')
+  return {
+    name: p.get('name') ?? '',
+    minBerths: parseInt(p.get('minBerths') ?? '0', 10) || 0,
+    minLength: parseInt(p.get('minLength') ?? '0', 10) || 0,
+    maxLength: parseInt(p.get('maxLength') ?? '0', 10) || 0,
+    iceBreaking: p.get('ice') === '1',
+    features: features ? features.split(',').filter(Boolean) : [],
+  }
+}
+
+function buildQueryString(search: SearchState, advanced: AdvancedFilters): string {
+  const p = new URLSearchParams()
+  if (search.where) p.set('where', search.where)
+  if (search.when) p.set('when', search.when)
+  if (search.bunks > 0) p.set('bunks', String(search.bunks))
+  if (advanced.name) p.set('name', advanced.name)
+  if (advanced.minBerths > 0) p.set('minBerths', String(advanced.minBerths))
+  if (advanced.minLength > 0) p.set('minLength', String(advanced.minLength))
+  if (advanced.maxLength > 0) p.set('maxLength', String(advanced.maxLength))
+  if (advanced.iceBreaking) p.set('ice', '1')
+  if (advanced.features.length > 0) p.set('features', advanced.features.join(','))
+  return p.toString()
+}
+
 export default function HomeClient({ vessels, countries }: HomeClientProps) {
-  const [search, setSearch] = useState<SearchState>({ where: '', when: '', bunks: 0 })
-  const [advanced, setAdvanced] = useState<AdvancedFilters>(EMPTY_ADVANCED)
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const [search, setSearch] = useState<SearchState>(() => parseSearchFromParams(searchParams))
+  const [advanced, setAdvanced] = useState<AdvancedFilters>(() => parseAdvancedFromParams(searchParams))
+  const [showAdvanced, setShowAdvanced] = useState(() => {
+    const a = parseAdvancedFromParams(searchParams)
+    return !!(a.name || a.minBerths > 0 || a.minLength > 0 || a.maxLength > 0 || a.iceBreaking || a.features.length > 0)
+  })
   const [showMap, setShowMap] = useState(false)
 
-  const advancedActive = !!(advanced.name || advanced.minBerths > 0 || advanced.iceBreaking || advanced.features.length > 0)
+  useEffect(() => {
+    const qs = buildQueryString(search, advanced)
+    const next = qs ? `${pathname}?${qs}` : pathname
+    const current = window.location.pathname + window.location.search
+    if (next !== current) {
+      router.replace(next, { scroll: false })
+    }
+  }, [search, advanced, pathname, router])
+
+  const advancedActive = !!(advanced.name || advanced.minBerths > 0 || advanced.minLength > 0 || advanced.maxLength > 0 || advanced.iceBreaking || advanced.features.length > 0)
   const hasSearch = !!(search.where || search.when || search.bunks > 0 || advancedActive)
 
   const withPhotos = useMemo(() => vessels.filter((v) => v.photo_urls?.length), [vessels])
@@ -136,7 +189,7 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
             Advanced search
             {advancedActive && (
               <span className="inline-flex items-center justify-center w-4 h-4 bg-teal text-white text-[10px] font-bold rounded-full">
-                {[!!advanced.name, advanced.minBerths > 0, advanced.iceBreaking, ...advanced.features.map(() => true)].filter(Boolean).length}
+                {[!!advanced.name, advanced.minBerths > 0, advanced.minLength > 0 || advanced.maxLength > 0, advanced.iceBreaking, ...advanced.features.map(() => true)].filter(Boolean).length}
               </span>
             )}
             <svg

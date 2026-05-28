@@ -9,8 +9,8 @@ import { useVesselViewTracker } from '@/hooks/useVesselViewTracker'
 // Set mode to 'gate' for a hard gate: blocking modal, no content without signup.
 // Set mode to 'banner' for a soft nudge: dismissable bottom bar, content stays visible.
 export const NUDGE_CONFIG = {
-  mode: 'banner' as 'banner' | 'gate',
-  threshold: 3,
+  mode: 'gate' as 'banner' | 'gate',
+  threshold: 6,
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -87,8 +87,7 @@ export default function SignupNudge({ vesselId, isAuthenticated }: Props) {
           </div>
           <h2 className="text-2xl font-bold text-navy mb-2">Join to keep exploring</h2>
           <p className="text-gray-500 text-sm mb-6 leading-relaxed max-w-xs mx-auto">
-            You&apos;ve browsed {NUDGE_CONFIG.threshold} vessels. Create a free account to keep
-            searching and connect with operators.
+            Create a free account to keep searching and connect with operators.
           </p>
           <Link
             href={signupHref}
@@ -98,16 +97,10 @@ export default function SignupNudge({ vesselId, isAuthenticated }: Props) {
           </Link>
           <Link
             href={signinHref}
-            className="block text-sm font-medium text-teal hover:underline mb-6"
+            className="block text-sm font-medium text-teal hover:underline"
           >
             Already have an account? Sign in
           </Link>
-          <button
-            onClick={dismiss}
-            className="text-xs text-gray-400 hover:text-gray-500 transition-colors"
-          >
-            Maybe later
-          </button>
         </div>
       </div>
     )

@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function POST(request: Request) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'You must be signed in to list a vessel.' }, { status: 401 })
+  }
+
   let body: Record<string, string>
   try {
     body = await request.json()
@@ -9,14 +15,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { vessel_name, operator_name, email, mmsi, length_m, main_activity } = body
+  const { vessel_name, operator_name, mmsi, length_m, main_activity } = body
 
-  // Required field validation
-  if (!vessel_name?.trim() || !operator_name?.trim() || !email?.trim()) {
-    return NextResponse.json({ error: 'Vessel name, operator, and email are required.' }, { status: 400 })
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: 'Invalid email address.' }, { status: 400 })
+  if (!vessel_name?.trim() || !operator_name?.trim()) {
+    return NextResponse.json({ error: 'Vessel name and operator are required.' }, { status: 400 })
   }
   if (mmsi?.trim() && !/^\d{9}$/.test(mmsi.trim())) {
     return NextResponse.json({ error: 'MMSI must be exactly 9 digits.' }, { status: 400 })
@@ -30,9 +32,10 @@ export async function POST(request: Request) {
   const str = (v: string | undefined) => v?.trim() || null
 
   const { error } = await supabase.from('vessel_submissions').insert({
+    user_id: user.id,
     vessel_name: vessel_name.trim(),
     operator_name: operator_name.trim(),
-    email: email.trim().toLowerCase(),
+    email: (user.email ?? '').toLowerCase(),
     port_city: str(body.port_city),
     port_state: str(body.port_state),
     country: str(body.country),

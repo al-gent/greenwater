@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { getAllVessels, stripHtml } from '@/lib/vessels'
 import HomeClient from '@/components/HomeClient'
 
@@ -17,10 +18,12 @@ export default async function HomePage() {
   ).sort()
 
   return (
-    <HomeClient
-      vessels={allVessels}
-      countries={vesselCountries}
-      activities={vesselActivities}
-    />
+    <Suspense fallback={<div className="pt-[88px] bg-white min-h-screen" />}>
+      <HomeClient
+        vessels={allVessels}
+        countries={vesselCountries}
+        activities={vesselActivities}
+      />
+    </Suspense>
   )
 }

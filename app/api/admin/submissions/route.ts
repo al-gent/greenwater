@@ -60,7 +60,7 @@ export async function PATCH(request: Request) {
 
   // On approval: insert a new row into vessels
   if (status === 'approved') {
-    const { error: insertError } = await supabaseAdmin.from('vessels').insert({
+    const { data: newVessel, error: insertError } = await supabaseAdmin.from('vessels').insert({
       name: submission.vessel_name,
       operator_name: submission.operator_name,
       port_city: submission.port_city,
@@ -84,9 +84,9 @@ export async function PATCH(request: Request) {
       dpos: submission.dpos ?? null,
       ice_breaking: submission.ice_breaking ?? null,
       url_ship: submission.url_ship ?? null,
-    })
+    }).select('id').single()
 
-    if (insertError) {
+    if (insertError || !newVessel) {
       console.error('vessel insert error on approval:', insertError)
       // Roll back the status update
       await supabaseAdmin
@@ -94,6 +94,19 @@ export async function PATCH(request: Request) {
         .update({ status: 'pending', admin_notes: null, reviewed_at: null })
         .eq('id', id)
       return NextResponse.json({ error: 'Failed to add vessel to database. Approval was not saved.' }, { status: 500 })
+    }
+
+    // Link the submitter's profile to the new vessel and promote to operator
+    if (submission.user_id) {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({ role: 'operator', vessel_id: newVessel.id })
+        .eq('id', submission.user_id)
+
+      if (profileError) {
+        console.error('Failed to link submitter profile on approval:', profileError)
+        // Vessel is already created; surface the error but don't roll back the vessel.
+      }
     }
   }
 

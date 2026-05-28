@@ -9,6 +9,7 @@ import ClaimButton from '@/components/ClaimButton'
 import VesselPhotoGallery from '@/components/VesselPhotoGallery'
 import VesselDetailSpecs from '@/components/VesselDetailSpecs'
 import SignupNudge from '@/components/SignupNudge'
+import BackButton from '@/components/BackButton'
 
 const VesselDetailMap = dynamic(() => import('@/components/VesselDetailMap'), {
   ssr: false,
@@ -103,14 +104,9 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
         </div>
       )}
 
-      {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-2">
         <nav className="flex items-center justify-between gap-2 text-sm text-gray-400">
-          <div className="flex items-center gap-2">
-            <Link href="/vessels" className="hover:text-navy transition-colors">Browse All</Link>
-            <span>/</span>
-            <span className="text-gray-600 truncate max-w-xs">{vessel.name}</span>
-          </div>
+          <BackButton />
           {isAdmin && (
             <Link
               href={`/admin/vessels/${id}/edit`}

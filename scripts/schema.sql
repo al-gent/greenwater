@@ -34,6 +34,7 @@ create trigger on_auth_user_created
 -- ── vessel_submissions: new listing requests from /list ──────────────────────
 create table vessel_submissions (
   id             uuid        primary key default gen_random_uuid(),
+  user_id        uuid        references auth.users on delete set null,
   -- Core contact info
   vessel_name    text        not null,
   operator_name  text        not null,
@@ -70,8 +71,10 @@ create table vessel_submissions (
   reviewed_at    timestamptz
 );
 alter table vessel_submissions enable row level security;
--- Anyone can submit a listing (including unauthenticated visitors)
-create policy "insert_submissions" on vessel_submissions for insert with check (true);
+-- Authenticated users can submit listings; user_id must match the session user.
+create policy "insert_submissions"
+  on vessel_submissions for insert to authenticated
+  with check (auth.uid() = user_id);
 
 -- ── vessel_claims: operator claims on existing vessels ───────────────────────
 create table vessel_claims (
@@ -227,6 +230,14 @@ alter table vessel_submissions drop column if exists homeport;
 alter table vessel_submissions
   add column if not exists port_city  text not null default '',
   add column if not exists port_state text;
+
+-- Associate vessel_submissions with the submitting user
+alter table vessel_submissions
+  add column if not exists user_id uuid references auth.users on delete set null;
+drop policy if exists "insert_submissions" on vessel_submissions;
+create policy "insert_submissions"
+  on vessel_submissions for insert to authenticated
+  with check (auth.uid() = user_id);
 
 -- ── Expand vessels with full detail fields ────────────────────────────────────
 -- Storage URLs
