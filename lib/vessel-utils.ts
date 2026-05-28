@@ -298,26 +298,25 @@ export function safeFilename(name: string): string {
  * Returns the first URL from photo_urls, falling back to placeholder.
  */
 export function getPhotoUrl(vessel: Vessel): string {
-  if (vessel.photo_urls?.length) return vessel.photo_urls[0]
+  if (vessel.photo_urls?.length) return toThumbUrl(vessel.photo_urls[0])
   return getFallbackPhotoUrl(vessel)
 }
 
 /** Fallback photo URL */
 export function getFallbackPhotoUrl(_vessel: Vessel): string {
-  return 'https://jmpxcsihkmyotidxjuyv.supabase.co/storage/v1/object/public/vessel-photos/placeholder.jpg'
+  return 'https://jmpxcsihkmyotidxjuyv.supabase.co/storage/v1/object/public/vessel-photos/thumbs/placeholder.jpg'
 }
 
-/**
- * Convert a Supabase Storage URL to a resized thumbnail via the image transform API.
- * Non-Supabase URLs (e.g. picsum fallbacks) are returned unchanged.
- */
-export function toThumbnailUrl(url: string, width = 400, quality = 75): string {
-  const marker = '/storage/v1/object/public/'
+// Rewrites a Supabase Storage URL for a photo to point at the pre-generated
+// ~400px-wide thumb in vessel-photos/thumbs/. Non-Supabase URLs pass through.
+// See scripts/generate_thumbnails.py for the source-side resize job.
+function toThumbUrl(url: string): string {
+  const marker = '/storage/v1/object/public/vessel-photos/'
   const idx = url.indexOf(marker)
   if (idx === -1) return url
-  const path = url.slice(idx + marker.length)
-  const base = url.slice(0, idx)
-  return `${base}/storage/v1/render/image/public/${path}?width=${width}&quality=${quality}`
+  const after = url.slice(idx + marker.length)
+  if (after.startsWith('thumbs/')) return url
+  return url.slice(0, idx + marker.length) + 'thumbs/' + after
 }
 
 export function filterVessels(vessels: Vessel[], filters: FilterState): Vessel[] {

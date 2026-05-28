@@ -180,7 +180,7 @@ export default async function ListYourVesselPage() {
       {/* Mid-page CTA */}
       <section className="bg-gray-50 py-16">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl font-bold text-navy mb-3">Ready to apply?</h2>
+          <h2 className="text-3xl font-bold text-navy mb-3">Ready to embark?</h2>
           <p className="text-gray-500 mb-6">
             Submit your vessel for review — our team responds within 3–5 business days.
           </p>

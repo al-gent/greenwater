@@ -92,7 +92,23 @@ const VESSEL_COLS: { key: VesselColKey; label: string }[] = [
   { key: 'scientists', label: 'Scientists' },
 ]
 
-type Tab = 'submissions' | 'claims' | 'scientists' | 'vessels' | 'analytics'
+type Tab = 'submissions' | 'claims' | 'scientists' | 'vessels' | 'analytics' | 'messages'
+
+interface AdminMessage {
+  id: string
+  thread_id: string
+  vessel_id: number
+  author_id: string
+  author_role: 'scientist' | 'operator'
+  body: string
+  status: string
+  created_at: string
+  is_root: boolean
+  author_name: string | null
+  author_email: string | null
+  author_institution: string | null
+  vessel_name: string
+}
 type Filter = 'all' | 'pending' | 'approved' | 'rejected'
 
 
@@ -258,6 +274,7 @@ export default function AdminDashboard() {
   const [claims, setClaims] = useState<Claim[]>([])
   const [scientists, setScientists] = useState<Scientist[]>([])
   const [vessels, setVessels] = useState<VesselRow[]>([])
+  const [messages, setMessages] = useState<AdminMessage[]>([])
   const [vesselStatusPending, setVesselStatusPending] = useState<Record<number, boolean>>({})
   const [vesselSearch, setVesselSearch] = useState('')
   const [vesselCols, setVesselCols] = useState<Set<VesselColKey>>(new Set(['country', 'port_city', 'year_built']))
@@ -272,11 +289,13 @@ export default function AdminDashboard() {
       fetch('/api/admin/claims').then((r) => r.json()),
       fetch('/api/admin/scientists').then((r) => r.json()),
       fetch('/api/admin/vessels').then((r) => r.json()),
-    ]).then(([subs, cls, sci, vess]) => {
+      fetch('/api/admin/messages').then((r) => r.json()),
+    ]).then(([subs, cls, sci, vess, msgs]) => {
       setSubmissions(Array.isArray(subs) ? subs : [])
       setClaims(Array.isArray(cls) ? cls : [])
       setScientists(Array.isArray(sci) ? sci : [])
       setVessels(Array.isArray(vess) ? vess : [])
+      setMessages(Array.isArray(msgs) ? msgs : [])
       setLoading(false)
     })
   }, [])
@@ -347,7 +366,7 @@ export default function AdminDashboard() {
 
         {/* Tabs */}
         <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-card mb-4 w-fit">
-          {(['submissions', 'claims', 'scientists', 'vessels', 'analytics'] as Tab[]).map((t) => (
+          {(['submissions', 'claims', 'scientists', 'vessels', 'messages', 'analytics'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -376,7 +395,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Filter pills */}
-        {tab !== 'vessels' && tab !== 'analytics' && (
+        {tab !== 'vessels' && tab !== 'analytics' && tab !== 'messages' && (
           <div className="flex items-center gap-2 mb-6">
             {(['all', 'pending', 'approved', 'rejected'] as Filter[]).map((f) => (
               <button
@@ -732,6 +751,54 @@ export default function AdminDashboard() {
             })()}
 
             {tab === 'analytics' && <AnalyticsTab />}
+
+            {tab === 'messages' && (
+              messages.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">No messages yet.</div>
+              ) : messages.map((m) => (
+                <div key={m.id} className="bg-white rounded-2xl shadow-card p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-navy">
+                          {m.author_name || m.author_email || '—'}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          ({m.author_role})
+                        </span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          m.is_root
+                            ? 'bg-teal-50 text-teal border-teal/20'
+                            : 'bg-gray-50 text-gray-500 border-gray-200'
+                        }`}>
+                          {m.is_root ? 'new thread' : 'reply'}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                        {m.author_institution && <span>{m.author_institution}</span>}
+                        {m.author_email && (
+                          <a href={`mailto:${m.author_email}`} className="text-teal hover:underline">
+                            {m.author_email}
+                          </a>
+                        )}
+                        <a
+                          href={`/vessels/${m.vessel_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-teal hover:underline"
+                        >
+                          → {m.vessel_name}
+                        </a>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">{fmt(m.created_at)}</span>
+                  </div>
+                  <p className="mt-3 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap line-clamp-3">
+                    {m.body}
+                  </p>
+                </div>
+              ))
+            )}
 
             {tab === 'scientists' && (
               filteredScientists.length === 0 ? (

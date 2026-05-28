@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import type { Vessel } from '@/lib/vessel-utils'
-import { getPhotoUrl, toThumbnailUrl } from '@/lib/vessel-utils'
+import { getPhotoUrl } from '@/lib/vessel-utils'
 import SearchBar, { type SearchState } from './SearchBar'
 import AdvancedSearch, { type AdvancedFilters, EMPTY_ADVANCED } from './AdvancedSearch'
 import VesselCard from './VesselCard'
@@ -84,7 +84,7 @@ export default function BrowseClient({ vessels, countries, initialCountry = '' }
   }, [filtered])
 
   const mapVessels = useMemo(
-    () => filtered.map((v) => ({ ...v, photoUrl: toThumbnailUrl(getPhotoUrl(v), 400, 75) })),
+    () => filtered.map((v) => ({ ...v, photoUrl: getPhotoUrl(v) })),
     [filtered]
   )
 

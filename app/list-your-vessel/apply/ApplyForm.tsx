@@ -37,8 +37,54 @@ const emptyForm: ListForm = {
   main_activity: '', operating_area: '', dpos: '', ice_breaking: '', url_ship: '',
 }
 
+type SectionKey = 'homePort' | 'physical' | 'performance' | 'operations'
+
+const inputClass = 'w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition'
+const labelClass = 'block text-sm font-medium text-gray-700 mb-1.5'
+
 interface Props {
   userEmail: string
+}
+
+function CollapsibleSection({
+  open,
+  onToggle,
+  label,
+  count,
+  children,
+}: {
+  open: boolean
+  onToggle: () => void
+  label: string
+  count: number
+  children: React.ReactNode
+}) {
+  return (
+    <div className="border border-gray-200 rounded-2xl overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors"
+      >
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="text-sm font-semibold text-navy flex-1">{label}</span>
+        <span className="text-xs text-gray-400">{count} fields</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-5 pt-4 space-y-4 border-t border-gray-100 bg-white">
+          {children}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function ApplyForm({ userEmail }: Props) {
@@ -47,6 +93,14 @@ export default function ApplyForm({ userEmail }: Props) {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState<Record<SectionKey, boolean>>({
+    homePort: false,
+    physical: false,
+    performance: false,
+    operations: false,
+  })
+
+  const toggle = (key: SectionKey) => setOpen((s) => ({ ...s, [key]: !s[key] }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,10 +108,12 @@ export default function ApplyForm({ userEmail }: Props) {
     setError(null)
 
     if (form.mmsi && !/^\d{9}$/.test(form.mmsi.trim())) {
+      setOpen((s) => ({ ...s, homePort: true }))
       setValidationError('MMSI must be exactly 9 digits.')
       return
     }
     if (form.imo_number && !/^(IMO\s?)?\d{7}$/.test(form.imo_number.trim())) {
+      setOpen((s) => ({ ...s, homePort: true }))
       setValidationError('IMO Number must be 7 digits (e.g. 1234567 or IMO 1234567).')
       return
     }
@@ -154,257 +210,43 @@ export default function ApplyForm({ userEmail }: Props) {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-8">
 
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Vessel Name <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={form.vesselName}
-                      onChange={(e) => setForm({ ...form, vesselName: e.target.value })}
-                      placeholder="R/V Ocean Explorer"
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Operator / Institution <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={form.operatorName}
-                      onChange={(e) => setForm({ ...form, operatorName: e.target.value })}
-                      placeholder="Woods Hole Oceanographic..."
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Home Port</label>
-                    <input
-                      type="text"
-                      value={form.port_city}
-                      onChange={(e) => setForm({ ...form, port_city: e.target.value })}
-                      placeholder="e.g. Boston, Woods Hole, Hamburg"
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      State / Province
-                      <span className="ml-1 text-gray-400 font-normal">(if applicable)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.port_state}
-                      onChange={(e) => setForm({ ...form, port_state: e.target.value })}
-                      placeholder="e.g. MA, British Columbia"
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Country / Flag State</label>
-                  <input
-                    type="text"
-                    value={form.country}
-                    onChange={(e) => setForm({ ...form, country: e.target.value })}
-                    placeholder="USA"
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-gray-100">
-                <h3 className="text-xs font-semibold text-navy uppercase tracking-widest mb-4">Vessel Identification</h3>
-                <div className="space-y-4">
+              {/* Essentials */}
+              <div>
+                <h2 className="text-xs font-semibold text-navy uppercase tracking-widest mb-4">
+                  The essentials
+                </h2>
+                <div className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        MMSI <span className="text-gray-400 font-normal">(9 digits — AIS identifier)</span>
+                      <label className={labelClass}>
+                        Vessel name <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
-                        inputMode="numeric"
-                        maxLength={9}
-                        value={form.mmsi}
-                        onChange={(e) => setForm({ ...form, mmsi: e.target.value.replace(/\D/g, '') })}
-                        placeholder="123456789"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition font-mono"
+                        required
+                        value={form.vesselName}
+                        onChange={(e) => setForm({ ...form, vesselName: e.target.value })}
+                        placeholder="R/V Ocean Explorer"
+                        className={inputClass}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        IMO Number <span className="text-gray-400 font-normal">(7 digits)</span>
+                      <label className={labelClass}>
+                        Operator / Institution <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
-                        value={form.imo_number}
-                        onChange={(e) => setForm({ ...form, imo_number: e.target.value })}
-                        placeholder="IMO 1234567"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition font-mono"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-400 -mt-1">Optional — provide if available. Used for automatic position tracking.</p>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Call Sign</label>
-                    <input
-                      type="text"
-                      value={form.call_sign}
-                      onChange={(e) => setForm({ ...form, call_sign: e.target.value })}
-                      placeholder="KABO"
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-gray-100">
-                <h3 className="text-xs font-semibold text-navy uppercase tracking-widest mb-4">Physical Specifications</h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Length (m)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={form.length_m}
-                        onChange={(e) => setForm({ ...form, length_m: e.target.value })}
-                        placeholder="85"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Beam (m)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={form.beam_m}
-                        onChange={(e) => setForm({ ...form, beam_m: e.target.value })}
-                        placeholder="16"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Draft (m)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={form.draft_m}
-                        onChange={(e) => setForm({ ...form, draft_m: e.target.value })}
-                        placeholder="5.5"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Year Built</label>
-                      <input
-                        type="number"
-                        min="1900"
-                        value={form.year_built}
-                        onChange={(e) => setForm({ ...form, year_built: e.target.value })}
-                        placeholder="1998"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Year Last Refit</label>
-                      <input
-                        type="number"
-                        min="1900"
-                        value={form.year_refit}
-                        onChange={(e) => setForm({ ...form, year_refit: e.target.value })}
-                        placeholder="2019"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-gray-100">
-                <h3 className="text-xs font-semibold text-navy uppercase tracking-widest mb-4">Performance &amp; Capacity</h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Cruise Speed (kn)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={form.speed_cruise}
-                        onChange={(e) => setForm({ ...form, speed_cruise: e.target.value })}
-                        placeholder="12"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Max Speed (kn)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={form.speed_max}
-                        onChange={(e) => setForm({ ...form, speed_max: e.target.value })}
-                        placeholder="15"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Research Bunks</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={form.scientists}
-                        onChange={(e) => setForm({ ...form, scientists: e.target.value })}
-                        placeholder="24 (or 0 for day trips)"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Crew</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={form.crew}
-                        onChange={(e) => setForm({ ...form, crew: e.target.value })}
-                        placeholder="18"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
+                        required
+                        value={form.operatorName}
+                        onChange={(e) => setForm({ ...form, operatorName: e.target.value })}
+                        placeholder="Woods Hole Oceanographic..."
+                        className={inputClass}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Endurance</label>
-                    <input
-                      type="text"
-                      value={form.endurance}
-                      onChange={(e) => setForm({ ...form, endurance: e.target.value })}
-                      placeholder="e.g. 30 days, 6000 nm"
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-gray-100">
-                <h3 className="text-xs font-semibold text-navy uppercase tracking-widest mb-4">Research Operations</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Research Activity / Main Focus <span className="text-red-400">*</span>
+                    <label className={labelClass}>
+                      Research focus / Main activity <span className="text-red-400">*</span>
                     </label>
                     <textarea
                       required
@@ -412,58 +254,298 @@ export default function ApplyForm({ userEmail }: Props) {
                       value={form.main_activity}
                       onChange={(e) => setForm({ ...form, main_activity: e.target.value })}
                       placeholder="Describe the vessel's research capabilities, scientific equipment, and typical mission types…"
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition resize-none"
+                      className={`${inputClass} resize-none`}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Operating Area</label>
-                    <input
-                      type="text"
-                      value={form.operating_area}
-                      onChange={(e) => setForm({ ...form, operating_area: e.target.value })}
-                      placeholder="e.g. North Atlantic, Arctic, Global"
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Dynamic Positioning
-                        <span className="ml-1 text-gray-400 font-normal">(DPos class)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={form.dpos}
-                        onChange={(e) => setForm({ ...form, dpos: e.target.value })}
-                        placeholder="e.g. DP2"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Ice Breaking Class</label>
-                      <input
-                        type="text"
-                        value={form.ice_breaking}
-                        onChange={(e) => setForm({ ...form, ice_breaking: e.target.value })}
-                        placeholder="e.g. 1A, PC6"
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
 
+              {/* Optional details */}
               <div className="pt-2 border-t border-gray-100">
-                <h3 className="text-xs font-semibold text-navy uppercase tracking-widest mb-4">Links</h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Official Website</label>
-                  <input
-                    type="url"
-                    value={form.url_ship}
-                    onChange={(e) => setForm({ ...form, url_ship: e.target.value })}
-                    placeholder="https://www.institution.edu/vessel"
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
-                  />
+                <div className="mb-4">
+                  <h2 className="text-xs font-semibold text-navy uppercase tracking-widest mb-1">
+                    Optional details
+                  </h2>
+                  <p className="text-xs text-gray-400">
+                    Share what you can — admins use these to feature your vessel and match it to researchers.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+
+                  <CollapsibleSection
+                    open={open.homePort}
+                    onToggle={() => toggle('homePort')}
+                    label="Home port & identification"
+                    count={6}
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>Home port</label>
+                        <input
+                          type="text"
+                          value={form.port_city}
+                          onChange={(e) => setForm({ ...form, port_city: e.target.value })}
+                          placeholder="e.g. Boston, Woods Hole"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>
+                          State / Province
+                          <span className="ml-1 text-gray-400 font-normal">(if applicable)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={form.port_state}
+                          onChange={(e) => setForm({ ...form, port_state: e.target.value })}
+                          placeholder="e.g. MA"
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Country / Flag State</label>
+                      <input
+                        type="text"
+                        value={form.country}
+                        onChange={(e) => setForm({ ...form, country: e.target.value })}
+                        placeholder="USA"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>
+                          MMSI <span className="text-gray-400 font-normal">(9 digits)</span>
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={9}
+                          value={form.mmsi}
+                          onChange={(e) => setForm({ ...form, mmsi: e.target.value.replace(/\D/g, '') })}
+                          placeholder="123456789"
+                          className={`${inputClass} font-mono`}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>
+                          IMO Number <span className="text-gray-400 font-normal">(7 digits)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={form.imo_number}
+                          onChange={(e) => setForm({ ...form, imo_number: e.target.value })}
+                          placeholder="IMO 1234567"
+                          className={`${inputClass} font-mono`}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Call sign</label>
+                      <input
+                        type="text"
+                        value={form.call_sign}
+                        onChange={(e) => setForm({ ...form, call_sign: e.target.value })}
+                        placeholder="KABO"
+                        className={`${inputClass} font-mono`}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">MMSI/IMO are used for automatic position tracking.</p>
+                  </CollapsibleSection>
+
+                  <CollapsibleSection
+                    open={open.physical}
+                    onToggle={() => toggle('physical')}
+                    label="Physical specifications"
+                    count={5}
+                  >
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className={labelClass}>Length (m)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={form.length_m}
+                          onChange={(e) => setForm({ ...form, length_m: e.target.value })}
+                          placeholder="85"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Beam (m)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={form.beam_m}
+                          onChange={(e) => setForm({ ...form, beam_m: e.target.value })}
+                          placeholder="16"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Draft (m)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={form.draft_m}
+                          onChange={(e) => setForm({ ...form, draft_m: e.target.value })}
+                          placeholder="5.5"
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>Year built</label>
+                        <input
+                          type="number"
+                          min="1900"
+                          value={form.year_built}
+                          onChange={(e) => setForm({ ...form, year_built: e.target.value })}
+                          placeholder="1998"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Year last refit</label>
+                        <input
+                          type="number"
+                          min="1900"
+                          value={form.year_refit}
+                          onChange={(e) => setForm({ ...form, year_refit: e.target.value })}
+                          placeholder="2019"
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+
+                  <CollapsibleSection
+                    open={open.performance}
+                    onToggle={() => toggle('performance')}
+                    label="Performance & capacity"
+                    count={5}
+                  >
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>Cruise speed (kn)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={form.speed_cruise}
+                          onChange={(e) => setForm({ ...form, speed_cruise: e.target.value })}
+                          placeholder="12"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Max speed (kn)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={form.speed_max}
+                          onChange={(e) => setForm({ ...form, speed_max: e.target.value })}
+                          placeholder="15"
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>Research bunks</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={form.scientists}
+                          onChange={(e) => setForm({ ...form, scientists: e.target.value })}
+                          placeholder="24"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Crew</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={form.crew}
+                          onChange={(e) => setForm({ ...form, crew: e.target.value })}
+                          placeholder="18"
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Endurance</label>
+                      <input
+                        type="text"
+                        value={form.endurance}
+                        onChange={(e) => setForm({ ...form, endurance: e.target.value })}
+                        placeholder="e.g. 30 days, 6000 nm"
+                        className={inputClass}
+                      />
+                    </div>
+                  </CollapsibleSection>
+
+                  <CollapsibleSection
+                    open={open.operations}
+                    onToggle={() => toggle('operations')}
+                    label="Operations & links"
+                    count={4}
+                  >
+                    <div>
+                      <label className={labelClass}>Operating area</label>
+                      <input
+                        type="text"
+                        value={form.operating_area}
+                        onChange={(e) => setForm({ ...form, operating_area: e.target.value })}
+                        placeholder="e.g. North Atlantic, Arctic, Global"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>
+                          Dynamic positioning
+                          <span className="ml-1 text-gray-400 font-normal">(DP class)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={form.dpos}
+                          onChange={(e) => setForm({ ...form, dpos: e.target.value })}
+                          placeholder="e.g. DP2"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Ice class</label>
+                        <input
+                          type="text"
+                          value={form.ice_breaking}
+                          onChange={(e) => setForm({ ...form, ice_breaking: e.target.value })}
+                          placeholder="e.g. 1A, PC6"
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Official website</label>
+                      <input
+                        type="url"
+                        value={form.url_ship}
+                        onChange={(e) => setForm({ ...form, url_ship: e.target.value })}
+                        placeholder="https://www.institution.edu/vessel"
+                        className={inputClass}
+                      />
+                    </div>
+                  </CollapsibleSection>
+
                 </div>
               </div>
 
@@ -484,15 +566,14 @@ export default function ApplyForm({ userEmail }: Props) {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Submitting Application…
+                    Submitting…
                   </>
                 ) : (
                   'Submit Application'
                 )}
               </button>
               <p className="text-center text-xs text-gray-400">
-                Listing is free. We don&apos;t sell or share your data. By submitting you agree to our{' '}
-                <a href="#" className="underline">Terms of Service</a>.
+                Listing is free. We don&apos;t sell or share your data.
               </p>
             </form>
           )}

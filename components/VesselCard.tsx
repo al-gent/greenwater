@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, stripHtml, getFallbackPhotoUrl, toThumbnailUrl, countryNameToFlag } from '@/lib/vessel-utils'
+import { fmt, stripHtml, getFallbackPhotoUrl, countryNameToFlag } from '@/lib/vessel-utils'
 
 function relativeDate(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
@@ -20,7 +20,7 @@ interface VesselCardProps {
 }
 
 export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
-  const [imgSrc, setImgSrc] = useState(() => toThumbnailUrl(photoUrl))
+  const [imgSrc, setImgSrc] = useState(photoUrl)
 
   const activity = stripHtml(vessel.main_activity)
 
