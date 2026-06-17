@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
@@ -17,7 +18,9 @@ export async function PATCH(request: Request) {
     .single()
 
   const body = await request.json()
-  const { vessel_id, ...updates } = body
+  // `_geocode` is a client signal (not a column) — true only when the user edited
+  // the home-port text by hand and wants the server to resolve coords.
+  const { vessel_id, _geocode, ...updates } = body
 
   // Admins can edit any vessel; operators can only edit their own
   if (profile?.role === 'admin') {
@@ -42,9 +45,15 @@ export async function PATCH(request: Request) {
     if (!denied.has(key)) safeUpdates[key] = value
   }
 
-  // Auto-geocode if location fields changed
-  const locationChanged = ['port_city', 'port_state', 'country'].some((f) => f in safeUpdates)
-  if (locationChanged) {
+  // Only admins may change a vessel's status (active/inactive/retired)
+  if (profile?.role !== 'admin') delete safeUpdates.status
+
+  // Only geocode when the client explicitly asked (user edited the home-port text by
+  // hand) AND no verified coords were provided. Crucially we do NOT geocode just because
+  // port_city/etc. are present in the payload — the form resends every field on save, so
+  // that would re-geocode and move the home port on unrelated edits (e.g. operating area).
+  const coordsProvided = !!safeUpdates.primary_latitude && !!safeUpdates.primary_longitude
+  if (_geocode === true && !coordsProvided) {
     const parts = [safeUpdates.port_city, safeUpdates.port_state, safeUpdates.country].filter(Boolean)
     if (parts.length > 0) {
       try {
@@ -72,6 +81,9 @@ export async function PATCH(request: Request) {
     console.error('vessel update error:', error)
     return NextResponse.json({ error: `Update failed: ${error.message}` }, { status: 500 })
   }
+
+  // Bust the detail page's Router/Full-Route cache so edits show without a hard refresh
+  revalidatePath(`/vessels/${vessel_id}`)
 
   return NextResponse.json({ success: true })
 }

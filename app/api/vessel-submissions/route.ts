@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'You must be signed in to list a vessel.' }, { status: 401 })
   }
 
-  let body: Record<string, string>
+  let body: Record<string, any>
   try {
     body = await request.json()
   } catch {
@@ -26,16 +26,33 @@ export async function POST(request: Request) {
   if (!main_activity?.trim()) {
     return NextResponse.json({ error: 'Research activity description is required.' }, { status: 400 })
   }
+  if (!body.operating_area?.trim()) {
+    return NextResponse.json({ error: 'Operating area is required.' }, { status: 400 })
+  }
 
   const num = (v: string | undefined) => (v?.trim() ? parseFloat(v) : null)
   const int = (v: string | undefined) => (v?.trim() ? parseInt(v, 10) : null)
   const str = (v: string | undefined) => v?.trim() || null
+
+  // operating_area_geojson: only accept a non-empty GeoJSON FeatureCollection
+  const rawGeo = body.operating_area_geojson
+  const operating_area_geojson =
+    rawGeo &&
+    typeof rawGeo === 'object' &&
+    rawGeo.type === 'FeatureCollection' &&
+    Array.isArray(rawGeo.features) &&
+    rawGeo.features.length > 0
+      ? rawGeo
+      : null
 
   const { error } = await supabase.from('vessel_submissions').insert({
     user_id: user.id,
     vessel_name: vessel_name.trim(),
     operator_name: operator_name.trim(),
     email: (user.email ?? '').toLowerCase(),
+    port_name: str(body.port_name),
+    homeport_latitude: typeof body.homeport_latitude === 'number' ? body.homeport_latitude : null,
+    homeport_longitude: typeof body.homeport_longitude === 'number' ? body.homeport_longitude : null,
     port_city: str(body.port_city),
     port_state: str(body.port_state),
     country: str(body.country),
@@ -54,6 +71,7 @@ export async function POST(request: Request) {
     endurance: str(body.endurance),
     main_activity: main_activity.trim(),
     operating_area: str(body.operating_area),
+    operating_area_geojson,
     dpos: str(body.dpos),
     ice_breaking: str(body.ice_breaking),
     url_ship: str(body.url_ship),

@@ -25,7 +25,6 @@ export default async function VesselsBrowsePage({
   return (
     <BrowseClient
       vessels={vessels}
-      countries={countries}
       initialCountry={initialCountry}
     />
   )

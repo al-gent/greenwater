@@ -12,7 +12,7 @@ import SignupNudge from '@/components/SignupNudge'
 import BackButton from '@/components/BackButton'
 import ShareButton from '@/components/ShareButton'
 
-const VesselDetailMap = dynamic(() => import('@/components/VesselDetailMap'), {
+const VesselMap = dynamic(() => import('@/components/VesselMap'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full bg-gray-100 flex items-center justify-center rounded-2xl">
@@ -20,21 +20,6 @@ const VesselDetailMap = dynamic(() => import('@/components/VesselDetailMap'), {
     </div>
   ),
 })
-
-function SpecCard({ label, value, icon }: { label: string; value: string | number | null | undefined; icon: React.ReactNode }) {
-  if (value === null || value === undefined || value === '') return null
-  return (
-    <div className="bg-gray-50 rounded-2xl p-4 flex items-start gap-3">
-      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 text-teal">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-0.5">{label}</p>
-        <p className="text-sm font-semibold text-navy leading-snug">{value}</p>
-      </div>
-    </div>
-  )
-}
 
 export default async function VesselDetailPage({ params }: { params: { id: string } }) {
   const id = parseInt(params.id, 10)
@@ -63,28 +48,9 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const portCallLat = lastPort?.lat != null ? Number(lastPort.lat) : null
   const portCallLng = lastPort?.lon != null ? Number(lastPort.lon) : null
   const hasPortCall = !!lastPort?.port_city && portCallLat !== null && portCallLng !== null && !isNaN(portCallLat) && !isNaN(portCallLng)
-  const showMap = hasCoords || hasPortCall
-
-  const n = (v: number | null | undefined, decimals = 1) =>
-    v != null ? parseFloat(v.toFixed(decimals)) : null
-
-  const specs = [
-    { label: 'Length', value: n(vessel.length) != null ? `${n(vessel.length)} m` : null, icon: <IconRuler /> },
-    { label: 'Cruise Speed', value: n(vessel.speed_cruise) != null ? `${n(vessel.speed_cruise)} kn` : null, icon: <IconBolt /> },
-    { label: 'Research Bunks', value: vessel.scientists, icon: <IconUsers /> },
-    { label: 'Beam', value: n(vessel.beam) != null ? `${n(vessel.beam)} m` : null, icon: <IconArrows /> },
-    { label: 'Draft', value: n(vessel.draft) != null ? `${n(vessel.draft)} m` : null, icon: <IconDown /> },
-    { label: 'Crew', value: vessel.crew, icon: <IconPerson /> },
-    { label: 'Year Built', value: vessel.year_built, icon: <IconCalendar /> },
-
-    { label: 'Call Sign', value: vessel.call_sign, icon: <IconSignal /> },
-    { label: 'Operating Area', value: vessel.operating_area, icon: <IconGlobe /> },
-    {
-      label: 'Home Port',
-      value: [vessel.port_city, vessel.port_state].filter(Boolean).join(', ') || null,
-      icon: <IconAnchor />,
-    },
-  ].filter((s) => s.value !== null && s.value !== undefined && s.value !== '')
+  const operatingArea = vessel.operating_area_geojson ?? null
+  const hasArea = !!operatingArea && (operatingArea.features?.length ?? 0) > 0
+  const showMap = hasCoords || hasPortCall || hasArea
 
   return (
     <div className="pt-[88px] bg-white min-h-screen">
@@ -259,17 +225,13 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             {showMap && (
               <div>
                 <h2 className="text-lg font-semibold text-navy mb-3">Location</h2>
-                <div className="rounded-2xl overflow-hidden border border-gray-100" style={{ height: '280px' }}>
-                  <VesselDetailMap
-                    vesselName={vessel.name}
-                    homeLat={hasCoords ? homeLat : null}
-                    homeLng={hasCoords ? homeLng : null}
-                    portCallLat={hasPortCall ? portCallLat : null}
-                    portCallLng={hasPortCall ? portCallLng : null}
-                    portCallName={lastPort?.port_city ?? null}
-                    portCallDate={lastPort?.arrived_at ?? null}
-                  />
-                </div>
+                <VesselMap
+                  vesselName={vessel.name}
+                  homePort={hasCoords ? { lat: homeLat!, lng: homeLng! } : null}
+                  lastPort={hasPortCall ? { lat: portCallLat!, lng: portCallLng!, name: lastPort?.port_city, date: lastPort?.arrived_at } : null}
+                  operatingArea={operatingArea}
+                  height={280}
+                />
               </div>
             )}
 
@@ -286,16 +248,8 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-4">
               <div className="border border-gray-200 rounded-2xl shadow-card p-6">
-                {/* Berths headline */}
                 <div className="mb-5">
-                  {vessel.scientists != null ? (
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-4xl font-bold text-navy">{vessel.scientists}</span>
-                      <span className="text-gray-500 text-sm"> research bunks</span>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 font-medium">Contact for availability</p>
-                  )}
+                  <h3 className="text-lg font-bold text-navy">Connect with this vessel</h3>
                   {activity && (
                     <p className="text-xs text-gray-400 mt-1 leading-snug line-clamp-2">{activity}</p>
                   )}
@@ -318,19 +272,6 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
                   )}
                 </div>
 
-                {/* Summary facts */}
-                {specs.filter(s => ['Length','Cruise Speed','Year Built','Country'].includes(s.label)).length > 0 && (
-                  <div className="mt-5 pt-4 border-t border-gray-100 space-y-2.5">
-                    {specs
-                      .filter(s => ['Length','Cruise Speed','Year Built','Country'].includes(s.label))
-                      .map(s => (
-                        <div key={s.label} className="flex justify-between text-sm">
-                          <span className="text-gray-500">{s.label}</span>
-                          <span className="font-medium text-gray-800">{s.value}</span>
-                        </div>
-                      ))}
-                  </div>
-                )}
               </div>
 
               <div className="flex items-center justify-center gap-6">
@@ -345,40 +286,6 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   )
 }
 
-// ── Inline SVG icon components ─────────────────────────────────────────────
-function IconRuler() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-}
-function IconBolt() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-}
-function IconUsers() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-}
-function IconArrows() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-}
-function IconDown() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-}
-function IconPerson() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-}
-function IconCalendar() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-}
-function IconPin() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-}
-function IconSignal() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" /></svg>
-}
-function IconGlobe() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
-}
-function IconAnchor() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3a2 2 0 100 4 2 2 0 000-4zm0 4v14M5 10h14M5 20c0-2 2.686-3.5 7-3.5S19 18 19 20" /></svg>
-}
 function IconPDF() {
   return (
     <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">

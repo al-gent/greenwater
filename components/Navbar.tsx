@@ -91,6 +91,12 @@ export default function Navbar() {
               Browse All
             </Link>
             <Link
+              href="/"
+              className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
+            >
+              Home
+            </Link>
+            <Link
               href="/list-your-vessel"
               className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
             >

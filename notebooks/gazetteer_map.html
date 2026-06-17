@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    
+        <script>
+            L_NO_TOUCH = false;
+            L_DISABLE_3D = false;
+        </script>
+    
+    <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
+    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_2c36ebb54f920b75355a00911a2c8eca {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+        
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_2c36ebb54f920b75355a00911a2c8eca" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_2c36ebb54f920b75355a00911a2c8eca = L.map(
+                "map_2c36ebb54f920b75355a00911a2c8eca",
+                {
+                    center: [20.0, 0.0],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 2,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_81e28f6c401c98c9ce9d9c9559defc3e = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_81e28f6c401c98c9ce9d9c9559defc3e.addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+            var rectangle_980a19bc5024b28a116ed65852320253 = L.rectangle(
+                [[42.68226, -71.30332], [60.45726, -43.53132]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_9f15f638f83b7f56714e7b72d61a7baa = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_1691dbda1cab682ebba438ba28386e6c = $(`<div id="html_1691dbda1cab682ebba438ba28386e6c" style="width: 100.0%; height: 100.0%;">Newfoundland → Labrador - Newfoundland (Large Marine Ecosystem)</div>`)[0];
+                popup_9f15f638f83b7f56714e7b72d61a7baa.setContent(html_1691dbda1cab682ebba438ba28386e6c);
+            
+        
+
+        rectangle_980a19bc5024b28a116ed65852320253.bindPopup(popup_9f15f638f83b7f56714e7b72d61a7baa)
+        ;
+
+        
+    
+    
+            var rectangle_c64c0dc7200c730d22dcc9212184f8be = L.rectangle(
+                [[30.26388168334961, -6.032672882080078], [45.783329010009766, 36.217281341552734]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_0021f4218e911c6133815591226e1c05 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_06aa685a793719235f128754803ce9ae = $(`<div id="html_06aa685a793719235f128754803ce9ae" style="width: 100.0%; height: 100.0%;">Mediterranean → Mediterranean Sea (IHO Sea Area)</div>`)[0];
+                popup_0021f4218e911c6133815591226e1c05.setContent(html_06aa685a793719235f128754803ce9ae);
+            
+        
+
+        rectangle_c64c0dc7200c730d22dcc9212184f8be.bindPopup(popup_0021f4218e911c6133815591226e1c05)
+        ;
+
+        
+    
+    
+            var rectangle_2cf0ef4e642a32933a87bbd59bf1d051 = L.rectangle(
+                [[54.364834, 10.053112], [55.327726, 13.147958]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_6e537e16a2a8f2360777fbf032343e22 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_3008326f918bc504289573b5a5d2fb1c = $(`<div id="html_3008326f918bc504289573b5a5d2fb1c" style="width: 100.0%; height: 100.0%;">The Baltic → Danish part of the Baltic Sea (Marine Region)</div>`)[0];
+                popup_6e537e16a2a8f2360777fbf032343e22.setContent(html_3008326f918bc504289573b5a5d2fb1c);
+            
+        
+
+        rectangle_2cf0ef4e642a32933a87bbd59bf1d051.bindPopup(popup_6e537e16a2a8f2360777fbf032343e22)
+        ;
+
+        
+    
+    
+            var rectangle_ccae1471f11de3e75d5df1390df101bd = L.rectangle(
+                [[60.86081802843, -13.50065481697], [76.56454739268, 25.78865038513]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_95de75d6b5c8bf6f6d711dbfe04fb444 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_9cba79e8a1e854c5537f9d6c32fbe81c = $(`<div id="html_9cba79e8a1e854c5537f9d6c32fbe81c" style="width: 100.0%; height: 100.0%;">Norwegian → Norwegian Sea (IHO Sea Area)</div>`)[0];
+                popup_95de75d6b5c8bf6f6d711dbfe04fb444.setContent(html_9cba79e8a1e854c5537f9d6c32fbe81c);
+            
+        
+
+        rectangle_ccae1471f11de3e75d5df1390df101bd.bindPopup(popup_95de75d6b5c8bf6f6d711dbfe04fb444)
+        ;
+
+        
+    
+    
+            var rectangle_5d69375626bd34cb5675c3a5ad6336c1 = L.rectangle(
+                [[65.00696182253, -35.986789942], [82.78065447116, 17.48220300686]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_80954fe3a44a90b8e1bdfb2d4ab7d31a = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_5bf5836d5080a2e297c69a36679614b9 = $(`<div id="html_5bf5836d5080a2e297c69a36679614b9" style="width: 100.0%; height: 100.0%;">Greenland → Greenland Sea (IHO Sea Area)</div>`)[0];
+                popup_80954fe3a44a90b8e1bdfb2d4ab7d31a.setContent(html_5bf5836d5080a2e297c69a36679614b9);
+            
+        
+
+        rectangle_5d69375626bd34cb5675c3a5ad6336c1.bindPopup(popup_80954fe3a44a90b8e1bdfb2d4ab7d31a)
+        ;
+
+        
+    
+    
+            var rectangle_462f557a5c935fbeb9f7e8e8097308b3 = L.rectangle(
+                [[65.88276755848, 16.58178101778], [81.85123443572, 68.57826318668]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_80f2b1032a64e77e7d1a3ce286950357 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_98fa4ff8c2f9b4d948b8d509bfc780b2 = $(`<div id="html_98fa4ff8c2f9b4d948b8d509bfc780b2" style="width: 100.0%; height: 100.0%;">Barents Seas → Barents Sea (IHO Sea Area)</div>`)[0];
+                popup_80f2b1032a64e77e7d1a3ce286950357.setContent(html_98fa4ff8c2f9b4d948b8d509bfc780b2);
+            
+        
+
+        rectangle_462f557a5c935fbeb9f7e8e8097308b3.bindPopup(popup_80f2b1032a64e77e7d1a3ce286950357)
+        ;
+
+        
+    
+    
+            var rectangle_c580e84848803d80aa0681d5a33d708a = L.rectangle(
+                [[40.90875351446, 27.44371211572], [47.31029641635, 42.35496044187]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_c9301b0cad6fb47bac61c527dfecda4a = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_7e9364c2abb4b42bd1514f4bf51c96bb = $(`<div id="html_7e9364c2abb4b42bd1514f4bf51c96bb" style="width: 100.0%; height: 100.0%;">Black Sea → Black Sea (IHO Sea Area)</div>`)[0];
+                popup_c9301b0cad6fb47bac61c527dfecda4a.setContent(html_7e9364c2abb4b42bd1514f4bf51c96bb);
+            
+        
+
+        rectangle_c580e84848803d80aa0681d5a33d708a.bindPopup(popup_c9301b0cad6fb47bac61c527dfecda4a)
+        ;
+
+        
+    
+    
+            var rectangle_ce0cc72c902d6949ff757398d49effc3 = L.rectangle(
+                [[-0.93603, -98.05392], [68.63872, 12.00594]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_e372cb433f2d9d61c4f58bbd9f92e5b4 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_3f7ca8626993741acb92925c94f16d08 = $(`<div id="html_3f7ca8626993741acb92925c94f16d08" style="width: 100.0%; height: 100.0%;">Atlantic Ocean → North Atlantic Ocean (IHO Sea Area)</div>`)[0];
+                popup_e372cb433f2d9d61c4f58bbd9f92e5b4.setContent(html_3f7ca8626993741acb92925c94f16d08);
+            
+        
+
+        rectangle_ce0cc72c902d6949ff757398d49effc3.bindPopup(popup_e372cb433f2d9d61c4f58bbd9f92e5b4)
+        ;
+
+        
+    
+    
+            var rectangle_804d8cba01e1f04104fcc72ab5bb05c8 = L.rectangle(
+                [[50.99536466555, -4.44537067412], [61.01702284843, 12.00594234456]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_8a54f6f22f94d9ec26a413558070905c = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_4207d26db0f0cb67092a49b042bf833e = $(`<div id="html_4207d26db0f0cb67092a49b042bf833e" style="width: 100.0%; height: 100.0%;">North Sea → North Sea (IHO Sea Area)</div>`)[0];
+                popup_8a54f6f22f94d9ec26a413558070905c.setContent(html_4207d26db0f0cb67092a49b042bf833e);
+            
+        
+
+        rectangle_804d8cba01e1f04104fcc72ab5bb05c8.bindPopup(popup_8a54f6f22f94d9ec26a413558070905c)
+        ;
+
+        
+    
+    
+            var rectangle_fe0eb171626bd8cc8672d815bfb7a53b = L.rectangle(
+                [[52.65352, 9.3656], [67.08059, 37.46891]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_24495ae4ad309ee6f5e63035a416c1ea = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_c1134ef66ef1d049c4355900683a803f = $(`<div id="html_c1134ef66ef1d049c4355900683a803f" style="width: 100.0%; height: 100.0%;">Baltic Sea → Baltic Sea (IHO Sea Area)</div>`)[0];
+                popup_24495ae4ad309ee6f5e63035a416c1ea.setContent(html_c1134ef66ef1d049c4355900683a803f);
+            
+        
+
+        rectangle_fe0eb171626bd8cc8672d815bfb7a53b.bindPopup(popup_24495ae4ad309ee6f5e63035a416c1ea)
+        ;
+
+        
+    
+    
+            var rectangle_c7f19abd3e7a5bb9b0924c6c8a1f1e3a = L.rectangle(
+                [[-85.5625, -180.0], [-60.0, 180.0]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_b5eb2401e873185f26d8eeb30a97b7d0 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_2e8c0ed36f023b32a65f4fa88542ef6d = $(`<div id="html_2e8c0ed36f023b32a65f4fa88542ef6d" style="width: 100.0%; height: 100.0%;">polar → South Polar Ocean (IHO Sea Area)</div>`)[0];
+                popup_b5eb2401e873185f26d8eeb30a97b7d0.setContent(html_2e8c0ed36f023b32a65f4fa88542ef6d);
+            
+        
+
+        rectangle_c7f19abd3e7a5bb9b0924c6c8a1f1e3a.bindPopup(popup_b5eb2401e873185f26d8eeb30a97b7d0)
+        ;
+
+        
+    
+    
+            var rectangle_35af6847bd34f80eaa2b604d89b85172 = L.rectangle(
+                [[47.02382314232, -137.13016986804], [59.49716317664, -122.14991795975]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_ca7637ebf99110cdfc12b198bb404650 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_fcfcbbdd65246c7a6dd3d59f8fdbe5cf = $(`<div id="html_fcfcbbdd65246c7a6dd3d59f8fdbe5cf" style="width: 100.0%; height: 100.0%;">British Columbia → The Coastal Waters of Southeast Alaska and British Columbia (IHO Sea Area)</div>`)[0];
+                popup_ca7637ebf99110cdfc12b198bb404650.setContent(html_fcfcbbdd65246c7a6dd3d59f8fdbe5cf);
+            
+        
+
+        rectangle_35af6847bd34f80eaa2b604d89b85172.bindPopup(popup_ca7637ebf99110cdfc12b198bb404650)
+        ;
+
+        
+    
+    
+            var rectangle_ccdffb31b3528962b5920f0460e9d091 = L.rectangle(
+                [[-60.0, 130.11129], [3.39114, -67.26667]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_5e4dfece4c9309e12da67bfd2319d253 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_80580118620272af391ff90064305165 = $(`<div id="html_80580118620272af391ff90064305165" style="width: 100.0%; height: 100.0%;">South Pacific → South Pacific Ocean (IHO Sea Area)</div>`)[0];
+                popup_5e4dfece4c9309e12da67bfd2319d253.setContent(html_80580118620272af391ff90064305165);
+            
+        
+
+        rectangle_ccdffb31b3528962b5920f0460e9d091.bindPopup(popup_5e4dfece4c9309e12da67bfd2319d253)
+        ;
+
+        
+    
+    
+            var rectangle_3eff64e293febbd103759a88c881102d = L.rectangle(
+                [[54.21157332, -6.1662877], [55.62522994, -4.856702131]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_f5db0c10f2eb6f061ed48f04e4fa0fc8 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_fe1283c59276d8562f6c99fbe5ba6db9 = $(`<div id="html_fe1283c59276d8562f6c99fbe5ba6db9" style="width: 100.0%; height: 100.0%;">North Channel → North Channel (Channel)</div>`)[0];
+                popup_f5db0c10f2eb6f061ed48f04e4fa0fc8.setContent(html_fe1283c59276d8562f6c99fbe5ba6db9);
+            
+        
+
+        rectangle_3eff64e293febbd103759a88c881102d.bindPopup(popup_f5db0c10f2eb6f061ed48f04e4fa0fc8)
+        ;
+
+        
+    
+    
+            var rectangle_7d5760d11658314284f7516373465239 = L.rectangle(
+                [[51.90413734476, -6.56905257671], [55.00417602071, -2.63917434252]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_97786bbd1aa9ad1f2cb0f6b25377ae2b = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_8563c9c015be1bb0ce2efc543c0a71e8 = $(`<div id="html_8563c9c015be1bb0ce2efc543c0a71e8" style="width: 100.0%; height: 100.0%;">Irish Sea → Irish Sea and St. George's Channel (IHO Sea Area)</div>`)[0];
+                popup_97786bbd1aa9ad1f2cb0f6b25377ae2b.setContent(html_8563c9c015be1bb0ce2efc543c0a71e8);
+            
+        
+
+        rectangle_7d5760d11658314284f7516373465239.bindPopup(popup_97786bbd1aa9ad1f2cb0f6b25377ae2b)
+        ;
+
+        
+    
+    
+            var rectangle_95199156a066acebb7cf089ea06dddb3 = L.rectangle(
+                [[46.50056578772, -11.5], [52.39568984501, -4.1380765434]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_9b1f4503e4e9e95bfd45651e55de5810 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_ea1f5aa9ede58fe2982cb80df78834a2 = $(`<div id="html_ea1f5aa9ede58fe2982cb80df78834a2" style="width: 100.0%; height: 100.0%;">Celtic Sea → Celtic Sea (IHO Sea Area)</div>`)[0];
+                popup_9b1f4503e4e9e95bfd45651e55de5810.setContent(html_ea1f5aa9ede58fe2982cb80df78834a2);
+            
+        
+
+        rectangle_95199156a066acebb7cf089ea06dddb3.bindPopup(popup_9b1f4503e4e9e95bfd45651e55de5810)
+        ;
+
+        
+    
+    
+            var rectangle_9d180e65235fa793ecb43f8ae201b9bc = L.rectangle(
+                [[48.50002086187, -5.70872848068], [51.16600370667, 1.93090510399]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_940a771327c2731137d7502d92ce11a7 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_69e93ad439c6b9c4b324cfa9959ee714 = $(`<div id="html_69e93ad439c6b9c4b324cfa9959ee714" style="width: 100.0%; height: 100.0%;">English Channel → English Channel (IHO Sea Area)</div>`)[0];
+                popup_940a771327c2731137d7502d92ce11a7.setContent(html_69e93ad439c6b9c4b324cfa9959ee714);
+            
+        
+
+        rectangle_9d180e65235fa793ecb43f8ae201b9bc.bindPopup(popup_940a771327c2731137d7502d92ce11a7)
+        ;
+
+        
+    
+    
+            var rectangle_7f9240d776898cf19ac8b77a1ad6f60e = L.rectangle(
+                [[17.39859, -179.77818], [29.14307, -153.47676]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_2dcf1b306ca8a97c1cdebae702db6a68 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_1c16c6ea9d794ff02a1b1cebe8cb13b9 = $(`<div id="html_1c16c6ea9d794ff02a1b1cebe8cb13b9" style="width: 100.0%; height: 100.0%;">Pacific → Insular Pacific-Hawaiian (Large Marine Ecosystem)</div>`)[0];
+                popup_2dcf1b306ca8a97c1cdebae702db6a68.setContent(html_1c16c6ea9d794ff02a1b1cebe8cb13b9);
+            
+        
+
+        rectangle_7f9240d776898cf19ac8b77a1ad6f60e.bindPopup(popup_2dcf1b306ca8a97c1cdebae702db6a68)
+        ;
+
+        
+    
+    
+            var rectangle_ad635fcf5bd752a08ae6e45e146b25b6 = L.rectangle(
+                [[14.928363, -68.481889], [18.877293, -63.888889]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_66058e0c3031ad519aae13fa0635575f = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_d6a2933cdf2fdd343d3fdf00303c3baa = $(`<div id="html_d6a2933cdf2fdd343d3fdf00303c3baa" style="width: 100.0%; height: 100.0%;">Puerto Rico → United States part of the Caribbean Sea (Puerto Rico) (Marine Region)</div>`)[0];
+                popup_66058e0c3031ad519aae13fa0635575f.setContent(html_d6a2933cdf2fdd343d3fdf00303c3baa);
+            
+        
+
+        rectangle_ad635fcf5bd752a08ae6e45e146b25b6.bindPopup(popup_66058e0c3031ad519aae13fa0635575f)
+        ;
+
+        
+    
+    
+            var rectangle_5f218f22c57b4f8fd42feb2c168b0386 = L.rectangle(
+                [[17.964166, -65.032237], [18.968165, -63.810144]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_951e166321bb52fb00a31e7ae740affb = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_d69cc650f7b2e6956a89e24506df49f0 = $(`<div id="html_d69cc650f7b2e6956a89e24506df49f0" style="width: 100.0%; height: 100.0%;">Virgin Islands → British Virgin Islands part of the Caribbean Sea (Marine Region)</div>`)[0];
+                popup_951e166321bb52fb00a31e7ae740affb.setContent(html_d69cc650f7b2e6956a89e24506df49f0);
+            
+        
+
+        rectangle_5f218f22c57b4f8fd42feb2c168b0386.bindPopup(popup_951e166321bb52fb00a31e7ae740affb)
+        ;
+
+        
+    
+    
+            var rectangle_5ffe980cdd598c32dcb13d9f55b6d5e2 = L.rectangle(
+                [[9.562873, -83.6458], [11.767564, -81.433333]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_18239b8a7d0a2ea5063580c5455f9eeb = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_74b388433d28662b0acb19bd277a93c3 = $(`<div id="html_74b388433d28662b0acb19bd277a93c3" style="width: 100.0%; height: 100.0%;">Costa Rica → Costa Rican part of the Caribbean Sea (Marine Region)</div>`)[0];
+                popup_18239b8a7d0a2ea5063580c5455f9eeb.setContent(html_74b388433d28662b0acb19bd277a93c3);
+            
+        
+
+        rectangle_5ffe980cdd598c32dcb13d9f55b6d5e2.bindPopup(popup_18239b8a7d0a2ea5063580c5455f9eeb)
+        ;
+
+        
+    
+    
+            var rectangle_3003ee9079ea5787c22ef35776766d6c = L.rectangle(
+                [[29.24608, -21.21826], [36.45761, -12.48362]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_78405e19e06bdbd25db9c0388c56ebff = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_b964ee2f48f63aa0797a8efe678638d5 = $(`<div id="html_b964ee2f48f63aa0797a8efe678638d5" style="width: 100.0%; height: 100.0%;">Madeira → Portuguese (Madeira) part of the North Atlantic Ocean (Marine Region)</div>`)[0];
+                popup_78405e19e06bdbd25db9c0388c56ebff.setContent(html_b964ee2f48f63aa0797a8efe678638d5);
+            
+        
+
+        rectangle_3003ee9079ea5787c22ef35776766d6c.bindPopup(popup_78405e19e06bdbd25db9c0388c56ebff)
+        ;
+
+        
+    
+    
+            var rectangle_014f95ded474e64766029a9681a1c592 = L.rectangle(
+                [[36.57, -121.74], [37.02, -122.12]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_80a16c11ea389a2d4e544b9d6534aa2d = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_006b5138822347b9a5a5d28a2088c452 = $(`<div id="html_006b5138822347b9a5a5d28a2088c452" style="width: 100.0%; height: 100.0%;">Monterey Bay → Monterey Bay (Bay)</div>`)[0];
+                popup_80a16c11ea389a2d4e544b9d6534aa2d.setContent(html_006b5138822347b9a5a5d28a2088c452);
+            
+        
+
+        rectangle_014f95ded474e64766029a9681a1c592.bindPopup(popup_80a16c11ea389a2d4e544b9d6534aa2d)
+        ;
+
+        
+    
+    
+            var rectangle_2053d578ce5b3d3d1f70eff78971d63f = L.rectangle(
+                [[22.87876534474, -115.03601205391], [31.94955372772, -106.7850719686]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_29378894c041c8061d4ff07c59b80e6c = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_14e66726bdaa9cf9d9f6e627223ef04a = $(`<div id="html_14e66726bdaa9cf9d9f6e627223ef04a" style="width: 100.0%; height: 100.0%;">Gulf of California → Gulf of California (IHO Sea Area)</div>`)[0];
+                popup_29378894c041c8061d4ff07c59b80e6c.setContent(html_14e66726bdaa9cf9d9f6e627223ef04a);
+            
+        
+
+        rectangle_2053d578ce5b3d3d1f70eff78971d63f.bindPopup(popup_29378894c041c8061d4ff07c59b80e6c)
+        ;
+
+        
+    
+    
+            var rectangle_632c1f7182492c2bd7c3a7760f75e199 = L.rectangle(
+                [[-3.22872316783, 102.2384721041], [25.5672843459, 122.15129880188]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_302fab816b93091bf0146eb52833e82f = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_1d026b0b152921cf728c13ebf517553e = $(`<div id="html_1d026b0b152921cf728c13ebf517553e" style="width: 100.0%; height: 100.0%;">South China Sea → South China Sea (IHO Sea Area)</div>`)[0];
+                popup_302fab816b93091bf0146eb52833e82f.setContent(html_1d026b0b152921cf728c13ebf517553e);
+            
+        
+
+        rectangle_632c1f7182492c2bd7c3a7760f75e199.bindPopup(popup_302fab816b93091bf0146eb52833e82f)
+        ;
+
+        
+    
+    
+            var rectangle_a9de1537e349b17c384244e51827c5b9 = L.rectangle(
+                [[12.45626235033, 33.63937130978], [28.13954293736, 43.50552117856]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_9d5da497d51093fbe76bda5de64a6f29 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_35fadeae7db1e56d0ab6ab057b5056d3 = $(`<div id="html_35fadeae7db1e56d0ab6ab057b5056d3" style="width: 100.0%; height: 100.0%;">Red Sea → Red Sea (IHO Sea Area)</div>`)[0];
+                popup_9d5da497d51093fbe76bda5de64a6f29.setContent(html_35fadeae7db1e56d0ab6ab057b5056d3);
+            
+        
+
+        rectangle_a9de1537e349b17c384244e51827c5b9.bindPopup(popup_9d5da497d51093fbe76bda5de64a6f29)
+        ;
+
+        
+    
+    
+            var rectangle_db49bb817407e2680a9288b251aeae14 = L.rectangle(
+                [[63.68782293808, 93.65715944795], [81.26895497331, 141.22509455677]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_47a1ea554192a5e5f0a24ff351a4fd38 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_0502af0a508e4d3aa2222b774d74eb5e = $(`<div id="html_0502af0a508e4d3aa2222b774d74eb5e" style="width: 100.0%; height: 100.0%;">Laptev Sea → Laptev Sea (IHO Sea Area)</div>`)[0];
+                popup_47a1ea554192a5e5f0a24ff351a4fd38.setContent(html_0502af0a508e4d3aa2222b774d74eb5e);
+            
+        
+
+        rectangle_db49bb817407e2680a9288b251aeae14.bindPopup(popup_47a1ea554192a5e5f0a24ff351a4fd38)
+        ;
+
+        
+    
+    
+            var rectangle_56300362a6b2e73a621ce2fba2ec2608 = L.rectangle(
+                [[39.65, -71.1], [46.02, -62.28]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_2b40ca67053fb5ddba44246dfe84ef28 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_f5d69aa65d8a12db96f05a290f52224c = $(`<div id="html_f5d69aa65d8a12db96f05a290f52224c" style="width: 100.0%; height: 100.0%;">Gulf Of Maine → Gulf of Maine (Gulf)</div>`)[0];
+                popup_2b40ca67053fb5ddba44246dfe84ef28.setContent(html_f5d69aa65d8a12db96f05a290f52224c);
+            
+        
+
+        rectangle_56300362a6b2e73a621ce2fba2ec2608.bindPopup(popup_2b40ca67053fb5ddba44246dfe84ef28)
+        ;
+
+        
+    
+    
+            var rectangle_8f534a84fd88337288f5cee9b045e7e0 = L.rectangle(
+                [[35.10948944128, 22.53159654165], [41.09132552156, 28.33056116127]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_5b7c4e533b4c2a1954d8d10f47e686fb = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_aad548fe07d089e9174ba8d74a65efdf = $(`<div id="html_aad548fe07d089e9174ba8d74a65efdf" style="width: 100.0%; height: 100.0%;">Aegean Sea → Aegean Sea (IHO Sea Area)</div>`)[0];
+                popup_5b7c4e533b4c2a1954d8d10f47e686fb.setContent(html_aad548fe07d089e9174ba8d74a65efdf);
+            
+        
+
+        rectangle_8f534a84fd88337288f5cee9b045e7e0.bindPopup(popup_5b7c4e533b4c2a1954d8d10f47e686fb)
+        ;
+
+        
+    
+    
+            var rectangle_03f8c67150ea55c73b92d0f3de02fa49 = L.rectangle(
+                [[39.99890852001, 26.17422051992], [41.23293495342, 29.94218587848]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_f8e46479ef083cc4045cda5596e1bcf6 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_855b375a9289bbf3b207684db694cf25 = $(`<div id="html_855b375a9289bbf3b207684db694cf25" style="width: 100.0%; height: 100.0%;">Marmara Sea → Marmara Sea (IHO Sea Area)</div>`)[0];
+                popup_f8e46479ef083cc4045cda5596e1bcf6.setContent(html_855b375a9289bbf3b207684db694cf25);
+            
+        
+
+        rectangle_03f8c67150ea55c73b92d0f3de02fa49.bindPopup(popup_f8e46479ef083cc4045cda5596e1bcf6)
+        ;
+
+        
+    
+    
+            var rectangle_ea51e39f55a174bd48c5211c266a3e21 = L.rectangle(
+                [[24.05760752069, 118.47804582106], [33.37195920955, 131.1322036827]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_8f78d173f9e240f988a1457830c36671 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_bbe938f912090a62db4c03c3ff1885ff = $(`<div id="html_bbe938f912090a62db4c03c3ff1885ff" style="width: 100.0%; height: 100.0%;">Eastern → Eastern China Sea (IHO Sea Area)</div>`)[0];
+                popup_8f78d173f9e240f988a1457830c36671.setContent(html_bbe938f912090a62db4c03c3ff1885ff);
+            
+        
+
+        rectangle_ea51e39f55a174bd48c5211c266a3e21.bindPopup(popup_8f78d173f9e240f988a1457830c36671)
+        ;
+
+        
+    
+    
+            var rectangle_a2794f07ad6799298f32cfaf0ec93a0c = L.rectangle(
+                [[7.70979893208, -89.41292977359], [22.70652472953, -59.42160093753]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_b6405862e0beca25ee70d5959c36fe8c = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_5b5aa5ca934b0c10e66ae3926c52255b = $(`<div id="html_5b5aa5ca934b0c10e66ae3926c52255b" style="width: 100.0%; height: 100.0%;">Caribbean → Caribbean Sea (IHO Sea Area)</div>`)[0];
+                popup_b6405862e0beca25ee70d5959c36fe8c.setContent(html_5b5aa5ca934b0c10e66ae3926c52255b);
+            
+        
+
+        rectangle_a2794f07ad6799298f32cfaf0ec93a0c.bindPopup(popup_b6405862e0beca25ee70d5959c36fe8c)
+        ;
+
+        
+    
+    
+            var rectangle_43ae9af9d6425aec01e3be79ac3d6110 = L.rectangle(
+                [[17.40680801848, -98.05392181844], [31.46484375034, -80.43304073784]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_5abf5188a954c4933af9e198c1bc78e1 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_9f0ab9772c3812276ef81bbb6fef2725 = $(`<div id="html_9f0ab9772c3812276ef81bbb6fef2725" style="width: 100.0%; height: 100.0%;">Gulf of Mexico → Gulf of Mexico (IHO Sea Area)</div>`)[0];
+                popup_5abf5188a954c4933af9e198c1bc78e1.setContent(html_9f0ab9772c3812276ef81bbb6fef2725);
+            
+        
+
+        rectangle_43ae9af9d6425aec01e3be79ac3d6110.bindPopup(popup_5abf5188a954c4933af9e198c1bc78e1)
+        ;
+
+        
+    
+    
+            var rectangle_1b9884bb71db8b5253498c67b4e68524 = L.rectangle(
+                [[18.832222, -85.887557], [22.700836, -73.868092]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_508de2dce89a2235b2444e465b9464e9 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_0ef7735a95e3fcff5ebd32635f82cc16 = $(`<div id="html_0ef7735a95e3fcff5ebd32635f82cc16" style="width: 100.0%; height: 100.0%;">The Caribbean Sea → Cuban part of the Caribbean Sea (Marine Region)</div>`)[0];
+                popup_508de2dce89a2235b2444e465b9464e9.setContent(html_0ef7735a95e3fcff5ebd32635f82cc16);
+            
+        
+
+        rectangle_1b9884bb71db8b5253498c67b4e68524.bindPopup(popup_508de2dce89a2235b2444e465b9464e9)
+        ;
+
+        
+    
+    
+            var rectangle_385922f941636384dee4fdeb9059d2e8 = L.rectangle(
+                [[54.29833316814, -163.35763296168], [61.549499631, -136.61806464177]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_5772e2561504b7966ec38d4a6f6f22b4 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_236cf6c0f2e05452ec265b429d29211c = $(`<div id="html_236cf6c0f2e05452ec265b429d29211c" style="width: 100.0%; height: 100.0%;">Alaska → Gulf of Alaska (IHO Sea Area)</div>`)[0];
+                popup_5772e2561504b7966ec38d4a6f6f22b4.setContent(html_236cf6c0f2e05452ec265b429d29211c);
+            
+        
+
+        rectangle_385922f941636384dee4fdeb9059d2e8.bindPopup(popup_5772e2561504b7966ec38d4a6f6f22b4)
+        ;
+
+        
+    
+    
+            var rectangle_06877dab772befbfe4b9d7ef4bbe0cec = L.rectangle(
+                [[-85.47028, -179.99998], [-60.38523, 179.99998]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_64af5c8d11bd6e8e635c380f09508087 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_42585508c81210eac222f6f8b50b6f97 = $(`<div id="html_42585508c81210eac222f6f8b50b6f97" style="width: 100.0%; height: 100.0%;">Antarctica → Antarctica (Large Marine Ecosystem)</div>`)[0];
+                popup_64af5c8d11bd6e8e635c380f09508087.setContent(html_42585508c81210eac222f6f8b50b6f97);
+            
+        
+
+        rectangle_06877dab772befbfe4b9d7ef4bbe0cec.bindPopup(popup_64af5c8d11bd6e8e635c380f09508087)
+        ;
+
+        
+    
+    
+            var rectangle_ad6725010d9808972d9d40c05067c81b = L.rectangle(
+                [[51.3507886089, -156.22572875], [66.56286, 161.823778153]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_e56dae8933053ec64b50c15828524dfb = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_e8019c1802d69b0430db6b8e5a9c374e = $(`<div id="html_e8019c1802d69b0430db6b8e5a9c374e" style="width: 100.0%; height: 100.0%;">Bering Sea → Bering Sea (IHO Sea Area)</div>`)[0];
+                popup_e56dae8933053ec64b50c15828524dfb.setContent(html_e8019c1802d69b0430db6b8e5a9c374e);
+            
+        
+
+        rectangle_ad6725010d9808972d9d40c05067c81b.bindPopup(popup_e56dae8933053ec64b50c15828524dfb)
+        ;
+
+        
+    
+    
+            var rectangle_4b1ab37e94f942eecb3ea9149ed6108e = L.rectangle(
+                [[23.95901381933, 47.70244097687], [31.18585503098, 57.3399815557]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_9cbf76c95cdef9a181e82fe0ed459649 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_ebcee23670f265470f00e94994a4b2d0 = $(`<div id="html_ebcee23670f265470f00e94994a4b2d0" style="width: 100.0%; height: 100.0%;">Arabian Gulf → Arabian Gulf (IHO Sea Area)</div>`)[0];
+                popup_9cbf76c95cdef9a181e82fe0ed459649.setContent(html_ebcee23670f265470f00e94994a4b2d0);
+            
+        
+
+        rectangle_4b1ab37e94f942eecb3ea9149ed6108e.bindPopup(popup_9cbf76c95cdef9a181e82fe0ed459649)
+        ;
+
+        
+    
+    
+            var rectangle_4a61ec664dbddce5bb412d834aa1608a = L.rectangle(
+                [[54.33640234359, -8.24960118869], [58.62454384285, -4.45862984669]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_f0dad8190207034bff2f1768dc31a9d7 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_aa36fd705286681e9a1194b7f1767d31 = $(`<div id="html_aa36fd705286681e9a1194b7f1767d31" style="width: 100.0%; height: 100.0%;">West Coast of Scotland → Inner Seas off the West Coast of Scotland (IHO Sea Area)</div>`)[0];
+                popup_f0dad8190207034bff2f1768dc31a9d7.setContent(html_aa36fd705286681e9a1194b7f1767d31);
+            
+        
+
+        rectangle_4a61ec664dbddce5bb412d834aa1608a.bindPopup(popup_f0dad8190207034bff2f1768dc31a9d7)
+        ;
+
+        
+    
+    
+            var rectangle_9c376ec602532d9db9a82006b7de797c = L.rectangle(
+                [[50.65532705, -1.789142893], [50.94092477, -0.807473241]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_d7a54adb256e866d952974a62baa5165 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_c9c73c2d730e9eaaa64570ed4d855a09 = $(`<div id="html_c9c73c2d730e9eaaa64570ed4d855a09" style="width: 100.0%; height: 100.0%;">The Solent → The Solent (Strait)</div>`)[0];
+                popup_d7a54adb256e866d952974a62baa5165.setContent(html_c9c73c2d730e9eaaa64570ed4d855a09);
+            
+        
+
+        rectangle_9c376ec602532d9db9a82006b7de797c.bindPopup(popup_d7a54adb256e866d952974a62baa5165)
+        ;
+
+        
+    
+    
+            var rectangle_82c78f754b5f672a284f2ae1ea83714d = L.rectangle(
+                [[36.97, -75.74], [39.01, -76.75]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_49dba951fe2be2faac9474f912963174 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_c3f8a142ef4e2016343c4b2e27962e17 = $(`<div id="html_c3f8a142ef4e2016343c4b2e27962e17" style="width: 100.0%; height: 100.0%;">Chesapeake → Chesapeake Bay (Bay)</div>`)[0];
+                popup_49dba951fe2be2faac9474f912963174.setContent(html_c3f8a142ef4e2016343c4b2e27962e17);
+            
+        
+
+        rectangle_82c78f754b5f672a284f2ae1ea83714d.bindPopup(popup_49dba951fe2be2faac9474f912963174)
+        ;
+
+        
+    
+    
+            var rectangle_fcf152ab11a8765b8c7ca22653932796 = L.rectangle(
+                [[24.8, -81.08], [25.25, -80.33]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_8db571769aadfe1f4f63cd8ac5a939b0 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_d33f0ba2e712fd1372b31c00d165aa04 = $(`<div id="html_d33f0ba2e712fd1372b31c00d165aa04" style="width: 100.0%; height: 100.0%;">Florida → Florida Bay (Bay)</div>`)[0];
+                popup_8db571769aadfe1f4f63cd8ac5a939b0.setContent(html_d33f0ba2e712fd1372b31c00d165aa04);
+            
+        
+
+        rectangle_fcf152ab11a8765b8c7ca22653932796.bindPopup(popup_8db571769aadfe1f4f63cd8ac5a939b0)
+        ;
+
+        
+    
+    
+            var rectangle_1f40b0ed29cbd45308aea05596bcc414 = L.rectangle(
+                [[32.57501368363, 125.8013889], [51.74733316939, 142.2638347153]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_66328e7d5cabf98a308940bd2a0f71d8 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_3b3cc19223d469c84fc01a62ad3492ea = $(`<div id="html_3b3cc19223d469c84fc01a62ad3492ea" style="width: 100.0%; height: 100.0%;">Japan Sea → Japan Sea/East Sea (IHO Sea Area)</div>`)[0];
+                popup_66328e7d5cabf98a308940bd2a0f71d8.setContent(html_3b3cc19223d469c84fc01a62ad3492ea);
+            
+        
+
+        rectangle_1f40b0ed29cbd45308aea05596bcc414.bindPopup(popup_66328e7d5cabf98a308940bd2a0f71d8)
+        ;
+
+        
+    
+    
+            var rectangle_2e9f08191feff4a03f87886dea21ea8f = L.rectangle(
+                [[0.0, 117.51622], [66.56286, -76.98544]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_590369be1c42a9d6c99d105209193d6c = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_f2e94e7467af1dd3c193f75ececdabb3 = $(`<div id="html_f2e94e7467af1dd3c193f75ececdabb3" style="width: 100.0%; height: 100.0%;">North Pacific Ocean → North Pacific Ocean (IHO Sea Area)</div>`)[0];
+                popup_590369be1c42a9d6c99d105209193d6c.setContent(html_f2e94e7467af1dd3c193f75ececdabb3);
+            
+        
+
+        rectangle_2e9f08191feff4a03f87886dea21ea8f.bindPopup(popup_590369be1c42a9d6c99d105209193d6c)
+        ;
+
+        
+    
+    
+            var rectangle_c539420d1698987e2963467646a05722 = L.rectangle(
+                [[40.98, -72.04], [41.27, -73.9]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_3b73f1386f86b69e5aec4bdb7753df9b = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_1fdf4c9556e9cecd8f6964adb11b3f30 = $(`<div id="html_1fdf4c9556e9cecd8f6964adb11b3f30" style="width: 100.0%; height: 100.0%;">Long Island Sound → Long Island Sound (bay) (Bay)</div>`)[0];
+                popup_3b73f1386f86b69e5aec4bdb7753df9b.setContent(html_1fdf4c9556e9cecd8f6964adb11b3f30);
+            
+        
+
+        rectangle_c539420d1698987e2963467646a05722.bindPopup(popup_3b73f1386f86b69e5aec4bdb7753df9b)
+        ;
+
+        
+    
+    
+            var rectangle_52749dac5cc277266e8a673655160520 = L.rectangle(
+                [[57.09880185142, 6.99822115858], [59.91914391516, 11.91655933884]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_e7158251f847728c7cb36c004018f16b = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_3c9b523c736dd2a2ad286d94a459dd75 = $(`<div id="html_3c9b523c736dd2a2ad286d94a459dd75" style="width: 100.0%; height: 100.0%;">Skagerak → Skagerrak (IHO Sea Area)</div>`)[0];
+                popup_e7158251f847728c7cb36c004018f16b.setContent(html_3c9b523c736dd2a2ad286d94a459dd75);
+            
+        
+
+        rectangle_52749dac5cc277266e8a673655160520.bindPopup(popup_e7158251f847728c7cb36c004018f16b)
+        ;
+
+        
+    
+    
+            var rectangle_c7d4cbb307af4e5d82b20ffb85dfef01 = L.rectangle(
+                [[54.63373190945, 9.36559641892], [58.07746934863, 13.06291067639]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_9db4e138ffad19f2471518dfbc1e8e11 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_51f60ec1c93dcbc1d42d3af513b0f8c3 = $(`<div id="html_51f60ec1c93dcbc1d42d3af513b0f8c3" style="width: 100.0%; height: 100.0%;">Kattegat → Kattegat (IHO Sea Area)</div>`)[0];
+                popup_9db4e138ffad19f2471518dfbc1e8e11.setContent(html_51f60ec1c93dcbc1d42d3af513b0f8c3);
+            
+        
+
+        rectangle_c7d4cbb307af4e5d82b20ffb85dfef01.bindPopup(popup_9db4e138ffad19f2471518dfbc1e8e11)
+        ;
+
+        
+    
+    
+            var rectangle_98fa58ff37a36996eebbda24bd1c85b6 = L.rectangle(
+                [[50.98893535109, -4.92431735966], [51.81888794922, -2.34539175033]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_f8cc57d89f1df1c1cf82057f9be169fd = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_a51c59c2f8b0ac61f17a78c14e6357e1 = $(`<div id="html_a51c59c2f8b0ac61f17a78c14e6357e1" style="width: 100.0%; height: 100.0%;">Channel → Bristol Channel (IHO Sea Area)</div>`)[0];
+                popup_f8cc57d89f1df1c1cf82057f9be169fd.setContent(html_a51c59c2f8b0ac61f17a78c14e6357e1);
+            
+        
+
+        rectangle_98fa58ff37a36996eebbda24bd1c85b6.bindPopup(popup_f8cc57d89f1df1c1cf82057f9be169fd)
+        ;
+
+        
+    
+    
+            var rectangle_c2107534b8fd092e748931f341228a4f = L.rectangle(
+                [[44.95849871674, -74.86481297044], [52.22241842777, -54.70344650725]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_73c1ee5e7ac594fbe9a8db02b1f4ece2 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_08953a1eb397eaf50596448aac20af31 = $(`<div id="html_08953a1eb397eaf50596448aac20af31" style="width: 100.0%; height: 100.0%;">Gulf of St → Gulf of St. Lawrence (IHO Sea Area)</div>`)[0];
+                popup_73c1ee5e7ac594fbe9a8db02b1f4ece2.setContent(html_08953a1eb397eaf50596448aac20af31);
+            
+        
+
+        rectangle_c2107534b8fd092e748931f341228a4f.bindPopup(popup_73c1ee5e7ac594fbe9a8db02b1f4ece2)
+        ;
+
+        
+    
+    
+            var rectangle_fef67898fa802862cb460708a274b61e = L.rectangle(
+                [[75.9383, -180.0], [90.0, 180.0]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_73bf3967a198582cc4d2916b668f7cd8 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_ed325a31c46be59b1aa0e0559048fe35 = $(`<div id="html_ed325a31c46be59b1aa0e0559048fe35" style="width: 100.0%; height: 100.0%;">Central → Central Arctic (Large Marine Ecosystem)</div>`)[0];
+                popup_73bf3967a198582cc4d2916b668f7cd8.setContent(html_ed325a31c46be59b1aa0e0559048fe35);
+            
+        
+
+        rectangle_fef67898fa802862cb460708a274b61e.bindPopup(popup_73bf3967a198582cc4d2916b668f7cd8)
+        ;
+
+        
+    
+    
+            var rectangle_dc99212c447daac763cf18979e8d3c72 = L.rectangle(
+                [[67.59654724626, -156.66489112353], [76.36291547159, -122.65277135381]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_2ef2713aa9c85dfa21bf6cd99c3bbf6d = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_12fefc79b96dc4dfaa6242762211a18e = $(`<div id="html_12fefc79b96dc4dfaa6242762211a18e" style="width: 100.0%; height: 100.0%;">Beaufort Sea → Beaufort Sea (IHO Sea Area)</div>`)[0];
+                popup_2ef2713aa9c85dfa21bf6cd99c3bbf6d.setContent(html_12fefc79b96dc4dfaa6242762211a18e);
+            
+        
+
+        rectangle_dc99212c447daac763cf18979e8d3c72.bindPopup(popup_2ef2713aa9c85dfa21bf6cd99c3bbf6d)
+        ;
+
+        
+    
+    
+            var rectangle_6c0b3dc5a07fc63b891dc32040e26da9 = L.rectangle(
+                [[-60.0, 20.00262], [31.18586, 146.89822]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_349b1813abe9e86a0bb35ebecaa3c01a = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_d34479c4d024452d070b9ee8ac571ccb = $(`<div id="html_d34479c4d024452d070b9ee8ac571ccb" style="width: 100.0%; height: 100.0%;">Indian Oceans → Indian Ocean (IHO Sea Area)</div>`)[0];
+                popup_349b1813abe9e86a0bb35ebecaa3c01a.setContent(html_d34479c4d024452d070b9ee8ac571ccb);
+            
+        
+
+        rectangle_6c0b3dc5a07fc63b891dc32040e26da9.bindPopup(popup_349b1813abe9e86a0bb35ebecaa3c01a)
+        ;
+
+        
+    
+    
+            var rectangle_6b054e10698754f1bf0df219d85aa906 = L.rectangle(
+                [[50.5603, -180.0], [53.69347, 180.0]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_3fb84b39d230763397b251b44c953f91 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_88b6ed2037af5331d2ecba9c3bb25dea = $(`<div id="html_88b6ed2037af5331d2ecba9c3bb25dea" style="width: 100.0%; height: 100.0%;">islands → Aleutian Islands (Large Marine Ecosystem)</div>`)[0];
+                popup_3fb84b39d230763397b251b44c953f91.setContent(html_88b6ed2037af5331d2ecba9c3bb25dea);
+            
+        
+
+        rectangle_6b054e10698754f1bf0df219d85aa906.bindPopup(popup_3fb84b39d230763397b251b44c953f91)
+        ;
+
+        
+    
+    
+            var rectangle_e155ab89c43eaa733f5df7461f4b0089 = L.rectangle(
+                [[35.885791, -6.032673], [36.184436, -5.307646]],
+                {"bubblingMouseEvents": true, "color": "#2A7B6F", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2A7B6F", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 1}
+            ).addTo(map_2c36ebb54f920b75355a00911a2c8eca);
+        
+    
+        var popup_732117ebb98b56fceea1562030885ff8 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_50ca9a20e11a751ac9da915f1d2e6a4e = $(`<div id="html_50ca9a20e11a751ac9da915f1d2e6a4e" style="width: 100.0%; height: 100.0%;">the St → Spanish part of the Strait of Gibraltar (Marine Region)</div>`)[0];
+                popup_732117ebb98b56fceea1562030885ff8.setContent(html_50ca9a20e11a751ac9da915f1d2e6a4e);
+            
+        
+
+        rectangle_e155ab89c43eaa733f5df7461f4b0089.bindPopup(popup_732117ebb98b56fceea1562030885ff8)
+        ;
+
+        
+    
+</script>
+</html>

@@ -34,9 +34,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Vessel name is required.' }, { status: 400 })
   }
 
-  // Auto-geocode if location provided
+  // Auto-geocode if location provided and no verified coords came from the autocomplete
+  const coordsProvided = !!fields.primary_latitude && !!fields.primary_longitude
   const parts = [fields.port_city, fields.port_state, fields.country].filter(Boolean)
-  if (parts.length > 0) {
+  if (parts.length > 0 && !coordsProvided) {
     try {
       const q = encodeURIComponent((parts as string[]).join(', '))
       const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {

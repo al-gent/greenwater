@@ -49,6 +49,7 @@ export default function AdminNewVesselPage() {
             vessel={{ name: '' }}
             backHref="/admin"
             createMode
+            isAdmin
           />
         </div>
       </div>

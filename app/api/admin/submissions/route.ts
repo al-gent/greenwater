@@ -63,9 +63,14 @@ export async function PATCH(request: Request) {
     const { data: newVessel, error: insertError } = await supabaseAdmin.from('vessels').insert({
       name: submission.vessel_name,
       operator_name: submission.operator_name,
+      port_name: submission.port_name ?? null,
       port_city: submission.port_city,
       port_state: submission.port_state ?? null,
       country: submission.country ?? null,
+      // vessels stores homeport coords in the (text) primary_* columns
+      primary_latitude: submission.homeport_latitude != null ? String(submission.homeport_latitude) : null,
+      primary_longitude: submission.homeport_longitude != null ? String(submission.homeport_longitude) : null,
+      operating_area_geojson: submission.operating_area_geojson ?? null,
       mmsi: submission.mmsi ?? null,
       imo_number: submission.imo_number ?? null,
       call_sign: submission.call_sign ?? null,

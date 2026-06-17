@@ -5,8 +5,10 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import type { Vessel } from '@/lib/vessel-utils'
 import { getPhotoUrl } from '@/lib/vessel-utils'
-import SearchBar, { type SearchState } from './SearchBar'
-import AdvancedSearch, { type AdvancedFilters, EMPTY_ADVANCED } from './AdvancedSearch'
+import { type SearchMode } from './LocationSearch'
+import { type AdvancedFilters, EMPTY_ADVANCED, advancedActive } from './AdvancedSearch'
+import VesselSearchBar from './VesselSearchBar'
+import { useVesselLocationSearch, type Place } from './useVesselLocationSearch'
 import VesselCard from './VesselCard'
 import VesselRow from './VesselRow'
 
@@ -36,17 +38,15 @@ const FEATURE_CHECKS: Record<string, (v: Vessel) => boolean> = {
   coring:    (v) => !!v.core_capable,
 }
 
-function applySearch(vessels: Vessel[], search: SearchState, advanced: AdvancedFilters): Vessel[] {
-  const minDays = search.when ? parseInt(search.when, 10) : 0
+function applySearch(vessels: Vessel[], advanced: AdvancedFilters, locationIds: Set<number> | null): Vessel[] {
   return vessels.filter((v) => {
-    if (search.where && v.country !== search.where) return false
-    if (search.bunks > 0 && (!v.scientists || v.scientists < search.bunks)) return false
-    if (minDays > 0) {
-      const endurance = parseInt(v.endurance ?? '', 10)
-      if (!endurance || endurance < minDays) return false
-    }
+    if (locationIds && !locationIds.has(v.id)) return false
     if (advanced.name && !v.name.toLowerCase().includes(advanced.name.toLowerCase())) return false
     if (advanced.minBerths > 0 && (!v.scientists || v.scientists < advanced.minBerths)) return false
+    if (advanced.minEndurance > 0) {
+      const endurance = parseInt(v.endurance ?? '', 10)
+      if (!endurance || endurance < advanced.minEndurance) return false
+    }
     if (advanced.minLength > 0 && (!v.length || v.length < advanced.minLength)) return false
     if (advanced.maxLength > 0 && (!v.length || v.length > advanced.maxLength)) return false
     if (advanced.iceBreaking) {
@@ -92,16 +92,6 @@ const COUNTRY_SUBTITLES: Record<string, string> = {
 
 interface HomeClientProps {
   vessels: Vessel[]
-  countries: string[]
-  activities: string[]
-}
-
-function parseSearchFromParams(p: URLSearchParams): SearchState {
-  return {
-    where: p.get('where') ?? '',
-    when: p.get('when') ?? '',
-    bunks: parseInt(p.get('bunks') ?? '0', 10) || 0,
-  }
 }
 
 function parseAdvancedFromParams(p: URLSearchParams): AdvancedFilters {
@@ -109,6 +99,7 @@ function parseAdvancedFromParams(p: URLSearchParams): AdvancedFilters {
   return {
     name: p.get('name') ?? '',
     minBerths: parseInt(p.get('minBerths') ?? '0', 10) || 0,
+    minEndurance: parseInt(p.get('endurance') ?? '0', 10) || 0,
     minLength: parseInt(p.get('minLength') ?? '0', 10) || 0,
     maxLength: parseInt(p.get('maxLength') ?? '0', 10) || 0,
     iceBreaking: p.get('ice') === '1',
@@ -116,47 +107,82 @@ function parseAdvancedFromParams(p: URLSearchParams): AdvancedFilters {
   }
 }
 
-function buildQueryString(search: SearchState, advanced: AdvancedFilters): string {
+interface LocationState {
+  query: string
+  place: Place | null
+  mode: SearchMode
+  radius: number
+}
+
+function parseLocationFromParams(p: URLSearchParams): LocationState {
+  const lat = parseFloat(p.get('lat') ?? '')
+  const lon = parseFloat(p.get('lon') ?? '')
+  const has = !isNaN(lat) && !isNaN(lon)
+  const label = p.get('loc') ?? ''
+  const bboxRaw = (p.get('bbox') ?? '').split(',').map(Number)
+  const bbox = bboxRaw.length === 4 && bboxRaw.every((n) => !isNaN(n))
+    ? (bboxRaw as [number, number, number, number])
+    : undefined
+  return {
+    query: label,
+    place: has ? { label, lat, lon, bbox } : null,
+    mode: (p.get('smode') as SearchMode) || 'last_port',
+    radius: parseInt(p.get('radius') ?? '250', 10) || 250,
+  }
+}
+
+function buildQueryString(advanced: AdvancedFilters, loc: LocationState): string {
   const p = new URLSearchParams()
-  if (search.where) p.set('where', search.where)
-  if (search.when) p.set('when', search.when)
-  if (search.bunks > 0) p.set('bunks', String(search.bunks))
   if (advanced.name) p.set('name', advanced.name)
   if (advanced.minBerths > 0) p.set('minBerths', String(advanced.minBerths))
+  if (advanced.minEndurance > 0) p.set('endurance', String(advanced.minEndurance))
   if (advanced.minLength > 0) p.set('minLength', String(advanced.minLength))
   if (advanced.maxLength > 0) p.set('maxLength', String(advanced.maxLength))
   if (advanced.iceBreaking) p.set('ice', '1')
   if (advanced.features.length > 0) p.set('features', advanced.features.join(','))
+  if (loc.place) {
+    p.set('loc', loc.place.label)
+    p.set('lat', String(loc.place.lat))
+    p.set('lon', String(loc.place.lon))
+    if (loc.mode !== 'last_port') p.set('smode', loc.mode) // last_port is the default
+    if (loc.mode === 'operating_area') {
+      p.set('radius', String(loc.radius))
+    } else {
+      if (loc.place.bbox) p.set('bbox', loc.place.bbox.join(','))
+      p.set('radius', String(loc.radius))
+    }
+  }
   return p.toString()
 }
 
-export default function HomeClient({ vessels, countries }: HomeClientProps) {
+export default function HomeClient({ vessels }: HomeClientProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const [search, setSearch] = useState<SearchState>(() => parseSearchFromParams(searchParams))
   const [advanced, setAdvanced] = useState<AdvancedFilters>(() => parseAdvancedFromParams(searchParams))
   const [showAdvanced, setShowAdvanced] = useState(() => {
     const a = parseAdvancedFromParams(searchParams)
-    return !!(a.name || a.minBerths > 0 || a.minLength > 0 || a.maxLength > 0 || a.iceBreaking || a.features.length > 0)
+    return !!(a.name || a.minBerths > 0 || a.minEndurance > 0 || a.minLength > 0 || a.maxLength > 0 || a.iceBreaking || a.features.length > 0)
   })
-  const [showMap, setShowMap] = useState(false)
+  const [showMap, setShowMap] = useState(true)
+  const loc = useVesselLocationSearch(parseLocationFromParams(searchParams))
 
+  // Keep the URL in sync so the search survives back/refresh.
   useEffect(() => {
-    const qs = buildQueryString(search, advanced)
+    const qs = buildQueryString(advanced, { query: loc.query, place: loc.place, mode: loc.mode, radius: loc.radius })
     const next = qs ? `${pathname}?${qs}` : pathname
     const current = window.location.pathname + window.location.search
     if (next !== current) {
       router.replace(next, { scroll: false })
     }
-  }, [search, advanced, pathname, router])
+  }, [advanced, loc.place, loc.mode, loc.radius, loc.query, pathname, router])
 
-  const advancedActive = !!(advanced.name || advanced.minBerths > 0 || advanced.minLength > 0 || advanced.maxLength > 0 || advanced.iceBreaking || advanced.features.length > 0)
-  const hasSearch = !!(search.where || search.when || search.bunks > 0 || advancedActive)
+  const isAdvancedActive = advancedActive(advanced)
+  const hasSearch = !!(isAdvancedActive || loc.place)
 
   const withPhotos = useMemo(() => vessels.filter((v) => v.photo_urls?.length), [vessels])
-  const filtered = useMemo(() => applySearch(vessels, search, advanced), [vessels, search, advanced])
+  const filtered = useMemo(() => applySearch(vessels, advanced, loc.match?.ids ?? null), [vessels, advanced, loc.match])
   const rows = useMemo(() => groupByCountry(withPhotos), [withPhotos])
   const mapVessels = useMemo(
     () => (hasSearch ? filtered : vessels).map((v) => ({ ...v, photoUrl: getPhotoUrl(v) })),
@@ -168,64 +194,31 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
 
       {/* Search bar */}
       <div className="border-b border-gray-100 bg-white py-8 px-4">
-        <SearchBar
-          countries={countries}
-          value={search}
-          onChange={setSearch}
-          advancedValue={advanced}
+        <VesselSearchBar
+          loc={loc}
+          advanced={advanced}
           onAdvancedChange={setAdvanced}
-          advancedActive={advancedActive}
+          showAdvanced={showAdvanced}
+          onToggleAdvanced={() => setShowAdvanced((v) => !v)}
+          showMap={showMap}
+          onToggleMap={() => setShowMap((v) => !v)}
         />
-        <div className="sm:flex justify-center items-center gap-6 mt-3 hidden">
-          <button
-            onClick={() => setShowAdvanced((v) => !v)}
-            className={`flex items-center gap-1.5 text-sm transition-colors ${
-              showAdvanced || advancedActive ? 'text-teal font-medium' : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-            </svg>
-            Advanced search
-            {advancedActive && (
-              <span className="inline-flex items-center justify-center w-4 h-4 bg-teal text-white text-[10px] font-bold rounded-full">
-                {[!!advanced.name, advanced.minBerths > 0, advanced.minLength > 0 || advanced.maxLength > 0, advanced.iceBreaking, ...advanced.features.map(() => true)].filter(Boolean).length}
-              </span>
-            )}
-            <svg
-              className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          <button
-            onClick={() => setShowMap((v) => !v)}
-            className={`flex items-center gap-1.5 text-sm transition-colors ${
-              showMap ? 'text-teal font-medium' : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-            {showMap ? 'Hide map' : 'Show map'}
-          </button>
-        </div>
-        {showAdvanced && (
-          <div className="hidden sm:block">
-            <AdvancedSearch
-              value={advanced}
-              onChange={setAdvanced}
-              onClear={() => setAdvanced(EMPTY_ADVANCED)}
-            />
-          </div>
-        )}
       </div>
 
       {/* Map (toggleable) */}
       {showMap && (
         <div style={{ height: '420px' }} className="w-full border-b border-gray-100">
-          <HomeMap vessels={mapVessels} />
+          <HomeMap
+            vessels={mapVessels}
+            searchPlace={loc.place ? {
+              lat: loc.place.lat,
+              lon: loc.place.lon,
+              label: loc.place.label,
+              // operating-area is point-based (distance to polygon), so always a circle
+              bbox: loc.mode === 'operating_area' ? undefined : loc.place.bbox,
+              radiusNm: loc.radiusApplies ? loc.radius : undefined,
+            } : undefined}
+          />
         </div>
       )}
 
@@ -234,11 +227,12 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 flex items-center justify-between">
           <p className="text-sm text-gray-400">
             <span className="font-semibold text-navy">{filtered.length}</span> vessel{filtered.length !== 1 ? 's' : ''} found
-            {search.bunks > 0 && ` · ${search.bunks}+ research bunks`}
-            {search.when && ` · ${search.when}+ days endurance`}
+            {loc.match && ` · ${loc.match.mode === 'operating_area' ? 'operating near' : loc.match.mode === 'home_port' ? 'based near' : 'last seen near'} ${loc.match.label}`}
+            {advanced.minBerths > 0 && ` · ${advanced.minBerths}+ berths`}
+            {advanced.minEndurance > 0 && ` · ${advanced.minEndurance}+ days endurance`}
           </p>
           <button
-            onClick={() => { setSearch({ where: '', when: '', bunks: 0 }); setAdvanced(EMPTY_ADVANCED) }}
+            onClick={() => { setAdvanced(EMPTY_ADVANCED); loc.clear() }}
             className="text-sm text-gray-500 hover:text-navy underline"
           >
             Clear
@@ -257,9 +251,9 @@ export default function HomeClient({ vessels, countries }: HomeClientProps) {
                 </svg>
               </div>
               <h3 className="font-semibold text-navy mb-1">No vessels found</h3>
-              <p className="text-sm text-gray-400 mb-4">Try a different location or fewer bunks.</p>
+              <p className="text-sm text-gray-400 mb-4">Try a different location or fewer filters.</p>
               <button
-                onClick={() => { setSearch({ where: '', when: '', bunks: 0 }); setAdvanced(EMPTY_ADVANCED) }}
+                onClick={() => { setAdvanced(EMPTY_ADVANCED); loc.clear() }}
                 className="bg-navy text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors"
               >
                 Clear search

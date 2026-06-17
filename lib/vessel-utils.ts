@@ -37,8 +37,10 @@ export interface Vessel {
   speed_max: number | null
   ice_breaking: string | null
   operating_area: string | null
+  operating_area_geojson: GeoJSON.FeatureCollection | null
   endurance: string | null
   dpos: string | null
+  port_name: string | null
   port_city: string | null
   port_state: string | null
 

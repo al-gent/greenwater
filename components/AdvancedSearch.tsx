@@ -3,6 +3,7 @@
 export interface AdvancedFilters {
   name: string
   minBerths: number
+  minEndurance: number
   minLength: number
   maxLength: number
   iceBreaking: boolean
@@ -12,10 +13,36 @@ export interface AdvancedFilters {
 export const EMPTY_ADVANCED: AdvancedFilters = {
   name: '',
   minBerths: 0,
+  minEndurance: 0,
   minLength: 0,
   maxLength: 0,
   iceBreaking: false,
   features: [],
+}
+
+/** True if any advanced filter is set. */
+export function advancedActive(f: AdvancedFilters): boolean {
+  return (
+    !!f.name ||
+    f.minBerths > 0 ||
+    f.minEndurance > 0 ||
+    f.minLength > 0 ||
+    f.maxLength > 0 ||
+    f.iceBreaking ||
+    f.features.length > 0
+  )
+}
+
+/** Count of active advanced filter groups (for the badge). */
+export function advancedCount(f: AdvancedFilters): number {
+  return [
+    !!f.name,
+    f.minBerths > 0,
+    f.minEndurance > 0,
+    f.minLength > 0 || f.maxLength > 0,
+    f.iceBreaking,
+    ...f.features.map(() => true),
+  ].filter(Boolean).length
 }
 
 export const FEATURES = [
@@ -44,13 +71,7 @@ export default function AdvancedSearch({ value, onChange, onClear }: Props) {
     onChange({ ...value, features: next })
   }
 
-  const isActive =
-    !!value.name ||
-    value.minBerths > 0 ||
-    value.minLength > 0 ||
-    value.maxLength > 0 ||
-    value.iceBreaking ||
-    value.features.length > 0
+  const isActive = advancedActive(value)
 
   return (
     <div className="w-full max-w-3xl mx-auto mt-3 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
@@ -120,6 +141,21 @@ export default function AdvancedSearch({ value, onChange, onClear }: Props) {
               />
             </div>
           </div>
+        </div>
+
+        <div className="sm:max-w-[calc(50%-0.5rem)]">
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+            Minimum endurance (days)
+          </label>
+          <input
+            type="number"
+            min={0}
+            inputMode="numeric"
+            value={value.minEndurance || ''}
+            onChange={(e) => onChange({ ...value, minEndurance: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+            placeholder="e.g. 30"
+            className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+          />
         </div>
 
         <div>

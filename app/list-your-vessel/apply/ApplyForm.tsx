@@ -2,10 +2,20 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import PlaceAutocomplete from '@/components/PlaceAutocomplete'
+import CollapsibleSection from '@/components/CollapsibleSection'
+
+// Leaflet must not SSR
+const VesselMap = dynamic(() => import('@/components/VesselMap'), {
+  ssr: false,
+  loading: () => <div className="h-[320px] rounded-xl bg-gray-100 animate-pulse" />,
+})
 
 interface ListForm {
   vesselName: string
   operatorName: string
+  port_name: string
   port_city: string
   port_state: string
   country: string
@@ -30,14 +40,14 @@ interface ListForm {
 }
 
 const emptyForm: ListForm = {
-  vesselName: '', operatorName: '', port_city: '', port_state: '',
+  vesselName: '', operatorName: '', port_name: '', port_city: '', port_state: '',
   country: '', mmsi: '', imo_number: '', call_sign: '',
   year_built: '', year_refit: '', length_m: '', beam_m: '', draft_m: '',
   speed_cruise: '', speed_max: '', scientists: '', crew: '', endurance: '',
   main_activity: '', operating_area: '', dpos: '', ice_breaking: '', url_ship: '',
 }
 
-type SectionKey = 'homePort' | 'physical' | 'performance' | 'operations'
+type SectionKey = 'location' | 'identification' | 'physical' | 'performance' | 'operations'
 
 const inputClass = 'w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition'
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1.5'
@@ -46,55 +56,17 @@ interface Props {
   userEmail: string
 }
 
-function CollapsibleSection({
-  open,
-  onToggle,
-  label,
-  count,
-  children,
-}: {
-  open: boolean
-  onToggle: () => void
-  label: string
-  count: number
-  children: React.ReactNode
-}) {
-  return (
-    <div className="border border-gray-200 rounded-2xl overflow-hidden">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors"
-      >
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-        <span className="text-sm font-semibold text-navy flex-1">{label}</span>
-        <span className="text-xs text-gray-400">{count} fields</span>
-      </button>
-      {open && (
-        <div className="px-4 pb-5 pt-4 space-y-4 border-t border-gray-100 bg-white">
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function ApplyForm({ userEmail }: Props) {
   const [form, setForm] = useState<ListForm>(emptyForm)
+  const [operatingAreaGeojson, setOperatingAreaGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
+  const [homePortCoords, setHomePortCoords] = useState<{ lat: number; lon: number } | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
-    homePort: false,
+    location: true,
+    identification: false,
     physical: false,
     performance: false,
     operations: false,
@@ -107,13 +79,18 @@ export default function ApplyForm({ userEmail }: Props) {
     setValidationError(null)
     setError(null)
 
+    if (!form.operating_area.trim()) {
+      setOpen((s) => ({ ...s, location: true }))
+      setValidationError("Please add the vessel's operating area.")
+      return
+    }
     if (form.mmsi && !/^\d{9}$/.test(form.mmsi.trim())) {
-      setOpen((s) => ({ ...s, homePort: true }))
+      setOpen((s) => ({ ...s, identification: true }))
       setValidationError('MMSI must be exactly 9 digits.')
       return
     }
     if (form.imo_number && !/^(IMO\s?)?\d{7}$/.test(form.imo_number.trim())) {
-      setOpen((s) => ({ ...s, homePort: true }))
+      setOpen((s) => ({ ...s, identification: true }))
       setValidationError('IMO Number must be 7 digits (e.g. 1234567 or IMO 1234567).')
       return
     }
@@ -125,6 +102,9 @@ export default function ApplyForm({ userEmail }: Props) {
       body: JSON.stringify({
         vessel_name: form.vesselName,
         operator_name: form.operatorName,
+        port_name: form.port_name,
+        homeport_latitude: homePortCoords?.lat ?? null,
+        homeport_longitude: homePortCoords?.lon ?? null,
         port_city: form.port_city,
         port_state: form.port_state,
         country: form.country,
@@ -143,6 +123,7 @@ export default function ApplyForm({ userEmail }: Props) {
         endurance: form.endurance,
         main_activity: form.main_activity,
         operating_area: form.operating_area,
+        operating_area_geojson: operatingAreaGeojson,
         dpos: form.dpos,
         ice_breaking: form.ice_breaking,
         url_ship: form.url_ship,
@@ -176,7 +157,7 @@ export default function ApplyForm({ userEmail }: Props) {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-navy mb-3">Apply to List Your Vessel</h1>
           <p className="text-gray-500">
-            Tell us about your vessel. Our team will review your application and reach out within 3–5 business days.
+            Tell us about your vessel. Our team will review your application and reach out within a day or two.
           </p>
         </div>
 
@@ -190,11 +171,11 @@ export default function ApplyForm({ userEmail }: Props) {
               </div>
               <h3 className="text-2xl font-bold text-navy mb-2">Application Submitted!</h3>
               <p className="text-gray-500 mb-6 max-w-sm">
-                Thank you for your interest. Our team will review your application and contact you at <strong>{userEmail}</strong> within 3–5 business days.
+                Thank you for your interest. Our team will review your application and contact you at <strong>{userEmail}</strong> soon!
               </p>
               <div className="flex gap-3">
                 <button
-                  onClick={() => { setSubmitted(false); setForm(emptyForm) }}
+                  onClick={() => { setSubmitted(false); setForm(emptyForm); setOperatingAreaGeojson(null); setHomePortCoords(null) }}
                   className="border border-gray-200 text-gray-600 px-5 py-2.5 rounded-full text-sm font-medium hover:border-gray-300 transition-colors"
                 >
                   Submit another
@@ -274,19 +255,44 @@ export default function ApplyForm({ userEmail }: Props) {
                 <div className="space-y-3">
 
                   <CollapsibleSection
-                    open={open.homePort}
-                    onToggle={() => toggle('homePort')}
-                    label="Home port & identification"
-                    count={6}
+                    open={open.location}
+                    onToggle={() => toggle('location')}
+                    label="Location"
+                    count={5}
                   >
+                    <div>
+                      <label className={labelClass}>
+                        Home port
+                        {homePortCoords && (
+                          <span className="ml-2 text-xs text-teal font-normal">✓ location verified</span>
+                        )}
+                      </label>
+                      <PlaceAutocomplete
+                        value={form.port_name}
+                        preferPorts
+                        onChange={(v) => { setForm((f) => ({ ...f, port_name: v })); setHomePortCoords(null) }}
+                        onSelect={(r) => {
+                          setForm((f) => ({
+                            ...f,
+                            port_name: r.name,
+                            port_city: r.city ?? f.port_city,
+                            port_state: r.state ?? f.port_state,
+                            country: r.country ?? f.country,
+                          }))
+                          setHomePortCoords({ lat: r.lat, lon: r.lon })
+                        }}
+                        placeholder="Start typing a port or harbour…"
+                        className={inputClass}
+                      />
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className={labelClass}>Home port</label>
+                        <label className={labelClass}>City</label>
                         <input
                           type="text"
                           value={form.port_city}
                           onChange={(e) => setForm({ ...form, port_city: e.target.value })}
-                          placeholder="e.g. Boston, Woods Hole"
+                          placeholder="e.g. Falmouth"
                           className={inputClass}
                         />
                       </div>
@@ -314,6 +320,42 @@ export default function ApplyForm({ userEmail }: Props) {
                         className={inputClass}
                       />
                     </div>
+                    <div className="pt-2 border-t border-gray-100">
+                      <label className={labelClass}>
+                        Operating area <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.operating_area}
+                        onChange={(e) => setForm({ ...form, operating_area: e.target.value })}
+                        placeholder="e.g. North Atlantic, Arctic, Global"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>
+                        Draw operating area
+                        <span className="ml-1 text-gray-400 font-normal">(optional)</span>
+                      </label>
+                      <VesselMap
+                        editable
+                        operatingArea={operatingAreaGeojson}
+                        onAreaChange={setOperatingAreaGeojson}
+                        homePort={homePortCoords ? { lat: homePortCoords.lat, lng: homePortCoords.lon } : null}
+                        height={320}
+                      />
+                      <p className="mt-1.5 text-xs text-gray-400">
+                        Use the toolbar (top-right) to sketch one or more areas the vessel works in. This powers location search.
+                      </p>
+                    </div>
+                  </CollapsibleSection>
+
+                  <CollapsibleSection
+                    open={open.identification}
+                    onToggle={() => toggle('identification')}
+                    label="Identification"
+                    count={3}
+                  >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className={labelClass}>
@@ -497,18 +539,8 @@ export default function ApplyForm({ userEmail }: Props) {
                     open={open.operations}
                     onToggle={() => toggle('operations')}
                     label="Operations & links"
-                    count={4}
+                    count={3}
                   >
-                    <div>
-                      <label className={labelClass}>Operating area</label>
-                      <input
-                        type="text"
-                        value={form.operating_area}
-                        onChange={(e) => setForm({ ...form, operating_area: e.target.value })}
-                        placeholder="e.g. North Atlantic, Arctic, Global"
-                        className={inputClass}
-                      />
-                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className={labelClass}>
