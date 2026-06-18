@@ -71,7 +71,7 @@ export default function RootLayout({
                   Platform
                 </h3>
                 <ul className="space-y-2 text-sm opacity-80">
-                  <li><a href="/vessels" className="hover:text-gold transition-colors">Browse All</a></li>
+                  <li><a href="/" className="hover:text-gold transition-colors">Browse All</a></li>
                   <li><a href="/list-your-vessel" className="hover:text-gold transition-colors">List Your Vessel</a></li>
                 </ul>
               </div>

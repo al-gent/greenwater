@@ -19,7 +19,8 @@ const LISTING_COLUMNS = [
   'scientists', 'main_activity', 'length', 'speed_cruise', 'year_built',
   'primary_latitude', 'primary_longitude',
   'endurance',
-  // Advanced search feature filters
+  // Advanced search filters
+  'affiliation', 'draft', 'hull_material',
   'ice_breaking', 'area_wetlab', 'area_drylab',
   'ctd_cap', 'aquis_multibeam',
   'underwater_vehicles_rov', 'underwater_vehicles_auv',
@@ -47,7 +48,7 @@ export const getAllVessels = unstable_cache(
       last_port_date: portMap.get(v.id)?.arrived_at ?? null,
     }))
   },
-  ['all-vessels-v4'],
+  ['all-vessels-v5'], // bump when LISTING_COLUMNS changes
   { revalidate: 3600 }
 )
 

@@ -18,6 +18,7 @@ interface Props {
   onToggleAdvanced: () => void
   showMap: boolean
   onToggleMap: () => void
+  countries?: string[]
   /** Optional extra control to the right of the toggles (e.g. a Clear filters button). */
   trailing?: ReactNode
 }
@@ -28,7 +29,7 @@ const TOGGLE_OFF = 'text-gray-400 border-gray-200 hover:text-gray-600 hover:bg-g
 const TOOLTIP = 'pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1.5 whitespace-nowrap rounded bg-navy text-white text-[11px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[1000]'
 
 export default function VesselSearchBar({
-  loc, advanced, onAdvancedChange, showAdvanced, onToggleAdvanced, showMap, onToggleMap, trailing,
+  loc, advanced, onAdvancedChange, showAdvanced, onToggleAdvanced, showMap, onToggleMap, countries, trailing,
 }: Props) {
   const isAdvActive = advancedActive(advanced)
 
@@ -89,6 +90,7 @@ export default function VesselSearchBar({
             value={advanced}
             onChange={onAdvancedChange}
             onClear={() => onAdvancedChange(EMPTY_ADVANCED)}
+            countries={countries}
           />
         </div>
       )}

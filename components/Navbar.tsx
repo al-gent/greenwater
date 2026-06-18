@@ -85,12 +85,6 @@ export default function Navbar() {
           {/* Nav links — absolutely centered relative to the navbar */}
           <div className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
             <Link
-              href="/vessels"
-              className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
-            >
-              Browse All
-            </Link>
-            <Link
               href="/"
               className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
             >
