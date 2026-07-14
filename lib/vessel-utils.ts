@@ -235,6 +235,9 @@ const ALPHA3_TO_ALPHA2: Record<string, string> = {
   THA:'TH',TJK:'TJ',TKM:'TM',TLS:'TL',TON:'TO',TTO:'TT',TUN:'TN',TUR:'TR',TUV:'TV',
   TWN:'TW',TZA:'TZ',UGA:'UG',UKR:'UA',URY:'UY',USA:'US',UZB:'UZ',VCT:'VC',VEN:'VE',
   VNM:'VN',VUT:'VU',WSM:'WS',YEM:'YE',ZAF:'ZA',ZMB:'ZM',ZWE:'ZW',
+  // Territories that appear as GFW port/anchorage flags
+  ATA:'AQ',COK:'CK',CUW:'CW',CYM:'KY',FRO:'FO',GIB:'GI',GRL:'GL',HKG:'HK',
+  MAC:'MO',NCL:'NC',REU:'RE',SJM:'SJ',VIR:'VI',
 }
 
 /** Convert an ISO 3166-1 alpha-3 code (e.g. "USA") to a flag emoji (e.g. "🇺🇸"). */

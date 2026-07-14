@@ -1,0 +1,29 @@
+name: GFW port visit sync
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC (same slot as the old Vercel cron)
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: 'Full history backfill (rewrites existing rows)'
+        type: boolean
+        default: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run sync
+        run: node scripts/sync_gfw.mjs ${{ inputs.backfill && '--backfill' || '' }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GLOBAL_FISHING_WATCH_API_KEY: ${{ secrets.GLOBAL_FISHING_WATCH_API_KEY }}

@@ -385,3 +385,62 @@ alter table vessels
   add column if not exists "Vessel_other"     text,
   add column if not exists notes              text,
   add column if not exists amenities          text;
+
+-- ── GFW port call integration ────────────────────────────────────────────────
+-- (mirrors supabase/migrations/20260325_gfw_port_calls.sql +
+--  20260714_port_calls_history.sql)
+
+-- GFW internal vessel UUID, set by scripts/load_gfw_data.mjs
+alter table vessels add column if not exists vessel_id_gfw text;
+
+-- Full port call history (accumulates weekly via scripts/sync_gfw.mjs)
+create table if not exists port_calls (
+  id           uuid primary key default gen_random_uuid(),
+  vessel_id    integer references vessels(id) on delete cascade,
+  port_name    text,          -- GFW endAnchorage name (e.g. "HAMBURG")
+  port_flag    text,          -- ISO3 country code (e.g. "DEU")
+  port_city    text,          -- reverse-geocoded (Nominatim), latest calls only
+  port_state   text,
+  port_country text,
+  lat          numeric,       -- endAnchorage position
+  lon          numeric,
+  arrived_at   timestamptz,   -- event start
+  departed_at  timestamptz,   -- event end
+  duration_hrs numeric,       -- port_visit.durationHrs
+  confidence   smallint,      -- port_visit.confidence (2=low..4=high)
+  recorded_at  timestamptz default now(),
+  unique(vessel_id, arrived_at)
+);
+
+create index if not exists idx_port_calls_vessel_arrived
+  on port_calls (vessel_id, arrived_at desc);
+
+-- Latest port call per vessel — used by getAllVessels() join, detail page,
+-- and the last_port search mode
+drop view if exists vessel_last_port;
+create view vessel_last_port as
+select distinct on (vessel_id)
+  vessel_id, port_name, port_flag, port_city, port_state, port_country,
+  lat, lon, arrived_at, departed_at, duration_hrs
+from port_calls
+order by vessel_id, arrived_at desc;
+
+-- At-sea station-keeping/work periods (GFW loitering events) — combined with
+-- port_calls these form the vessel's historic track
+-- (mirrors supabase/migrations/20260714_loitering_events.sql)
+create table if not exists loitering_events (
+  id                       uuid primary key default gen_random_uuid(),
+  vessel_id                integer references vessels(id) on delete cascade,
+  lat                      numeric,       -- average position during the event
+  lon                      numeric,
+  started_at               timestamptz,
+  ended_at                 timestamptz,
+  duration_hrs             numeric,       -- loitering.totalTimeHours
+  avg_speed_knots          numeric,       -- loitering.averageSpeedKnots
+  avg_distance_from_shore_km numeric,     -- loitering.averageDistanceFromShoreKm
+  recorded_at              timestamptz default now(),
+  unique(vessel_id, started_at)
+);
+
+create index if not exists idx_loitering_vessel_started
+  on loitering_events (vessel_id, started_at desc);

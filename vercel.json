@@ -1,3 +1,0 @@
-{
-  "crons": [{ "path": "/api/admin/sync-gfw", "schedule": "0 6 * * 1" }]
-}

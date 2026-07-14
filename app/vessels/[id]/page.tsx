@@ -1,25 +1,17 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { getVesselById, fmt, stripHtml, countryNameToFlag } from '@/lib/vessels'
+import { getTrackWindow } from '@/lib/track'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getServerUser } from '@/lib/supabase-server'
 import RequestButton from '@/components/RequestButton'
 import ClaimButton from '@/components/ClaimButton'
 import VesselPhotoGallery from '@/components/VesselPhotoGallery'
 import VesselDetailSpecs from '@/components/VesselDetailSpecs'
+import VesselTrackSection from '@/components/VesselTrackSection'
 import SignupNudge from '@/components/SignupNudge'
 import BackButton from '@/components/BackButton'
 import ShareButton from '@/components/ShareButton'
-
-const VesselMap = dynamic(() => import('@/components/VesselMap'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full bg-gray-100 flex items-center justify-center rounded-2xl">
-      <span className="text-sm text-gray-400">Loading map…</span>
-    </div>
-  ),
-})
 
 export default async function VesselDetailPage({ params }: { params: { id: string } }) {
   const id = parseInt(params.id, 10)
@@ -27,11 +19,24 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   if (!vessel) notFound()
   if (vessel.status === 'deleted') notFound()
 
-  const [{ data: claimant }, { data: lastPort }, user] = await Promise.all([
+  const [{ data: claimant }, { data: lastPort }, yearWindow, user] = await Promise.all([
     supabaseAdmin.from('profiles').select('id').eq('vessel_id', id).maybeSingle(),
     supabaseAdmin.from('vessel_last_port').select('port_city, port_state, port_country, lat, lon, arrived_at').eq('vessel_id', id).maybeSingle(),
+    getTrackWindow(supabaseAdmin, id, 365),
     getServerUser(),
   ])
+
+  // Default the track to the last year; fall back to all-time for vessels
+  // whose activity is older (so the map never opens empty when data exists).
+  let initialDays: number | null = 365
+  let initialWindow = yearWindow
+  if (yearWindow.events.length < 5) {
+    const allTime = await getTrackWindow(supabaseAdmin, id, null)
+    if (allTime.events.length > yearWindow.events.length) {
+      initialDays = null
+      initialWindow = allTime
+    }
+  }
   const isClaimed = !!claimant
 
   const isAdmin = user
@@ -50,7 +55,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const hasPortCall = !!lastPort?.port_city && portCallLat !== null && portCallLng !== null && !isNaN(portCallLat) && !isNaN(portCallLng)
   const operatingArea = vessel.operating_area_geojson ?? null
   const hasArea = !!operatingArea && (operatingArea.features?.length ?? 0) > 0
-  const showMap = hasCoords || hasPortCall || hasArea
+  const showMap = hasCoords || hasPortCall || hasArea || initialWindow.events.length > 0
 
   return (
     <div className="pt-[88px] bg-white min-h-screen">
@@ -221,18 +226,17 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
               </div>
             )}
 
-            {/* Map */}
+            {/* Map + historic track */}
             {showMap && (
-              <div>
-                <h2 className="text-lg font-semibold text-navy mb-3">Location</h2>
-                <VesselMap
-                  vesselName={vessel.name}
-                  homePort={hasCoords ? { lat: homeLat!, lng: homeLng! } : null}
-                  lastPort={hasPortCall ? { lat: portCallLat!, lng: portCallLng!, name: lastPort?.port_city, date: lastPort?.arrived_at } : null}
-                  operatingArea={operatingArea}
-                  height={280}
-                />
-              </div>
+              <VesselTrackSection
+                vesselId={id}
+                vesselName={vessel.name}
+                homePort={hasCoords ? { lat: homeLat!, lng: homeLng! } : null}
+                lastPort={hasPortCall ? { lat: portCallLat!, lng: portCallLng!, name: lastPort?.port_city, date: lastPort?.arrived_at } : null}
+                operatingArea={operatingArea}
+                initialDays={initialDays}
+                initialWindow={initialWindow}
+              />
             )}
 
             {/* Operating area */}
