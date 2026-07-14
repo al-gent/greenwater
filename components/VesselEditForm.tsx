@@ -106,6 +106,23 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
     setLocationTextEdited(true)
   }
 
+  // Save photo_urls via the update route. Refreshing the session first matters:
+  // on a long-open form the access token in the cookie expires, the PATCH 401s,
+  // and (before this was added) the failure was silent — photos uploaded to
+  // storage but never landed in the DB. getSession() auto-refreshes an expired
+  // token and rewrites the auth cookies the route reads.
+  const savePhotoUrls = async (urls: string[]): Promise<string | null> => {
+    await createClient().auth.getSession()
+    const res = await fetch('/api/vessels/update', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vessel_id: vesselId, photo_urls: urls }),
+    })
+    if (res.ok) return null
+    const data = await res.json().catch(() => ({}))
+    return data.error ?? `Save failed (${res.status}). Please try again.`
+  }
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     if (!files.length) return
@@ -126,24 +143,26 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
       newUrls.push(publicUrl)
     }
     const updated = [...photos, ...newUrls]
-    setPhotos(updated)
-    await fetch('/api/vessels/update', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vessel_id: vesselId, photo_urls: updated }),
-    })
+    const saveError = await savePhotoUrls(updated)
+    if (saveError) {
+      setUploadError(saveError)
+    } else {
+      setPhotos(updated)
+    }
     setUploading(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const removePhoto = async (url: string) => {
+    const prev = photos
     const updated = photos.filter((p) => p !== url)
-    setPhotos(updated)
-    await fetch('/api/vessels/update', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vessel_id: vesselId, photo_urls: updated }),
-    })
+    setPhotos(updated) // optimistic — rolled back on failure
+    setUploadError(null)
+    const saveError = await savePhotoUrls(updated)
+    if (saveError) {
+      setPhotos(prev)
+      setUploadError(saveError)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -175,6 +194,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
       return
     }
 
+    await createClient().auth.getSession() // refresh expired token before saving
     const res = await fetch('/api/vessels/update', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

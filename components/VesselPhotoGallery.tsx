@@ -12,19 +12,23 @@ const PLACEHOLDER_URL = 'https://jmpxcsihkmyotidxjuyv.supabase.co/storage/v1/obj
 
 export default function VesselPhotoGallery({ photos, vesselName, country }: Props) {
   const [index, setIndex] = useState(0)
+  const [broken, setBroken] = useState<Set<string>>(new Set())
 
   const prev = () => setIndex((i) => (i - 1 + photos.length) % photos.length)
   const next = () => setIndex((i) => (i + 1) % photos.length)
 
   const isPlaceholder = photos.length === 0
+  const current = isPlaceholder ? PLACEHOLDER_URL : photos[index]
+  const src = broken.has(current) ? PLACEHOLDER_URL : current
 
   return (
     <div className="relative rounded-3xl overflow-hidden bg-gray-100" style={{ aspectRatio: '16/9' }}>
       <img
         key={isPlaceholder ? 'placeholder' : photos[index]}
-        src={isPlaceholder ? PLACEHOLDER_URL : photos[index]}
+        src={src}
         alt={isPlaceholder ? `${vesselName} placeholder` : `${vesselName} photo ${index + 1}`}
         className="w-full h-full object-cover"
+        onError={() => setBroken((b) => new Set(b).add(current))}
       />
       {isPlaceholder && (
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-5 py-4">
