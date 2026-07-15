@@ -52,7 +52,8 @@ export default function VesselDetailSpecs({ vessel }: Props) {
     { label: 'Research bunks', value: vessel.scientists },
     { label: 'Length',         value: n(vessel.length, ' m') },
     { label: 'Cruise speed',   value: n(vessel.speed_cruise, ' kn') },
-    { label: 'Endurance',      value: vessel.endurance ? `${vessel.endurance} days` : null },
+    // endurance is free text — some operators enter days, others fuel amounts
+    { label: 'Endurance',      value: vessel.endurance || null },
     { label: 'Range',          value: n(vessel.range, ' nm') },
     { label: 'Year built',     value: vessel.year_built },
     { label: 'Gross tons',     value: n(vessel.gross_tons) },

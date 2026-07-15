@@ -24,7 +24,7 @@ export default function VesselFeaturedCard({ vessel, photoUrl }: { vessel: Vesse
       + (portAgeLabel(vessel.last_port_date) ? ` · ${portAgeLabel(vessel.last_port_date)}` : '')
     : [vessel.port_city, vessel.port_state].filter(Boolean).join(', ') || fmt(vessel.country)
   const draft = vessel.draft != null ? Math.round(vessel.draft * 10) / 10 : null
-  const endDays = parseInt(vessel.endurance ?? '', 10) || null
+  const endurance = (vessel.endurance ?? '').trim() || null
 
   return (
     <Link
@@ -63,7 +63,7 @@ export default function VesselFeaturedCard({ vessel, photoUrl }: { vessel: Vesse
           {vessel.length != null && <Stat value={`${vessel.length}m`} label="length" />}
           {vessel.scientists != null && <Stat value={vessel.scientists} label="berths" />}
           {draft != null && <Stat value={`${draft}m`} label="draft" />}
-          {endDays != null && <Stat value={endDays} label="days" />}
+          {endurance != null && <Stat value={endurance} label="endurance" />}
         </div>
       </div>
     </Link>

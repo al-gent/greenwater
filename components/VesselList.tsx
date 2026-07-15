@@ -56,7 +56,7 @@ const COLUMNS: { key: SortKey; label: string; align: 'left' | 'right'; render: (
   { key: 'length', label: 'Length', align: 'right', render: (v) => (v.length != null ? `${v.length} m` : '—') },
   { key: 'scientists', label: 'Berths', align: 'right', render: (v) => (v.scientists != null ? String(v.scientists) : '—') },
   { key: 'draft', label: 'Draft', align: 'right', render: (v) => (v.draft != null ? `${Math.round(v.draft * 10) / 10} m` : '—') },
-  { key: 'endurance', label: 'Endurance', align: 'right', render: (v) => (parseInt(v.endurance ?? '', 10) ? `${parseInt(v.endurance!, 10)} d` : '—') },
+  { key: 'endurance', label: 'Endurance', align: 'right', render: (v) => (v.endurance ?? '').trim() || '—' },
 ]
 
 interface Props {
