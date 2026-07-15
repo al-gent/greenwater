@@ -23,8 +23,10 @@ const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : undefined
 const backfill = process.argv.includes('--backfill')
 const onlyArg = process.argv.find((a) => a.startsWith('--only='))
 const datasets = onlyArg ? [onlyArg.split('=')[1]] : undefined
+const idsArg = process.argv.find((a) => a.startsWith('--ids='))
+const ids = idsArg ? idsArg.split('=')[1].split(',').map((n) => parseInt(n, 10)).filter((n) => !isNaN(n)) : undefined
 
-syncGfw(supabase, process.env.GLOBAL_FISHING_WATCH_API_KEY, { limit, backfill, datasets })
+syncGfw(supabase, process.env.GLOBAL_FISHING_WATCH_API_KEY, { limit, backfill, datasets, ids })
   .then((result) => {
     console.log('\nDone:')
     console.log(`  Vessels processed: ${result.vessels}`)
