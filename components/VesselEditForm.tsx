@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import type { Vessel } from '@/lib/vessel-utils'
+import type { Vessel, VesselDoc } from '@/lib/vessel-utils'
 import { RATE_CURRENCIES } from '@/lib/vessel-utils'
 import { makeThumbnail } from '@/lib/image-thumb'
 import { createClient } from '@/lib/supabase-browser'
@@ -73,7 +73,7 @@ function formToPayload(form: FormState, vesselId: number): Record<string, unknow
 }
 
 interface Props {
-  vessel: Partial<EditableVessel> & { name: string; photo_urls?: string[] | null }
+  vessel: Partial<EditableVessel> & { name: string; photo_urls?: string[] | null; doc_details?: VesselDoc[] | null }
   vesselId?: number
   backHref: string
   createMode?: boolean
@@ -88,6 +88,82 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
   )
   const [photos, setPhotos] = useState<string[]>(() => vessel.photo_urls ?? [])
   const [voo, setVoo] = useState<boolean>(vessel.vessel_of_opportunity === true)
+  const [docs, setDocs] = useState<VesselDoc[]>(() => vessel.doc_details ?? [])
+  const [docUrl, setDocUrl] = useState('')
+  const [docLabel, setDocLabel] = useState('')
+  const [docBusy, setDocBusy] = useState(false)
+  const [uploadKind, setUploadKind] = useState<'photo' | 'doc'>('photo')
+  const [docError, setDocError] = useState<string | null>(null)
+
+  const addDoc = async () => {
+    if (!docUrl.trim() || docBusy) return
+    setDocBusy(true)
+    setDocError(null)
+    await createClient().auth.getSession() // refresh token like the photo path
+    const res = await fetch('/api/vessels/docs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vessel_id: vesselId, url: docUrl.trim(), description: docLabel.trim() || undefined }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (res.ok) {
+      setDocs(data.docs)
+      setDocUrl('')
+      setDocLabel('')
+    } else {
+      setDocError(data.error ?? `Failed (${res.status}).`)
+    }
+    setDocBusy(false)
+  }
+
+  const uploadDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || docBusy) return
+    setDocError(null)
+    if (file.size > 25 * 1024 * 1024) {
+      setDocError('PDFs up to 25 MB.')
+      return
+    }
+    setDocBusy(true)
+    const supabase = createClient()
+    await supabase.auth.getSession()
+    const safe = file.name.replace(/[^\p{L}\p{N}._-]/gu, '_').replace(/_{2,}/g, '_').slice(0, 80)
+    const path = `${vesselId}/${Date.now()}-${safe.toLowerCase().endsWith('.pdf') ? safe : safe + '.pdf'}`
+    const { error: upErr } = await supabase.storage.from('vessel-docs').upload(path, file, { contentType: 'application/pdf' })
+    if (upErr) {
+      setDocError(`Upload failed: ${upErr.message}`)
+      setDocBusy(false)
+      return
+    }
+    // server verifies the stored bytes are a real PDF before attaching
+    const res = await fetch('/api/vessels/docs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vessel_id: vesselId, path, description: docLabel.trim() || undefined }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (res.ok) {
+      setDocs(data.docs)
+      setDocLabel('')
+    } else {
+      setDocError(data.error ?? `Failed (${res.status}).`)
+    }
+    setDocBusy(false)
+  }
+
+  const removeDoc = async (url: string) => {
+    setDocError(null)
+    await createClient().auth.getSession()
+    const res = await fetch('/api/vessels/docs', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vessel_id: vesselId, url }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (res.ok) setDocs(data.docs)
+    else setDocError(data.error ?? `Failed to remove (${res.status}).`)
+  }
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -100,11 +176,11 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
   const [locationTextEdited, setLocationTextEdited] = useState(false)
 
   type SectionKey =
-    | 'photos' | 'identity' | 'location' | 'operatingArea' | 'operator'
+    | 'photos' | 'docs' | 'identity' | 'location' | 'operatingArea' | 'operator'
     | 'research' | 'physical' | 'propulsion' | 'facilities' | 'science'
     | 'acoustics' | 'nav' | 'notes'
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
-    photos: true, identity: true, location: true, operatingArea: true, operator: false,
+    photos: true, docs: false, identity: true, location: true, operatingArea: true, operator: false,
     research: false, physical: false, propulsion: false, facilities: false, science: false,
     acoustics: false, nav: false, notes: false,
   })
@@ -300,8 +376,8 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
       )}
 
       {!createMode && (
-        <CollapsibleSection open={open.photos} onToggle={() => toggle('photos')} label="Photos">
-          <div className="space-y-3">
+        <CollapsibleSection open={open.photos} onToggle={() => toggle('photos')} label="Photos & Documents" count={photos.length + docs.length}>
+          <div className="space-y-4">
             {photos.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {photos.map((url) => (
@@ -321,35 +397,94 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
                 ))}
               </div>
             )}
-            {uploadError && (
-              <p className="text-xs text-red-500">{uploadError}</p>
+            {docs.length > 0 && (
+              <div className="space-y-2">
+                {docs.map((d) => (
+                  <div key={d.url} className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100">
+                    <div className="min-w-0 flex-1">
+                      <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-teal hover:underline truncate block">
+                        {d.description || d.name}
+                      </a>
+                      <p className="text-xs text-gray-400 truncate">
+                        {d.name}{d.contentLength ? ` · ${Math.round(d.contentLength / 1024)} KB` : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeDoc(d.url)}
+                      className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                      aria-label="Remove document"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
-            <label className={`flex items-center gap-2 w-fit cursor-pointer px-4 py-2 rounded-xl border border-dashed border-gray-300 hover:border-teal text-sm text-gray-500 hover:text-teal transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-              {uploading ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Uploading…
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                  Upload photos
-                </>
+            {(uploadError || docError) && <p className="text-xs text-red-500">{uploadError || docError}</p>}
+
+            {/* one upload control; the toggle decides photo vs document handling */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
+                <button
+                  type="button"
+                  onClick={() => setUploadKind('photo')}
+                  className={`px-3 py-2 text-sm transition-colors ${uploadKind === 'photo' ? 'bg-teal text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                >
+                  Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadKind('doc')}
+                  className={`px-3 py-2 text-sm transition-colors border-l border-gray-200 ${uploadKind === 'doc' ? 'bg-teal text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                >
+                  Document (PDF)
+                </button>
+              </div>
+              {uploadKind === 'doc' && (
+                <input
+                  type="text"
+                  value={docLabel}
+                  onChange={(e) => setDocLabel(e.target.value)}
+                  placeholder="Label (optional, e.g. Spec sheet)"
+                  className={`${editInputClass} sm:w-52`}
+                />
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handlePhotoUpload}
-              />
-            </label>
+              <label className={`flex items-center justify-center gap-2 cursor-pointer px-4 py-2 rounded-lg border border-dashed border-gray-300 hover:border-teal text-sm text-gray-500 hover:text-teal transition-colors whitespace-nowrap ${(uploading || docBusy) ? 'opacity-50 pointer-events-none' : ''}`}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                {(uploading || docBusy) ? 'Working…' : uploadKind === 'photo' ? 'Upload photos' : 'Upload PDF'}
+                {uploadKind === 'photo' ? (
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+                ) : (
+                  <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={uploadDoc} />
+                )}
+              </label>
+            </div>
+            {uploadKind === 'doc' && (
+              /* or paste a link — the server fetches and stores our own copy
+                 (some sites block automated downloads; upload wins then) */
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="url"
+                  value={docUrl}
+                  onChange={(e) => setDocUrl(e.target.value)}
+                  placeholder="…or paste a link to a PDF"
+                  className={`${editInputClass} flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={addDoc}
+                  disabled={docBusy || !docUrl.trim()}
+                  className="bg-navy text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-navy-600 transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {docBusy ? 'Fetching…' : 'Add from link'}
+                </button>
+              </div>
+            )}
           </div>
         </CollapsibleSection>
       )}
