@@ -451,6 +451,40 @@ create table if not exists vessel_data_changes (
 create index if not exists idx_vdc_vessel on vessel_data_changes (vessel_id);
 create index if not exists idx_vdc_batch on vessel_data_changes (batch);
 
+-- Automatic column-level audit of every vessels UPDATE
+-- (mirrors supabase/migrations/20260715_vessels_audit_trigger.sql; skips
+--  bookkeeping columns; source = acting user uuid / role; RLS keeps the
+--  audit table server-side only)
+create or replace function log_vessel_changes() returns trigger as $$
+declare
+  k text;
+  oldj jsonb := to_jsonb(OLD);
+  newj jsonb := to_jsonb(NEW);
+  actor text;
+begin
+  actor := coalesce(
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub',
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
+    session_user::text
+  );
+  for k in select jsonb_object_keys(newj) loop
+    if (oldj -> k) is distinct from (newj -> k)
+       and k not in ('last_updated', 'identity_verified_at') then
+      insert into vessel_data_changes (vessel_id, field, old_value, new_value, source, batch)
+      values (OLD.id, k, nullif(oldj ->> k, ''), nullif(newj ->> k, ''), actor, 'trigger:update');
+    end if;
+  end loop;
+  return NEW;
+end
+$$ language plpgsql;
+
+drop trigger if exists vessels_audit on vessels;
+create trigger vessels_audit
+  after update on vessels
+  for each row execute function log_vessel_changes();
+
+alter table vessel_data_changes enable row level security;
+
 -- ── GFW port call integration ────────────────────────────────────────────────
 -- (mirrors supabase/migrations/20260325_gfw_port_calls.sql +
 --  20260714_port_calls_history.sql)
