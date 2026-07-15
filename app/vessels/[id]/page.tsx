@@ -13,6 +13,41 @@ import SignupNudge from '@/components/SignupNudge'
 import BackButton from '@/components/BackButton'
 import ShareButton from '@/components/ShareButton'
 
+// Per-vessel share cards: link previews show the vessel's name, its activity,
+// and its own photo instead of the generic site card.
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const id = parseInt(params.id, 10)
+  const vessel = isNaN(id) ? null : await getVesselById(id)
+  if (!vessel || vessel.status === 'deleted') return {}
+
+  const title = `${vessel.name} — VesselConnect`
+  const activity = stripHtml(vessel.main_activity ?? '').trim()
+  const description = activity
+    ? (activity.length > 160 ? activity.slice(0, 157) + '…' : activity)
+    : `Research vessel${vessel.country ? ` from ${vessel.country}` : ''} on VesselConnect — connecting marine scientists with research vessels worldwide.`
+  const photo = vessel.photo_urls?.[0]
+  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.vesselconnect.org'}/vessels/${id}`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url,
+      siteName: 'VesselConnect',
+      ...(photo ? { images: [{ url: photo, alt: vessel.name }] } : {}),
+    },
+    twitter: {
+      card: photo ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      ...(photo ? { images: [photo] } : {}),
+    },
+  }
+}
+
 export default async function VesselDetailPage({ params }: { params: { id: string } }) {
   const id = parseInt(params.id, 10)
   const vessel = await getVesselById(id)
@@ -57,8 +92,23 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const hasArea = !!operatingArea && (operatingArea.features?.length ?? 0) > 0
   const showMap = hasCoords || hasPortCall || hasArea || initialWindow.events.length > 0
 
+  // Schema.org structured data for rich search results
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Vehicle',
+    name: vessel.name,
+    url: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.vesselconnect.org'}/vessels/${id}`,
+    ...(photos.length ? { image: photos } : {}),
+    ...(activity ? { description: activity } : {}),
+    ...(vessel.year_built ? { modelDate: String(vessel.year_built) } : {}),
+    ...(vessel.operator_name || vessel.affiliation
+      ? { brand: { '@type': 'Organization', name: vessel.operator_name ?? vessel.affiliation } }
+      : {}),
+  }
+
   return (
     <div className="pt-[88px] bg-white min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <SignupNudge vesselId={id} isAuthenticated={!!user} />
       {/* Retired / inactive banner */}
       {(vessel.status === 'retired' || vessel.status === 'inactive') && (

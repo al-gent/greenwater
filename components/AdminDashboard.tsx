@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import AnalyticsTab from './AnalyticsTab'
 import { fmtDailyRate } from '@/lib/vessel-utils'
 
@@ -97,7 +98,30 @@ const VESSEL_COLS: { key: VesselColKey; label: string }[] = [
   { key: 'scientists', label: 'Scientists' },
 ]
 
-type Tab = 'submissions' | 'claims' | 'scientists' | 'vessels' | 'analytics' | 'messages'
+type Tab = 'submissions' | 'claims' | 'scientists' | 'vessels' | 'analytics' | 'messages' | 'changes'
+type ChangesWindow = 'hour' | 'day' | 'week' | 'month' | 'year' | 'all'
+const CHANGES_WINDOWS: { value: ChangesWindow; label: string }[] = [
+  { value: 'hour', label: 'Hour' },
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+  { value: 'year', label: 'Year' },
+  { value: 'all', label: 'All time' },
+]
+
+interface DataChange {
+  id: string
+  vessel_id: number | null
+  vessel_name: string | null
+  table_name: string
+  record_id: string | null
+  field: string
+  old_value: string | null
+  new_value: string | null
+  actor: string | null
+  batch: string
+  changed_at: string
+}
 
 interface AdminMessage {
   id: string
@@ -272,7 +296,21 @@ function ScientistActions({ scientist, onUpdate }: {
 }
 
 export default function AdminDashboard() {
-  const [tab, setTab] = useState<Tab>('submissions')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const TABS: Tab[] = ['submissions', 'claims', 'scientists', 'vessels', 'messages', 'changes', 'analytics']
+  // Tab lives in the URL (?tab=) so browser back/forward works; state follows the URL.
+  const urlTab = searchParams.get('tab') as Tab | null
+  const tab: Tab = urlTab && TABS.includes(urlTab) ? urlTab : 'submissions'
+  const setTab = (t: Tab) => {
+    router.push(t === 'submissions' ? '/admin' : `/admin?tab=${t}`, { scroll: false })
+  }
+  const [changesSort, setChangesSort] = useState<{ col: 'when' | 'who' | 'what' | 'field'; dir: 'asc' | 'desc' }>({ col: 'when', dir: 'desc' })
+  const [changesSearch, setChangesSearch] = useState('') // input value (uncommitted)
+  const [changesQuery, setChangesQuery] = useState('')   // committed via Search button / Enter
+  const [changesWindow, setChangesWindow] = useState<ChangesWindow>('hour')
+  const [changesLoading, setChangesLoading] = useState(false)
+  const [changesCapped, setChangesCapped] = useState(false)
   const [filter, setFilter] = useState<Filter>('pending')
   const [vesselFilter, setVesselFilter] = useState<VesselStatusFilter>('all')
   const [submissions, setSubmissions] = useState<Submission[]>([])
@@ -280,6 +318,7 @@ export default function AdminDashboard() {
   const [scientists, setScientists] = useState<Scientist[]>([])
   const [vessels, setVessels] = useState<VesselRow[]>([])
   const [messages, setMessages] = useState<AdminMessage[]>([])
+  const [changes, setChanges] = useState<DataChange[]>([])
   const [vesselStatusPending, setVesselStatusPending] = useState<Record<number, boolean>>({})
   const [vesselSearch, setVesselSearch] = useState('')
   const [vesselCols, setVesselCols] = useState<Set<VesselColKey>>(new Set(['country', 'port_city', 'year_built']))
@@ -305,6 +344,45 @@ export default function AdminDashboard() {
     })
   }, [])
 
+
+  // Server-side fetch: the time window + committed search term go to the API
+  // (which searches values, fields, batches, vessel names, and actor names in
+  // SQL). Search runs on button/Enter only — no per-keystroke queries.
+  useEffect(() => {
+    const controller = new AbortController()
+    ;(async () => {
+      setChangesLoading(true)
+      try {
+        const params = new URLSearchParams({ window: changesWindow })
+        if (changesQuery) params.set('q', changesQuery)
+        const res = await fetch(`/api/admin/changes?${params}`, { signal: controller.signal })
+        const data = await res.json()
+        setChanges(Array.isArray(data.changes) ? data.changes : [])
+        setChangesCapped(!!data.capped)
+      } catch {
+        /* aborted or failed — keep current rows */
+      } finally {
+        setChangesLoading(false)
+      }
+    })()
+    return () => controller.abort()
+  }, [changesQuery, changesWindow])
+
+  const sortedChanges = useMemo(() => {
+    const key = (c: DataChange): string => {
+      switch (changesSort.col) {
+        case 'when': return c.changed_at
+        case 'who': return (c.actor ?? '').toLowerCase()
+        case 'what': return (c.vessel_name ?? c.table_name ?? '').toLowerCase()
+        case 'field': return c.field
+      }
+    }
+    const dir = changesSort.dir === 'asc' ? 1 : -1
+    return [...changes].sort((a, b) => (key(a) < key(b) ? -dir : key(a) > key(b) ? dir : 0))
+  }, [changes, changesSort])
+
+  const toggleChangesSort = (col: 'when' | 'who' | 'what' | 'field') =>
+    setChangesSort((s) => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }))
 
   const updateVesselStatus = async (id: number, status: VesselRow['status']) => {
     setVesselStatusPending((prev) => ({ ...prev, [id]: true }))
@@ -371,7 +449,7 @@ export default function AdminDashboard() {
 
         {/* Tabs */}
         <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-card mb-4 w-fit">
-          {(['submissions', 'claims', 'scientists', 'vessels', 'messages', 'analytics'] as Tab[]).map((t) => (
+          {(['submissions', 'claims', 'scientists', 'vessels', 'messages', 'changes', 'analytics'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -400,7 +478,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Filter pills */}
-        {tab !== 'vessels' && tab !== 'analytics' && tab !== 'messages' && (
+        {tab !== 'vessels' && tab !== 'analytics' && tab !== 'messages' && tab !== 'changes' && (
           <div className="flex items-center gap-2 mb-6">
             {(['all', 'pending', 'approved', 'rejected'] as Filter[]).map((f) => (
               <button
@@ -790,6 +868,115 @@ export default function AdminDashboard() {
             })()}
 
             {tab === 'analytics' && <AnalyticsTab />}
+
+            {tab === 'changes' && (
+                <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+                  <div className="px-6 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {CHANGES_WINDOWS.map((w) => (
+                        <button
+                          key={w.value}
+                          onClick={() => setChangesWindow(w.value)}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
+                            changesWindow === w.value ? 'bg-navy text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                        >
+                          {w.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs text-gray-400">
+                        {changesLoading ? 'Searching…' : `${changes.length} change${changes.length === 1 ? '' : 's'}${changesCapped ? ' (showing first 1,000)' : ''}`}
+                      </p>
+                      <form
+                        onSubmit={(e) => { e.preventDefault(); setChangesQuery(changesSearch.trim()) }}
+                        className="flex items-center gap-2"
+                      >
+                        <input
+                          type="search"
+                          value={changesSearch}
+                          onChange={(e) => {
+                            setChangesSearch(e.target.value)
+                            if (e.target.value === '') setChangesQuery('') // clearing resets immediately
+                          }}
+                          placeholder="Search vessel, user, field, value…"
+                          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+                        />
+                        <button
+                          type="submit"
+                          className="bg-navy text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-navy-600 transition-colors"
+                        >
+                          Search
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                  {changes.length === 0 && !changesLoading && (
+                    <div className="text-center py-16 text-gray-400">
+                      {changesQuery ? 'No changes match that search in this period.' : 'No changes in this period.'}
+                    </div>
+                  )}
+                  {changes.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                          {([['when', 'When', 'px-6'], ['who', 'Who', 'px-3'], ['what', 'What', 'px-3'], ['field', 'Field', 'px-3']] as const).map(([col, label, pad]) => (
+                            <th key={col} className={`${pad} py-2 font-medium`}>
+                              <button onClick={() => toggleChangesSort(col)} className="flex items-center gap-1 uppercase tracking-wide hover:text-navy transition-colors">
+                                {label}
+                                {changesSort.col === col && <span>{changesSort.dir === 'asc' ? '↑' : '↓'}</span>}
+                              </button>
+                            </th>
+                          ))}
+                          <th className="px-3 py-2 font-medium">Change</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {sortedChanges.map((c) => (
+                          <tr key={c.id} className="align-top">
+                            <td className="px-6 py-2 whitespace-nowrap text-xs text-gray-400">
+                              {new Date(c.changed_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            </td>
+                            <td className="px-3 py-2 text-xs max-w-[130px]">
+                              <span className={`break-words ${c.actor === 'service_role' || c.actor === 'postgres' ? 'text-gray-400' : 'font-medium text-navy'}`}>
+                                {c.actor === 'service_role' || c.actor === 'postgres' ? 'script' : c.actor ?? '—'}
+                              </span>
+                              {c.batch !== 'trigger:update' && (
+                                <span className="block w-fit mt-0.5 bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded-full break-all">{c.batch}</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-xs max-w-[140px]">
+                              {c.vessel_id ? (
+                                <a href={`/vessels/${c.vessel_id}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline font-medium break-words">
+                                  {c.vessel_name ?? `vessel ${c.vessel_id}`}
+                                </a>
+                              ) : (
+                                <span className="text-gray-500">{c.table_name.replace('vessel_', '')}</span>
+                              )}
+                              {c.table_name !== 'vessels' && c.vessel_id != null && (
+                                <span className="ml-1 text-gray-300">({c.table_name.replace('vessel_', '')})</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-gray-600 font-mono break-all max-w-[120px]">{c.field}</td>
+                            <td className="px-3 py-2 text-xs max-w-md">
+                              <span className="text-gray-400 line-through break-all" title={c.old_value ?? ''}>
+                                {c.old_value ? (c.old_value.length > 42 ? c.old_value.slice(0, 42) + '…' : c.old_value) : '∅'}
+                              </span>
+                              <span className="text-gray-300 mx-1.5">→</span>
+                              <span className="text-gray-800 break-all" title={c.new_value ?? ''}>
+                                {c.new_value ? (c.new_value.length > 42 ? c.new_value.slice(0, 42) + '…' : c.new_value) : '∅'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  )}
+                </div>
+            )}
 
             {tab === 'messages' && (
               messages.length === 0 ? (

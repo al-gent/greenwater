@@ -2,6 +2,7 @@
  * Server-only data loading via Supabase. Do NOT import this from client components.
  * Import types and utilities from @/lib/vessel-utils instead.
  */
+import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { supabase } from './supabase'
 import type { Vessel } from './vessel-utils'
@@ -53,10 +54,12 @@ export const getAllVessels = unstable_cache(
   { revalidate: 3600 }
 )
 
-export async function getVesselById(id: number): Promise<Vessel | null> {
+// React cache() dedupes within a single request render — generateMetadata and
+// the page both call this, but only one DB query runs per request.
+export const getVesselById = cache(async (id: number): Promise<Vessel | null> => {
   const { data } = await supabase.from('vessels').select('*').eq('id', id).single()
   return data as Vessel | null
-}
+})
 
 /** Get unique, clean country list for filter dropdown */
 export async function getUniqueCountries(): Promise<string[]> {
