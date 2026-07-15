@@ -19,6 +19,7 @@ const LISTING_COLUMNS = [
   'scientists', 'main_activity', 'length', 'speed_cruise', 'year_built',
   'primary_latitude', 'primary_longitude',
   'endurance',
+  'vessel_of_opportunity', 'daily_rate', 'daily_rate_currency',
   // Advanced search filters
   'affiliation', 'draft', 'hull_material',
   'ice_breaking', 'area_wetlab', 'area_drylab',
@@ -48,7 +49,7 @@ export const getAllVessels = unstable_cache(
       last_port_date: portMap.get(v.id)?.arrived_at ?? null,
     }))
   },
-  ['all-vessels-v5'], // bump when LISTING_COLUMNS changes
+  ['all-vessels-v6'], // bump when LISTING_COLUMNS changes
   { revalidate: 3600 }
 )
 

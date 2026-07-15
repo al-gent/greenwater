@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, stripHtml, getPhotoUrl, getFallbackPhotoUrl, countryNameToFlag } from '@/lib/vessel-utils'
+import { fmt, stripHtml, getPhotoUrl, nextPhotoFallback, countryNameToFlag, portAgeLabel } from '@/lib/vessel-utils'
 
 interface Props {
   vessels: Vessel[]
@@ -40,6 +40,7 @@ export default function VesselFocus({ vessels, index, onPrev, onNext }: Props) {
   const activity = stripHtml(v.main_activity)
   const location = v.last_port_city
     ? [v.last_port_city, v.last_port_state, v.last_port_country].filter(Boolean).join(', ')
+      + (portAgeLabel(v.last_port_date) ? ` · ${portAgeLabel(v.last_port_date)}` : '')
     : [v.port_city, v.port_state].filter(Boolean).join(', ') || fmt(v.country)
 
   return (
@@ -61,7 +62,7 @@ export default function VesselFocus({ vessels, index, onPrev, onNext }: Props) {
               src={src}
               alt={v.name}
               className="w-full h-full object-cover"
-              onError={() => setSrc(getFallbackPhotoUrl(v))}
+              onError={() => setSrc(nextPhotoFallback(src, v))}
             />
             {countryNameToFlag(v.country) && (
               <div className="absolute top-3 left-3 text-2xl sm:text-3xl drop-shadow">{countryNameToFlag(v.country)}</div>

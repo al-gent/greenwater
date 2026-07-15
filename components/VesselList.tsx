@@ -2,12 +2,14 @@
 
 import { useRouter } from 'next/navigation'
 import type { Vessel } from '@/lib/vessel-utils'
-import { countryNameToFlag } from '@/lib/vessel-utils'
+import { countryNameToFlag, portAgeLabel } from '@/lib/vessel-utils'
 
 export type SortKey = 'name' | 'flag' | 'affiliation' | 'location' | 'length' | 'scientists' | 'draft' | 'endurance'
 export type SortDir = 'asc' | 'desc'
 
 function locationOf(v: Vessel): string {
+  // bare location only — this doubles as the Location sort key; the age
+  // suffix is appended at render time so it can't pollute the sort
   return v.last_port_city
     ? [v.last_port_city, v.last_port_state].filter(Boolean).join(', ')
     : [v.port_city, v.port_state].filter(Boolean).join(', ') || (v.country ?? '')
@@ -45,7 +47,12 @@ const COLUMNS: { key: SortKey; label: string; align: 'left' | 'right'; render: (
   { key: 'name', label: 'Name', align: 'left', render: (v) => v.name },
   { key: 'flag', label: 'Flag', align: 'left', render: (v) => `${countryNameToFlag(v.country) ?? ''} ${v.country ?? ''}`.trim() },
   { key: 'affiliation', label: 'Affiliation', align: 'left', render: (v) => v.affiliation ?? '—' },
-  { key: 'location', label: 'Location', align: 'left', render: (v) => locationOf(v) || '—' },
+  { key: 'location', label: 'Location', align: 'left', render: (v) => {
+    const loc = locationOf(v)
+    if (!loc) return '—'
+    const age = v.last_port_city ? portAgeLabel(v.last_port_date) : null
+    return age ? `${loc} · ${age}` : loc
+  } },
   { key: 'length', label: 'Length', align: 'right', render: (v) => (v.length != null ? `${v.length} m` : '—') },
   { key: 'scientists', label: 'Berths', align: 'right', render: (v) => (v.scientists != null ? String(v.scientists) : '—') },
   { key: 'draft', label: 'Draft', align: 'right', render: (v) => (v.draft != null ? `${Math.round(v.draft * 10) / 10} m` : '—') },

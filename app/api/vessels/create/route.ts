@@ -53,6 +53,8 @@ export async function POST(request: Request) {
     }
   }
 
+  fields.last_updated = new Date().toISOString() // created_at defaults in the DB
+
   const { data, error } = await supabaseAdmin
     .from('vessels')
     .insert(fields)

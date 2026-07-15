@@ -37,13 +37,16 @@ export async function PATCH(request: Request) {
 
   // Strip system-managed fields that should never be user-edited
   const denied = new Set([
-    'id', 'vessel_id_gfw', 'doc_details', 'last_updated',
+    'id', 'vessel_id_gfw', 'doc_details', 'last_updated', 'created_at',
   ])
 
   const safeUpdates: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(updates)) {
     if (!denied.has(key)) safeUpdates[key] = value
   }
+
+  // Human edit → stamp listing freshness (machine syncs never set this)
+  safeUpdates.last_updated = new Date().toISOString()
 
   // Only admins may change a vessel's status (active/inactive/retired)
   if (profile?.role !== 'admin') delete safeUpdates.status

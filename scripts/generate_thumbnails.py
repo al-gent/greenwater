@@ -33,8 +33,12 @@ JPEG_QUALITY = 75
 
 
 def load_env() -> dict:
-    env_path = ROOT / ".env.local"
+    """Read .env.local when present (local runs); real environment variables
+    take precedence so CI (GitHub Actions secrets) works without the file."""
     env = {}
+    env_path = ROOT / ".env.local"
+    if not env_path.exists():
+        return {k: v for k, v in os.environ.items()}
     for line in env_path.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -43,6 +47,7 @@ def load_env() -> dict:
             continue
         k, _, v = line.partition("=")
         env[k] = v
+    env.update({k: v for k, v in os.environ.items() if k in ("NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")})
     return env
 
 
@@ -64,6 +69,21 @@ def list_bucket(url: str, key: str, bucket: str, prefix: str = "") -> list[dict]
         if len(batch) < limit:
             break
         offset += limit
+    return out
+
+
+def walk_bucket(url: str, key: str, bucket: str, prefix: str = "") -> list[dict]:
+    """Recursively list every file in the bucket (Supabase list is per-folder).
+    Skips the thumbs/ tree — those are outputs, not sources."""
+    out = []
+    for entry in list_bucket(url, key, bucket, prefix):
+        name = f"{prefix}/{entry['name']}" if prefix else entry["name"]
+        if entry.get("id") is None:  # folder placeholder
+            if name == THUMB_PREFIX:
+                continue
+            out.extend(walk_bucket(url, key, bucket, name))
+        else:
+            out.append({**entry, "name": name})
     return out
 
 
@@ -125,12 +145,16 @@ def main() -> int:
         print("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local")
         return 1
 
-    print(f"Listing {BUCKET}/ …")
-    root_files = list_bucket(url, key, BUCKET, prefix="")
-    images = [f for f in root_files if f["name"].lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".gif"))]
-    print(f"  {len(images)} image files (out of {len(root_files)} total entries)")
+    print(f"Listing {BUCKET}/ (recursive) …")
+    all_files = walk_bucket(url, key, BUCKET, prefix="")
+    images = [f for f in all_files if f["name"].lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".gif"))]
+    print(f"  {len(images)} image files (out of {len(all_files)} total entries)")
 
-    existing_thumbs = {f["name"] for f in list_bucket(url, key, BUCKET, prefix=THUMB_PREFIX)}
+    # walk under thumbs/ too and compare source-relative names
+    existing_thumbs = {
+        f["name"][len(THUMB_PREFIX) + 1:]
+        for f in walk_bucket(url, key, BUCKET, prefix=THUMB_PREFIX)
+    }
     print(f"  {len(existing_thumbs)} thumbs already exist")
 
     done = 0

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, stripHtml, getFallbackPhotoUrl, countryNameToFlag } from '@/lib/vessel-utils'
+import { fmt, stripHtml, nextPhotoFallback, countryNameToFlag, portAgeLabel } from '@/lib/vessel-utils'
 
 function Stat({ value, label }: { value: string | number; label: string }) {
   return (
@@ -21,6 +21,7 @@ export default function VesselFeaturedCard({ vessel, photoUrl }: { vessel: Vesse
   const activity = stripHtml(vessel.main_activity ?? '')
   const location = vessel.last_port_city
     ? [vessel.last_port_city, vessel.last_port_state].filter(Boolean).join(', ')
+      + (portAgeLabel(vessel.last_port_date) ? ` · ${portAgeLabel(vessel.last_port_date)}` : '')
     : [vessel.port_city, vessel.port_state].filter(Boolean).join(', ') || fmt(vessel.country)
   const draft = vessel.draft != null ? Math.round(vessel.draft * 10) / 10 : null
   const endDays = parseInt(vessel.endurance ?? '', 10) || null
@@ -36,7 +37,7 @@ export default function VesselFeaturedCard({ vessel, photoUrl }: { vessel: Vesse
           alt={vessel.name}
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={() => setSrc(getFallbackPhotoUrl(vessel))}
+          onError={() => setSrc(nextPhotoFallback(src, vessel))}
         />
         {countryNameToFlag(vessel.country) && (
           <div className="absolute top-3 left-3 text-2xl drop-shadow">{countryNameToFlag(vessel.country)}</div>

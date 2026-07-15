@@ -9,6 +9,13 @@ function hasVal(v: string | number | boolean | null | undefined) {
   return v !== null && v !== undefined && v !== ''
 }
 
+function fmtMonthYear(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return null
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
 function Row({ label, value }: { label: string; value: string | number | null | undefined }) {
   if (!hasVal(value)) return null
   return (
@@ -40,22 +47,6 @@ export default function VesselDetailSpecs({ vessel }: Props) {
   const iceBreaking = (vessel.ice_breaking ?? '').trim().toLowerCase()
   const hasIce = iceBreaking && !ICE_NO.has(iceBreaking)
 
-  // Capability badges
-  const capabilities = [
-    { label: 'CTD',          active: !!vessel.ctd_cap },
-    { label: 'Multibeam',    active: !!vessel.aquis_multibeam },
-    { label: 'Side Scan',    active: !!vessel.aquis_sidescan },
-    { label: 'ADCP',         active: !!vessel.aquis_adcp },
-    { label: 'ROV',          active: !!vessel.underwater_vehicles_rov },
-    { label: 'AUV',          active: !!vessel.underwater_vehicles_auv },
-    { label: 'Diving',       active: !!vessel.diving_cap },
-    { label: 'Coring',       active: !!vessel.core_capable },
-    { label: 'DP System',    active: !!vessel.dpos },
-    { label: 'Ice Breaking', active: !!hasIce },
-    { label: 'Wet Lab',      active: (vessel.area_wetlab ?? 0) > 0 },
-    { label: 'Dry Lab',      active: (vessel.area_drylab ?? 0) > 0 },
-  ].filter((c) => c.active)
-
   // Key stats
   const stats = [
     { label: 'Research bunks', value: vessel.scientists },
@@ -71,28 +62,14 @@ export default function VesselDetailSpecs({ vessel }: Props) {
   return (
     <div className="space-y-4">
 
-      {/* Key stats */}
+      {/* Key stats — mobile: 3-col wrap; sm+: single row, cells share the width evenly */}
       {stats.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-none sm:grid-flow-col sm:auto-cols-fr gap-3">
           {stats.map((s) => (
             <div key={s.label} className="bg-gray-50 rounded-xl p-3 text-center">
               <p className="text-lg font-bold text-navy leading-none">{s.value}</p>
               <p className="text-xs text-gray-400 mt-1 leading-tight">{s.label}</p>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Capability badges */}
-      {capabilities.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {capabilities.map((c) => (
-            <span key={c.label} className="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs font-semibold px-2.5 py-1 rounded-full">
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              {c.label}
-            </span>
           ))}
         </div>
       )}
@@ -203,11 +180,32 @@ export default function VesselDetailSpecs({ vessel }: Props) {
             <Row label="Construction" value={vessel.vessel_construct} />
             <Row label="NODC Code" value={vessel.nodc_code} />
             <Row label="ISM Certificate" value={vessel.ism_cert} />
+            {vessel.url_ship && (
+              <div className="flex justify-between items-baseline gap-4 py-1.5 border-b border-gray-50 last:border-0">
+                <span className="text-xs text-gray-400 shrink-0">Website</span>
+                <a
+                  href={vessel.url_ship}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-teal hover:underline truncate text-right"
+                >
+                  {vessel.url_ship.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+                </a>
+              </div>
+            )}
             <Row label="UNOLS" value={vessel.unols ? 'Yes' : null} />
             <Row label="Euro Fleet" value={vessel.euro ? 'Yes' : null} />
             <Row label="Amenities" value={vessel.amenities} />
             <Row label="Notes" value={vessel.notes} />
             <Row label="Other" value={vessel.vessel_other} />
+
+            {(vessel.created_at || vessel.last_updated) && (
+              <>
+                <SectionHeader label="Listing" />
+                <Row label="Listed" value={fmtMonthYear(vessel.created_at)} />
+                <Row label="Details Updated" value={fmtMonthYear(vessel.last_updated)} />
+              </>
+            )}
 
           </div>
         )}

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getVesselById, fmt, stripHtml, countryNameToFlag } from '@/lib/vessels'
+import { getVesselById, fmt, fmtDailyRate, stripHtml } from '@/lib/vessels'
 import { getTrackWindow } from '@/lib/track'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getServerUser } from '@/lib/supabase-server'
@@ -94,65 +94,72 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="space-y-6">
 
-          {/* ── Left / Main column ─────────────────────────────── */}
-          <div className="lg:col-span-2 space-y-6">
-
-            {/* Hero photo */}
-            <VesselPhotoGallery photos={photos} vesselName={vessel.name} country={vessel.country} />
-
-            {/* Title + quick badges */}
+            {/* Title + actions + quick badges */}
             <div>
-              <h1 className="text-3xl font-bold text-navy leading-tight">{vessel.name}</h1>
+              <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+                <h1 className="text-3xl font-bold text-navy leading-tight min-w-0">{vessel.name}</h1>
+                <div className="flex items-center gap-5 flex-shrink-0">
+                  <ShareButton title={vessel.name} />
+                  <RequestButton vesselId={vessel.id} vesselName={vessel.name} compact />
+                </div>
+              </div>
+              {(vessel.affiliation || vessel.operator_name) && (
+                <p className="text-sm text-gray-500 mt-1">
+                  {[...new Set([vessel.affiliation, vessel.operator_name].filter(Boolean))].join(' · ')}
+                </p>
+              )}
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                {lastPort?.port_city && (() => {
-                  const flag = countryNameToFlag(lastPort.port_country) ?? ''
-                  const city = lastPort.port_city
-                  const days = lastPort.arrived_at
-                    ? Math.floor((Date.now() - new Date(lastPort.arrived_at).getTime()) / 86400000)
-                    : null
-                  const age = days === null ? null
-                    : days < 1 ? 'today'
-                    : days < 30 ? `${days}d ago`
-                    : days < 365 ? `${Math.floor(days / 30)}mo ago`
-                    : `${Math.floor(days / 365)}yr ago`
-                  return (
-                    <span className="flex items-center gap-1 text-sm text-gray-500">
-                      <svg className="w-4 h-4 text-teal flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      {[lastPort.port_city, lastPort.port_state, lastPort.port_country].filter(Boolean).join(', ')}{flag ? ` ${flag}` : ''}{age ? <span className="text-gray-400"> · {age}</span> : null}
-                    </span>
-                  )
-                })()}
-                {vessel.scientists != null && (
-                  <span className="bg-teal text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                    {vessel.scientists} research bunks
+                {vessel.vessel_of_opportunity === true && (
+                  <span
+                    className="bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-200"
+                    title="A pleasure craft, fishing, or working vessel that can also be used to perform research"
+                  >
+                    Vessel of opportunity
                   </span>
                 )}
-                {activity && (
-                  <span className="bg-navy-50 text-navy text-xs font-medium px-2.5 py-1 rounded-full border border-navy/10">
-                    {activity.length > 60 ? activity.slice(0, 60) + '…' : activity}
+                {vessel.daily_rate != null && (
+                  <span className="bg-navy-50 text-navy text-xs font-semibold px-2.5 py-1 rounded-full border border-navy/10">
+                    Est. {fmtDailyRate(vessel.daily_rate, vessel.daily_rate_currency)}/day
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Divider */}
-            <hr className="border-gray-100" />
-
-            {/* Activity description */}
-            {activity && activity.length > 60 && (
-              <div>
-                <h2 className="text-lg font-semibold text-navy mb-2">Research Activity</h2>
-                <p className="text-gray-600 leading-relaxed">{activity}</p>
+            {/* Hero photo + map, side by side on wide viewports */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              <div className={showMap ? '' : 'lg:col-span-2'}>
+                <VesselPhotoGallery photos={photos} vesselName={vessel.name} country={vessel.country} />
+                {activity && (
+                  <p className="text-gray-600 text-sm leading-relaxed mt-3">{activity}</p>
+                )}
               </div>
-            )}
+              {showMap && (
+                <div>
+                  <VesselTrackSection
+                    vesselId={id}
+                    vesselName={vessel.name}
+                    homePort={hasCoords ? { lat: homeLat!, lng: homeLng! } : null}
+                    lastPort={hasPortCall ? { lat: portCallLat!, lng: portCallLng!, name: lastPort?.port_city, date: lastPort?.arrived_at } : null}
+                    operatingArea={operatingArea}
+                    initialDays={initialDays}
+                    initialWindow={initialWindow}
+                  />
+                  {vessel.operating_area && (
+                    <p className="text-sm text-gray-600 mt-1.5">
+                      <span className="font-medium text-navy">Operating area:</span> {vessel.operating_area}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Specs */}
             <VesselDetailSpecs vessel={vessel} />
+
+            {/* Divider */}
+            <hr className="border-gray-100" />
 
             {/* Documents */}
             {docs.length > 0 && (
@@ -188,102 +195,23 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
               </div>
             )}
 
-            {/* Operator */}
-            {(vessel.affiliation || vessel.operator_name) && (
-              <div className="border border-gray-100 rounded-2xl p-5">
-                <h2 className="text-lg font-semibold text-navy mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  Operator
-                </h2>
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-                  {[
-                    ['Affiliation', vessel.affiliation],
-                    ['Operator', vessel.operator_name],
-                    ['Country', vessel.country],
-
-                  ]
-                    .filter(([, v]) => v)
-                    .map(([label, value]) => (
-                      <div key={label as string}>
-                        <dt className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">{label}</dt>
-                        <dd className="text-sm font-medium text-gray-800">{value}</dd>
-                      </div>
-                    ))}
-                </dl>
-                <div className="mt-4 flex flex-wrap gap-4">
-                  {vessel.url_ship && (
-                    <a href={vessel.url_ship} target="_blank" rel="noopener noreferrer"
-                      className="text-sm font-medium text-teal hover:underline flex items-center gap-1">
-                      Official website
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Map + historic track */}
-            {showMap && (
-              <VesselTrackSection
-                vesselId={id}
-                vesselName={vessel.name}
-                homePort={hasCoords ? { lat: homeLat!, lng: homeLng! } : null}
-                lastPort={hasPortCall ? { lat: portCallLat!, lng: portCallLng!, name: lastPort?.port_city, date: lastPort?.arrived_at } : null}
-                operatingArea={operatingArea}
-                initialDays={initialDays}
-                initialWindow={initialWindow}
-              />
-            )}
-
-            {/* Operating area */}
-            {vessel.operating_area && (
+            {/* Operating area (fallback placement for vessels with no map) */}
+            {vessel.operating_area && !showMap && (
               <div>
                 <h2 className="text-lg font-semibold text-navy mb-1">Operating Area</h2>
                 <p className="text-gray-600 text-sm">{vessel.operating_area}</p>
               </div>
             )}
-          </div>
 
-          {/* ── Right / Booking column ─────────────────────────── */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-4">
-              <div className="border border-gray-200 rounded-2xl shadow-card p-6">
-                <div className="mb-5">
-                  <h3 className="text-lg font-bold text-navy">Connect with this vessel</h3>
-                  {activity && (
-                    <p className="text-xs text-gray-400 mt-1 leading-snug line-clamp-2">{activity}</p>
-                  )}
+            {/* Claim */}
+            {!isClaimed && (
+              <div className="border-t border-gray-100 pt-6 flex flex-col items-center gap-3">
+                <p className="text-sm text-gray-400">Are you the operator of this vessel?</p>
+                <div className="w-full max-w-xs">
+                  <ClaimButton vesselId={vessel.id} vesselName={vessel.name} />
                 </div>
-
-                <RequestButton vesselId={vessel.id} vesselName={vessel.name} />
-
-                <p className="text-center text-xs text-gray-400 mt-3">
-                  Messages are handled through Greenwater — your contact details stay private until you both agree to connect.
-                </p>
-
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  {!isClaimed && (
-                    <>
-                      <ClaimButton vesselId={vessel.id} vesselName={vessel.name} />
-                      <p className="text-center text-xs text-gray-400 mt-2">
-                        Are you the operator of this vessel?
-                      </p>
-                    </>
-                  )}
-                </div>
-
               </div>
-
-              <div className="flex items-center justify-center gap-6">
-                <ShareButton title={vessel.name} />
-              </div>
-            </div>
-          </div>
-
+            )}
         </div>
       </div>
     </div>

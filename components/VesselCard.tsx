@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, getFallbackPhotoUrl, countryNameToFlag } from '@/lib/vessel-utils'
+import { fmt, nextPhotoFallback, countryNameToFlag, portAgeLabel } from '@/lib/vessel-utils'
 
 function relativeDate(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
@@ -34,7 +34,7 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
           alt={vessel.name}
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={() => setImgSrc(getFallbackPhotoUrl(vessel))}
+          onError={() => setImgSrc(nextPhotoFallback(imgSrc, vessel))}
         />
         {/* Country flag */}
         {countryNameToFlag(vessel.country) && (
@@ -64,6 +64,7 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
           <span className="truncate">
             {vessel.last_port_city
               ? [vessel.last_port_city, vessel.last_port_state].filter(Boolean).join(', ')
+                + (portAgeLabel(vessel.last_port_date) ? ` · ${portAgeLabel(vessel.last_port_date)}` : '')
               : vessel.port_city ?? vessel.port_state ?? fmt(vessel.country)}
           </span>
         </p>

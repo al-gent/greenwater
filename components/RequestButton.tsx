@@ -14,7 +14,7 @@ interface Profile {
   title: string | null
 }
 
-export default function RequestButton({ vesselId, vesselName }: { vesselId: number; vesselName: string }) {
+export default function RequestButton({ vesselId, vesselName, compact = false }: { vesselId: number; vesselName: string; compact?: boolean }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<User | null | undefined>(undefined) // undefined = loading
@@ -47,11 +47,16 @@ export default function RequestButton({ vesselId, vesselName }: { vesselId: numb
   // Verified gate: show inline message instead of opening modal
   if (user && profile && !profile.verified && !open) {
     return (
-      <div className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-center">
+      <div className={compact
+        ? 'bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-center'
+        : 'w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-center'}
+      >
         <p className="text-sm font-medium text-gray-700">Verification pending</p>
-        <p className="text-xs text-gray-400 mt-1">
-          Your account is awaiting admin verification. You'll receive an email once approved.
-        </p>
+        {!compact && (
+          <p className="text-xs text-gray-400 mt-1">
+            Your account is awaiting admin verification. You'll receive an email once approved.
+          </p>
+        )}
       </div>
     )
   }
@@ -60,7 +65,9 @@ export default function RequestButton({ vesselId, vesselName }: { vesselId: numb
     <>
       <button
         onClick={handleClick}
-        className="w-full bg-navy text-white py-4 rounded-2xl font-semibold text-base hover:bg-navy-600 transition-all hover:shadow-lg active:scale-[0.98]"
+        className={compact
+          ? 'bg-navy text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-navy-600 transition-all hover:shadow-lg active:scale-[0.98] whitespace-nowrap'
+          : 'w-full bg-navy text-white py-4 rounded-2xl font-semibold text-base hover:bg-navy-600 transition-all hover:shadow-lg active:scale-[0.98]'}
       >
         Connect with this Vessel
       </button>

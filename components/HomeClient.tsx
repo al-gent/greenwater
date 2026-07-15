@@ -65,6 +65,7 @@ function applySearch(vessels: Vessel[], advanced: AdvancedFilters, locationIds: 
       const ice = (v.ice_breaking ?? '').trim().toLowerCase()
       if (!ice || ICE_NO_VALUES.has(ice)) return false
     }
+    if (advanced.voo && v.vessel_of_opportunity !== true) return false
     for (const key of advanced.features) {
       if (FEATURE_CHECKS[key] && !FEATURE_CHECKS[key](v)) return false
     }
@@ -109,6 +110,7 @@ function parseAdvancedFromParams(p: URLSearchParams): AdvancedFilters {
     minSpeed: parseFloat(p.get('minSpeed') ?? '0') || 0,
     builtAfter: parseInt(p.get('builtAfter') ?? '0', 10) || 0,
     iceBreaking: p.get('ice') === '1',
+    voo: p.get('voo') === '1',
     features: features ? features.split(',').filter(Boolean) : [],
   }
 }
@@ -154,6 +156,7 @@ function buildQueryString(advanced: AdvancedFilters, loc: LocationState, view: V
   if (advanced.minSpeed > 0) p.set('minSpeed', String(advanced.minSpeed))
   if (advanced.builtAfter > 0) p.set('builtAfter', String(advanced.builtAfter))
   if (advanced.iceBreaking) p.set('ice', '1')
+  if (advanced.voo) p.set('voo', '1')
   if (advanced.features.length > 0) p.set('features', advanced.features.join(','))
   if (loc.place) {
     p.set('loc', loc.place.label)

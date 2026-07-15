@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import AnalyticsTab from './AnalyticsTab'
+import { fmtDailyRate } from '@/lib/vessel-utils'
 
 type SubmissionStatus = 'pending' | 'approved' | 'rejected'
 type ClaimStatus = 'pending' | 'approved' | 'rejected'
@@ -32,6 +33,10 @@ interface Submission {
   dpos: string | null
   ice_breaking: string | null
   url_ship: string | null
+  vessel_of_opportunity: boolean | null
+  daily_rate: number | null
+  daily_rate_currency: string | null
+  photo_urls: string[] | null
   status: SubmissionStatus
   admin_notes: string | null
   created_at: string
@@ -440,17 +445,51 @@ export default function AdminDashboard() {
               ) : filteredSubs.map((sub) => (
                 <div key={sub.id} className="bg-white rounded-2xl shadow-card p-6">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="font-semibold text-navy text-lg">{sub.vessel_name}</h3>
-                        <StatusBadge status={sub.status} />
+                    <div className="flex-1 min-w-0 flex items-start gap-4">
+                      {(sub.photo_urls?.length ?? 0) > 0 && (
+                        <a
+                          href={sub.photo_urls![0]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="relative flex-shrink-0 w-24 aspect-video rounded-lg overflow-hidden bg-gray-100 block"
+                          title="Open full size"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={sub.photo_urls![0]} alt={`${sub.vessel_name} photo`} className="w-full h-full object-cover" />
+                          {sub.photo_urls!.length > 1 && (
+                            <span className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[10px] font-medium px-1 rounded">
+                              +{sub.photo_urls!.length - 1}
+                            </span>
+                          )}
+                        </a>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <h3 className="font-semibold text-navy text-lg">{sub.vessel_name}</h3>
+                          {sub.vessel_of_opportunity === true ? (
+                            <span
+                              className="bg-amber-50 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-amber-200"
+                              title="Pleasure craft / fishing / working vessel that can also host research"
+                            >
+                              Vessel of opportunity
+                            </span>
+                          ) : (
+                            <span className="bg-navy-50 text-navy text-xs font-semibold px-2 py-0.5 rounded-full border border-navy/10">
+                              Research vessel
+                            </span>
+                          )}
+                          <StatusBadge status={sub.status} />
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+                          <span>{sub.operator_name}</span>
+                          <a href={`mailto:${sub.email}`} className="text-teal hover:underline">{sub.email}</a>
+                          <span>{[sub.port_city, sub.port_state, sub.country].filter(Boolean).join(', ')}</span>
+                          {sub.daily_rate != null && (
+                            <span className="font-medium text-navy">{fmtDailyRate(sub.daily_rate, sub.daily_rate_currency)}/day</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Submitted {fmt(sub.created_at)}</p>
                       </div>
-                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-                        <span>{sub.operator_name}</span>
-                        <a href={`mailto:${sub.email}`} className="text-teal hover:underline">{sub.email}</a>
-                        <span>{[sub.port_city, sub.port_state, sub.country].filter(Boolean).join(', ')}</span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1">Submitted {fmt(sub.created_at)}</p>
                     </div>
                   </div>
 

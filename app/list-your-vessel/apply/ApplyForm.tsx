@@ -5,6 +5,9 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import PlaceAutocomplete from '@/components/PlaceAutocomplete'
 import CollapsibleSection from '@/components/CollapsibleSection'
+import { RATE_CURRENCIES } from '@/lib/vessel-utils'
+import { makeThumbnail } from '@/lib/image-thumb'
+import { createClient } from '@/lib/supabase-browser'
 
 // Leaflet must not SSR
 const VesselMap = dynamic(() => import('@/components/VesselMap'), {
@@ -37,6 +40,9 @@ interface ListForm {
   dpos: string
   ice_breaking: string
   url_ship: string
+  vessel_of_opportunity: boolean
+  daily_rate: string
+  daily_rate_currency: string
 }
 
 const emptyForm: ListForm = {
@@ -45,6 +51,7 @@ const emptyForm: ListForm = {
   year_built: '', year_refit: '', length_m: '', beam_m: '', draft_m: '',
   speed_cruise: '', speed_max: '', scientists: '', crew: '', endurance: '',
   main_activity: '', operating_area: '', dpos: '', ice_breaking: '', url_ship: '',
+  vessel_of_opportunity: false, daily_rate: '', daily_rate_currency: 'USD',
 }
 
 type SectionKey = 'location' | 'identification' | 'physical' | 'performance' | 'operations'
@@ -59,6 +66,12 @@ interface Props {
 export default function ApplyForm({ userEmail }: Props) {
   const [form, setForm] = useState<ListForm>(emptyForm)
   const [operatingAreaGeojson, setOperatingAreaGeojson] = useState<GeoJSON.FeatureCollection | null>(null)
+  // Photos are staged in storage under submissions/<draftId>/ before the
+  // submission row exists; approval copies the URLs onto the vessel.
+  const [draftId] = useState(() => crypto.randomUUID())
+  const [photos, setPhotos] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const [homePortCoords, setHomePortCoords] = useState<{ lat: number; lon: number } | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -74,11 +87,63 @@ export default function ApplyForm({ userEmail }: Props) {
 
   const toggle = (key: SectionKey) => setOpen((s) => ({ ...s, [key]: !s[key] }))
 
+  const MAX_PHOTOS = 12 // mirror of the server-side cap in /api/vessel-submissions
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    let files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    setPhotoError(null)
+    const remaining = MAX_PHOTOS - photos.length
+    if (remaining <= 0) {
+      setPhotoError(`Up to ${MAX_PHOTOS} photos per listing.`)
+      e.target.value = ''
+      return
+    }
+    if (files.length > remaining) {
+      files = files.slice(0, remaining)
+      setPhotoError(`Up to ${MAX_PHOTOS} photos per listing — added the first ${remaining}.`)
+    }
+    setUploading(true)
+    const supabase = createClient()
+    const newUrls: string[] = []
+    for (const file of files) {
+      const ext = file.name.split('.').pop()
+      const path = `submissions/${draftId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { data, error } = await supabase.storage.from('vessel-photos').upload(path, file)
+      if (error) {
+        setPhotoError(`Upload failed: ${error.message}`)
+        setUploading(false)
+        return
+      }
+      // thumbnail for cards/maps — best-effort, never blocks the upload
+      const thumb = await makeThumbnail(file)
+      if (thumb) {
+        await supabase.storage.from('vessel-photos').upload(`thumbs/${data.path}`, thumb, { contentType: 'image/jpeg' })
+      }
+      const { data: { publicUrl } } = supabase.storage.from('vessel-photos').getPublicUrl(data.path)
+      newUrls.push(publicUrl)
+    }
+    setPhotos((p) => [...p, ...newUrls])
+    setUploading(false)
+    e.target.value = ''
+  }
+
+  const removeStagedPhoto = async (url: string) => {
+    setPhotos((p) => p.filter((u) => u !== url))
+    // best-effort cleanup of the staged file + its thumb; the submission only stores URLs
+    const path = url.split('/vessel-photos/')[1]
+    if (path) await createClient().storage.from('vessel-photos').remove([path, `thumbs/${path}`])
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setValidationError(null)
     setError(null)
 
+    if (uploading) {
+      setValidationError('Photos are still uploading — one moment.')
+      return
+    }
     if (!form.operating_area.trim()) {
       setOpen((s) => ({ ...s, location: true }))
       setValidationError("Please add the vessel's operating area.")
@@ -127,6 +192,10 @@ export default function ApplyForm({ userEmail }: Props) {
         dpos: form.dpos,
         ice_breaking: form.ice_breaking,
         url_ship: form.url_ship,
+        vessel_of_opportunity: form.vessel_of_opportunity,
+        daily_rate: form.daily_rate,
+        daily_rate_currency: form.daily_rate_currency,
+        photo_urls: photos,
       }),
     })
 
@@ -237,6 +306,79 @@ export default function ApplyForm({ userEmail }: Props) {
                       placeholder="Describe the vessel's research capabilities, scientific equipment, and typical mission types…"
                       className={`${inputClass} resize-none`}
                     />
+                  </div>
+
+                  {/* Vessel type toggle */}
+                  <div>
+                    <label className={labelClass}>Vessel type</label>
+                    <div className="grid grid-cols-2 rounded-xl border border-gray-200 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, vessel_of_opportunity: false })}
+                        className={`px-4 py-2.5 text-sm transition-colors ${!form.vessel_of_opportunity ? 'bg-teal text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                      >
+                        Dedicated research vessel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, vessel_of_opportunity: true })}
+                        className={`px-4 py-2.5 text-sm transition-colors border-l border-gray-200 ${form.vessel_of_opportunity ? 'bg-teal text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                      >
+                        Vessel of opportunity
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1.5">
+                      {form.vessel_of_opportunity
+                        ? 'A pleasure craft, fishing, or working vessel that can also be used to perform research.'
+                        : 'This is a research vessel — purpose-built or primarily used for scientific work.'}
+                    </p>
+                  </div>
+
+                  {/* Photos */}
+                  <div>
+                    <label className={labelClass}>
+                      Photos
+                      <span className="ml-1 text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    {photos.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+                        {photos.map((url) => (
+                          <div key={url} className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeStagedPhoto(url)}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="Remove photo"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {photoError && <p className="text-xs text-red-500 mb-2">{photoError}</p>}
+                    <label className={`flex items-center gap-2 w-fit cursor-pointer px-4 py-2 rounded-xl border border-dashed border-gray-300 hover:border-teal text-sm text-gray-500 hover:text-teal transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                      {uploading ? (
+                        <>
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Uploading…
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          Upload photos
+                        </>
+                      )}
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -539,8 +681,36 @@ export default function ApplyForm({ userEmail }: Props) {
                     open={open.operations}
                     onToggle={() => toggle('operations')}
                     label="Operations & links"
-                    count={3}
+                    count={5}
                   >
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>
+                          Estimated daily rate
+                          <span className="ml-1 text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={form.daily_rate}
+                          onChange={(e) => setForm({ ...form, daily_rate: e.target.value })}
+                          placeholder="e.g. 2500"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Currency</label>
+                        <select
+                          value={form.daily_rate_currency}
+                          onChange={(e) => setForm({ ...form, daily_rate_currency: e.target.value })}
+                          className={inputClass}
+                        >
+                          {RATE_CURRENCIES.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className={labelClass}>
@@ -589,7 +759,7 @@ export default function ApplyForm({ userEmail }: Props) {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploading}
                 className="w-full bg-navy text-white py-4 rounded-2xl font-semibold hover:bg-navy-600 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {loading ? (

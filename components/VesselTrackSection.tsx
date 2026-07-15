@@ -103,8 +103,25 @@ export default function VesselTrackSection({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-        <h2 className="text-lg font-semibold text-navy">Location &amp; Activity</h2>
+      <VesselMap
+        vesselName={vesselName}
+        homePort={homePort}
+        lastPort={lastPortInWindow ? lastPort : null}
+        portCalls={trackPoints}
+        operatingArea={operatingArea}
+        height={320}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 mt-2">
+        <p className="text-xs text-gray-400 min-h-[1rem]">
+          {loading ? 'Loading…'
+            : events.length === 0 ? 'No tracked activity in this period'
+            : <>
+                {rangeLabel} · {ports} port call{ports === 1 ? '' : 's'}
+                {sea > 0 && <> · {sea} at-sea period{sea === 1 ? '' : 's'}</>}
+                {window?.condensed && <> · showing {events.length} of {window.totalInWindow} events</>}
+              </>}
+        </p>
         <div className="flex items-center gap-1">
           {PRESETS.map((p) => (
             <button
@@ -121,25 +138,6 @@ export default function VesselTrackSection({
           ))}
         </div>
       </div>
-
-      <p className="text-xs text-gray-400 mb-3 min-h-[1rem]">
-        {loading ? 'Loading…'
-          : events.length === 0 ? 'No tracked activity in this period'
-          : <>
-              {rangeLabel} · {ports} port call{ports === 1 ? '' : 's'}
-              {sea > 0 && <> · {sea} at-sea period{sea === 1 ? '' : 's'}</>}
-              {window?.condensed && <> · showing {events.length} of {window.totalInWindow} events</>}
-            </>}
-      </p>
-
-      <VesselMap
-        vesselName={vesselName}
-        homePort={homePort}
-        lastPort={lastPortInWindow ? lastPort : null}
-        portCalls={trackPoints}
-        operatingArea={operatingArea}
-        height={320}
-      />
     </div>
   )
 }

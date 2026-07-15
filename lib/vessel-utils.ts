@@ -40,6 +40,11 @@ export interface Vessel {
   operating_area_geojson: GeoJSON.FeatureCollection | null
   endurance: string | null
   dpos: string | null
+  // Vessel of opportunity (pleasure/fishing/working craft that can host
+  // research) + optional estimated charter rate. null = not answered.
+  vessel_of_opportunity: boolean | null
+  daily_rate: number | null
+  daily_rate_currency: string | null // ISO 4217
   port_name: string | null
   port_city: string | null
   port_state: string | null
@@ -47,7 +52,8 @@ export interface Vessel {
   // Extended fields (backfilled from vessel_details JSONs)
   photo_urls: string[] | null
   doc_details: VesselDoc[] | null
-  last_updated: string | null
+  last_updated: string | null // human listing edits (legacy rows: source registry date)
+  created_at: string | null // when the vessel entered our system (null = legacy import)
 
   // GFW identity + last known port (populated by getAllVessels join; null on getVesselById)
   vessel_id_gfw: string | null
@@ -277,10 +283,56 @@ export function countryNameToFlag(name: string | null | undefined): string | nul
   return [...a2].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('')
 }
 
+/**
+ * Next src to try after an <img> error: a failed thumbnail falls back to the
+ * original photo (thumbs are generated async — see .github/workflows), and a
+ * failed original falls back to the placeholder.
+ */
+export function nextPhotoFallback(current: string, vessel: Vessel): string {
+  const placeholder = getFallbackPhotoUrl(vessel)
+  // Terminal state — if even the placeholder errors (storage down), returning
+  // the same src stops the onError → setState → retry loop.
+  if (current === placeholder) return placeholder
+  const original = vessel.photo_urls?.[0]
+  if (current.includes('/thumbs/') && original && current !== original) return original
+  return placeholder
+}
+
+/** "2026-02-14…" → "today" / "5d ago" / "5mo ago" / "2yr ago" (null when no date) */
+export function portAgeLabel(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (isNaN(days) || days < 0) return null
+  if (days < 1) return 'today'
+  if (days < 30) return `${days}d ago`
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`
+  return `${Math.floor(days / 365)}yr ago`
+}
+
 /** Display helper — returns value or em dash */
 export function fmt(value: string | number | null | undefined, suffix = ''): string {
   if (value === null || value === undefined || value === '') return '—'
   return `${value}${suffix}`
+}
+
+/** Currencies offered for the daily-rate dropdown (ISO 4217). */
+export const RATE_CURRENCIES = [
+  'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'NZD', 'JPY', 'NOK', 'SEK', 'DKK',
+  'ISK', 'CHF', 'BRL', 'CLP', 'MXN', 'ZAR', 'INR', 'IDR', 'SGD', 'KRW',
+  'PLN', 'TRY',
+] as const
+
+/** "2500" + "EUR" → "€2,500" (falls back to "2,500 XYZ" for unknown codes). */
+export function fmtDailyRate(rate: number | null | undefined, currency: string | null | undefined): string | null {
+  if (rate == null) return null
+  const code = (currency ?? 'USD').toUpperCase()
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency', currency: code, maximumFractionDigits: 0,
+    }).format(rate)
+  } catch {
+    return `${rate.toLocaleString()} ${code}`
+  }
 }
 
 

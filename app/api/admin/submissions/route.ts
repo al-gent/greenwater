@@ -89,6 +89,11 @@ export async function PATCH(request: Request) {
       dpos: submission.dpos ?? null,
       ice_breaking: submission.ice_breaking ?? null,
       url_ship: submission.url_ship ?? null,
+      vessel_of_opportunity: submission.vessel_of_opportunity ?? null,
+      daily_rate: submission.daily_rate ?? null,
+      daily_rate_currency: submission.daily_rate_currency ?? null,
+      photo_urls: submission.photo_urls?.length ? submission.photo_urls : null,
+      last_updated: new Date().toISOString(), // created_at defaults in the DB
     }).select('id').single()
 
     if (insertError || !newVessel) {
@@ -99,6 +104,39 @@ export async function PATCH(request: Request) {
         .update({ status: 'pending', admin_notes: null, reviewed_at: null })
         .eq('id', id)
       return NextResponse.json({ error: 'Failed to add vessel to database. Approval was not saved.' }, { status: 500 })
+    }
+
+    // Move staged photos out of submissions/<draftId>/ — the applicant keeps
+    // owner-delete rights on staging paths, so a live vessel must not point
+    // there. Copy each file (+ its thumb) to <vesselId>/ and rewrite the URLs;
+    // on a copy failure keep the staging URL rather than lose the photo.
+    if (submission.photo_urls?.length) {
+      const bucketPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vessel-photos/`
+      const movedUrls: string[] = []
+      for (const url of submission.photo_urls as string[]) {
+        const stagingPath = url.startsWith(bucketPrefix) ? url.slice(bucketPrefix.length) : null
+        const fileName = stagingPath?.split('/').pop()
+        if (!stagingPath || !fileName) {
+          movedUrls.push(url)
+          continue
+        }
+        const destPath = `${newVessel.id}/${fileName}`
+        const { error: copyError } = await supabaseAdmin.storage
+          .from('vessel-photos')
+          .copy(stagingPath, destPath)
+        if (copyError && !/already exists/i.test(copyError.message)) {
+          console.error(`photo copy failed for ${stagingPath}:`, copyError.message)
+          movedUrls.push(url)
+          continue
+        }
+        // thumbnail is best-effort — cards fall back to the original without it
+        await supabaseAdmin.storage
+          .from('vessel-photos')
+          .copy(`thumbs/${stagingPath}`, `thumbs/${destPath}`)
+          .catch(() => {})
+        movedUrls.push(bucketPrefix + destPath)
+      }
+      await supabaseAdmin.from('vessels').update({ photo_urls: movedUrls }).eq('id', newVessel.id)
     }
 
     // Link the submitter's profile to the new vessel and promote to operator

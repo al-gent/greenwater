@@ -277,7 +277,8 @@ export default function VesselMap({
   }, [track])
 
   return (
-    <div className="relative w-full rounded-xl overflow-hidden border border-gray-200" style={{ height }}>
+    // isolate: contain the legend's + Leaflet's z-indexes so they never float above page modals
+    <div className="relative isolate w-full rounded-xl overflow-hidden border border-gray-200" style={{ height }}>
       {legend && (hasArea || homePort || lastPort) && (
         <div className="absolute bottom-3 left-3 z-[1000] bg-white/90 backdrop-blur-sm rounded-xl shadow-sm px-3 py-2 flex flex-col gap-1.5 text-xs text-gray-600">
           {homePort && (

@@ -4,6 +4,8 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import type { Vessel } from '@/lib/vessel-utils'
+import { RATE_CURRENCIES } from '@/lib/vessel-utils'
+import { makeThumbnail } from '@/lib/image-thumb'
 import { createClient } from '@/lib/supabase-browser'
 import PlaceAutocomplete from '@/components/PlaceAutocomplete'
 import CollapsibleSection from '@/components/CollapsibleSection'
@@ -32,13 +34,23 @@ const NUM_FIELDS = new Set([
   'water_gen', 'water_capacity', 'air_cond', 'freeboard_deck', 'free_deck_area',
   'oc_winches', 'oc_steelwire_len', 'oc_steelwire_load', 'oc_condcable_len', 'oc_condcable_load',
   'oc_trawl_len', 'oc_trawl_load', 'oc_other_len', 'oc_other_load',
-  'gantry_abovedeck', 'gantry_outboard_ext', 'gantry_load',
+  'gantry_abovedeck', 'gantry_outboard_ext', 'gantry_load', 'daily_rate',
   'crane_abovedeck', 'crane_outboard_ext', 'crane_load',
+])
+
+// Never absorb these into text-field form state. Crucial for the nullable
+// array/object columns: when NULL they'd slip past the array check below,
+// become '' in the form, and formToPayload would then send them back as
+// explicit null on Save — wiping e.g. a photo uploaded moments earlier.
+const NON_FORM_FIELDS = new Set([
+  'id', 'photo_urls', 'doc_details', 'operating_area_geojson',
+  'vessel_id_gfw', 'last_updated', 'created_at', 'vessel_of_opportunity',
 ])
 
 function vesselToForm(vessel: Partial<EditableVessel>): FormState {
   const form: FormState = {}
   for (const [key, value] of Object.entries(vessel)) {
+    if (NON_FORM_FIELDS.has(key)) continue
     // Skip arrays and objects — those are handled separately (e.g. photo_urls)
     if (Array.isArray(value) || (value !== null && typeof value === 'object')) continue
     form[key] = value != null ? String(value) : ''
@@ -75,6 +87,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
     () => (vessel.operating_area_geojson as GeoJSON.FeatureCollection | null) ?? null,
   )
   const [photos, setPhotos] = useState<string[]>(() => vessel.photo_urls ?? [])
+  const [voo, setVoo] = useState<boolean>(vessel.vessel_of_opportunity === true)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -139,6 +152,11 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
         setUploading(false)
         return
       }
+      // thumbnail for cards/maps — best-effort, never blocks the upload
+      const thumb = await makeThumbnail(file)
+      if (thumb) {
+        await supabase.storage.from('vessel-photos').upload(`thumbs/${data.path}`, thumb, { contentType: 'image/jpeg' })
+      }
       const { data: { publicUrl } } = supabase.storage.from('vessel-photos').getPublicUrl(data.path)
       newUrls.push(publicUrl)
     }
@@ -177,6 +195,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
         if (trimmed !== '') payload[key] = NUM_FIELDS.has(key) ? Number(trimmed) : trimmed
       }
       payload.operating_area_geojson = operatingAreaGeojson
+      payload.vessel_of_opportunity = voo
       const res = await fetch('/api/vessels/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -198,7 +217,14 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
     const res = await fetch('/api/vessels/update', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...formToPayload(form, vesselId!), operating_area_geojson: operatingAreaGeojson, _geocode: locationTextEdited }),
+      body: JSON.stringify({
+        ...formToPayload(form, vesselId!),
+        operating_area_geojson: operatingAreaGeojson,
+        vessel_of_opportunity: voo,
+        // explicit null so clearing the rate actually clears it
+        daily_rate: form.daily_rate?.trim() ? Number(form.daily_rate) : null,
+        _geocode: locationTextEdited,
+      }),
     })
 
     setSaving(false)
@@ -412,9 +438,48 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection open={open.research} onToggle={() => toggle('research')} label="Research" count={2}>
+      <CollapsibleSection open={open.research} onToggle={() => toggle('research')} label="Research" count={4}>
         {ta('Research Activity / Description', 'main_activity', 4)}
         {f('Research Bunks', 'scientists', 'number')}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Vessel type</label>
+          <div className="grid grid-cols-2 rounded-lg border border-gray-200 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setVoo(false)}
+              className={`px-3 py-2 text-sm transition-colors ${!voo ? 'bg-teal text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+            >
+              Dedicated research vessel
+            </button>
+            <button
+              type="button"
+              onClick={() => setVoo(true)}
+              className={`px-3 py-2 text-sm transition-colors border-l border-gray-200 ${voo ? 'bg-teal text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+            >
+              Vessel of opportunity
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            {voo
+              ? 'A pleasure craft, fishing, or working vessel that can also be used to perform research.'
+              : 'This is a research vessel — purpose-built or primarily used for scientific work.'}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {f('Estimated Daily Rate', 'daily_rate', 'number')}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Currency</label>
+            <select
+              value={form.daily_rate_currency || 'USD'}
+              onChange={(e) => set('daily_rate_currency', e.target.value)}
+              className={editInputClass}
+            >
+              {RATE_CURRENCIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </CollapsibleSection>
 
       <CollapsibleSection open={open.operator} onToggle={() => toggle('operator')} label="Operator & Contact" count={8}>

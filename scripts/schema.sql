@@ -386,6 +386,54 @@ alter table vessels
   add column if not exists notes              text,
   add column if not exists amenities          text;
 
+-- ── Listing timestamps ───────────────────────────────────────────────────────
+-- (mirrors supabase/migrations/20260714_vessel_timestamps.sql)
+-- created_at: entry into OUR system (null = legacy bulk import).
+-- last_updated: human listing edits only; legacy rows carry the source
+-- registry's own last-modified date. Machine syncs never set either.
+alter table vessels add column if not exists created_at timestamptz default now();
+
+-- ── Vessel of opportunity + daily charter rate ───────────────────────────────
+-- (mirrors supabase/migrations/20260714_voo_daily_rate.sql)
+-- VOO = pleasure/fishing/working craft that can also host research.
+-- null = not answered; existing fleet backfilled to false (dedicated RVs).
+alter table vessels
+  add column if not exists vessel_of_opportunity boolean,
+  add column if not exists daily_rate numeric,
+  add column if not exists daily_rate_currency text; -- ISO 4217
+
+alter table vessel_submissions
+  add column if not exists vessel_of_opportunity boolean,
+  add column if not exists daily_rate numeric,
+  add column if not exists daily_rate_currency text;
+
+-- Photos staged during the list-your-vessel flow
+-- (mirrors supabase/migrations/20260714_submission_photos.sql)
+alter table vessel_submissions add column if not exists photo_urls text[];
+
+-- (includes 20260714_submission_thumbs_policy.sql: thumbs/submissions/ is
+-- writable too, for browser-generated thumbnails at upload time)
+create policy "Authenticated users can stage submission photos"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'vessel-photos'
+    and (
+      (storage.foldername(name))[1] = 'submissions'
+      or ((storage.foldername(name))[1] = 'thumbs' and (storage.foldername(name))[2] = 'submissions')
+    )
+  );
+
+create policy "Users can delete their own staged submission photos"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'vessel-photos'
+    and (
+      (storage.foldername(name))[1] = 'submissions'
+      or ((storage.foldername(name))[1] = 'thumbs' and (storage.foldername(name))[2] = 'submissions')
+    )
+    and owner = auth.uid()
+  );
+
 -- ── GFW port call integration ────────────────────────────────────────────────
 -- (mirrors supabase/migrations/20260325_gfw_port_calls.sql +
 --  20260714_port_calls_history.sql)

@@ -75,6 +75,19 @@ export async function POST(request: Request) {
     dpos: str(body.dpos),
     ice_breaking: str(body.ice_breaking),
     url_ship: str(body.url_ship),
+    vessel_of_opportunity: typeof body.vessel_of_opportunity === 'boolean' ? body.vessel_of_opportunity : null,
+    daily_rate: num(body.daily_rate),
+    daily_rate_currency: typeof body.daily_rate_currency === 'string' && /^[A-Za-z]{3}$/.test(body.daily_rate_currency)
+      ? body.daily_rate_currency.toUpperCase()
+      : null,
+    // only accept photos the applicant staged in our own bucket
+    photo_urls: Array.isArray(body.photo_urls)
+      ? body.photo_urls
+          .filter((u: unknown): u is string =>
+            typeof u === 'string' &&
+            u.startsWith(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vessel-photos/submissions/`))
+          .slice(0, 12)
+      : null,
   })
 
   if (error) {

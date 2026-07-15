@@ -14,6 +14,7 @@ export interface AdvancedFilters {
   builtAfter: number
   hull: string
   iceBreaking: boolean
+  voo: boolean // vessels of opportunity only
   features: string[]
 }
 
@@ -31,6 +32,7 @@ export const EMPTY_ADVANCED: AdvancedFilters = {
   builtAfter: 0,
   hull: '',
   iceBreaking: false,
+  voo: false,
   features: [],
 }
 
@@ -41,7 +43,7 @@ export function advancedActive(f: AdvancedFilters): boolean {
     f.minBerths > 0 || f.minEndurance > 0 ||
     f.minLength > 0 || f.maxLength > 0 || f.maxDraft > 0 ||
     f.minSpeed > 0 || f.builtAfter > 0 ||
-    f.iceBreaking || f.features.length > 0
+    f.iceBreaking || f.voo || f.features.length > 0
   )
 }
 
@@ -52,7 +54,7 @@ export function advancedCount(f: AdvancedFilters): number {
     f.minBerths > 0, f.minEndurance > 0,
     f.minLength > 0 || f.maxLength > 0, f.maxDraft > 0,
     f.minSpeed > 0, f.builtAfter > 0,
-    f.iceBreaking,
+    f.iceBreaking, f.voo,
     ...f.features.map(() => true),
   ].filter(Boolean).length
 }
@@ -188,6 +190,13 @@ export default function AdvancedSearch({ value, onChange, onClear, countries = [
               className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${value.iceBreaking ? 'border-teal bg-teal text-white font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'}`}
             >
               Ice class
+            </button>
+            <button
+              onClick={() => set({ voo: !value.voo })}
+              title="Pleasure craft, fishing, or working vessels that can also host research"
+              className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${value.voo ? 'border-teal bg-teal text-white font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'}`}
+            >
+              Vessel of opportunity
             </button>
             {FEATURES.map((f) => {
               const active = value.features.includes(f.key)
