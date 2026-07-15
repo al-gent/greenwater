@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     ? (activity.length > 160 ? activity.slice(0, 157) + '…' : activity)
     : `Research vessel${vessel.country ? ` from ${vessel.country}` : ''} on VesselConnect — connecting marine scientists with research vessels worldwide.`
   const photo = vessel.photo_urls?.[0]
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.vesselconnect.org'}/vessels/${id}`
+  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vesselconnect.org'}/vessels/${id}`
 
   return {
     title,
@@ -97,7 +97,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
     '@context': 'https://schema.org',
     '@type': 'Vehicle',
     name: vessel.name,
-    url: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.vesselconnect.org'}/vessels/${id}`,
+    url: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vesselconnect.org'}/vessels/${id}`,
     ...(photos.length ? { image: photos } : {}),
     ...(activity ? { description: activity } : {}),
     ...(vessel.year_built ? { modelDate: String(vessel.year_built) } : {}),
