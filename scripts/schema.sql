@@ -434,13 +434,18 @@ create policy "Users can delete their own staged submission photos"
     and owner = auth.uid()
   );
 
--- ── Audit trail for programmatic vessel-data changes ─────────────────────────
--- (mirrors supabase/migrations/20260715_vessel_data_changes.sql)
--- Every scripted fill/fix logs old value, new value, and source, so suspect
--- data can be traced back to the batch that wrote it.
-create table if not exists vessel_data_changes (
+-- ── Change audit: data_changes table + triggers ──────────────────────────────
+-- (mirrors supabase/migrations/20260715_vessel_data_changes.sql +
+--  20260715_vessels_audit_trigger.sql + 20260715_audit_more_tables.sql)
+-- Column-level diff of every UPDATE on vessels / profiles / vessel_claims /
+-- vessel_submissions. Scripted batch changes insert rows directly with a
+-- batch label; the trigger uses batch='trigger:update'. source = acting user
+-- uuid (PostgREST JWT) or DB role. RLS keeps the table server-side only.
+create table if not exists data_changes (
   id uuid primary key default gen_random_uuid(),
   vessel_id integer references vessels(id) on delete cascade,
+  table_name text not null default 'vessels',
+  record_id text,
   field text not null,
   old_value text,
   new_value text,
@@ -448,30 +453,36 @@ create table if not exists vessel_data_changes (
   batch text not null,
   changed_at timestamptz default now()
 );
-create index if not exists idx_vdc_vessel on vessel_data_changes (vessel_id);
-create index if not exists idx_vdc_batch on vessel_data_changes (batch);
+create index if not exists idx_vdc_vessel on data_changes (vessel_id);
+create index if not exists idx_vdc_batch on data_changes (batch);
+create index if not exists idx_dc_table on data_changes (table_name);
+alter table data_changes enable row level security;
 
--- Automatic column-level audit of every vessels UPDATE
--- (mirrors supabase/migrations/20260715_vessels_audit_trigger.sql; skips
---  bookkeeping columns; source = acting user uuid / role; RLS keeps the
---  audit table server-side only)
-create or replace function log_vessel_changes() returns trigger as $$
+create or replace function log_data_changes() returns trigger as $$
 declare
   k text;
   oldj jsonb := to_jsonb(OLD);
   newj jsonb := to_jsonb(NEW);
   actor text;
+  vid integer;
+  skip text[] := case TG_TABLE_NAME
+    when 'vessels' then array['last_updated', 'identity_verified_at']
+    else array[]::text[]
+  end;
 begin
   actor := coalesce(
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub',
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
     session_user::text
   );
+  vid := case TG_TABLE_NAME
+    when 'vessels' then (oldj ->> 'id')::integer
+    else nullif(coalesce(newj ->> 'vessel_id', oldj ->> 'vessel_id'), '')::integer
+  end;
   for k in select jsonb_object_keys(newj) loop
-    if (oldj -> k) is distinct from (newj -> k)
-       and k not in ('last_updated', 'identity_verified_at') then
-      insert into vessel_data_changes (vessel_id, field, old_value, new_value, source, batch)
-      values (OLD.id, k, nullif(oldj ->> k, ''), nullif(newj ->> k, ''), actor, 'trigger:update');
+    if (oldj -> k) is distinct from (newj -> k) and not (k = any(skip)) then
+      insert into data_changes (vessel_id, table_name, record_id, field, old_value, new_value, source, batch)
+      values (vid, TG_TABLE_NAME, oldj ->> 'id', k, nullif(oldj ->> k, ''), nullif(newj ->> k, ''), actor, 'trigger:update');
     end if;
   end loop;
   return NEW;
@@ -479,11 +490,17 @@ end
 $$ language plpgsql;
 
 drop trigger if exists vessels_audit on vessels;
-create trigger vessels_audit
-  after update on vessels
-  for each row execute function log_vessel_changes();
-
-alter table vessel_data_changes enable row level security;
+create trigger vessels_audit after update on vessels
+  for each row execute function log_data_changes();
+drop trigger if exists profiles_audit on profiles;
+create trigger profiles_audit after update on profiles
+  for each row execute function log_data_changes();
+drop trigger if exists vessel_claims_audit on vessel_claims;
+create trigger vessel_claims_audit after update on vessel_claims
+  for each row execute function log_data_changes();
+drop trigger if exists vessel_submissions_audit on vessel_submissions;
+create trigger vessel_submissions_audit after update on vessel_submissions
+  for each row execute function log_data_changes();
 
 -- ── GFW port call integration ────────────────────────────────────────────────
 -- (mirrors supabase/migrations/20260325_gfw_port_calls.sql +
