@@ -33,6 +33,9 @@ export async function GET(request: NextRequest) {
   const excludeBots  = searchParams.get('bots')  !== 'true'
   const excludeStaff = searchParams.get('staff') !== 'true'
 
+  const segmentRaw = searchParams.get('segment') ?? 'all'
+  const segment = ['all', 'registered', 'anon'].includes(segmentRaw) ? segmentRaw : 'all'
+
   const cutoffDate = new Date(Date.now() - days * 86_400_000)
 
   const [analyticsResult, vesselsResult] = await Promise.all([
@@ -41,6 +44,7 @@ export async function GET(request: NextRequest) {
       p_site_filter:   site,
       p_exclude_bots:  excludeBots,
       p_exclude_staff: excludeStaff,
+      p_segment:       segment,
     }),
     // vessels.created_at may not exist on all deployments — fall back to 0 on error
     supabaseAdmin
@@ -56,45 +60,12 @@ export async function GET(request: NextRequest) {
 
   const data = analyticsResult.data as Record<string, unknown>
 
-  // Strip same-property self-referrals. The SQL handles this correctly after the v2 SQL
-  // is deployed; this mirrors the logic here as a safety net for the transition period.
-  // Canonicalize app domains and strip same-property self-referrals.
-  // vessels.greenwaterfoundation.org and vesselconnect.org are the same property;
-  // the SQL normalizes both to 'vesselconnect.org' — this mirrors that for the
-  // transition period before the updated SQL is deployed.
-  if (Array.isArray(data?.referrers)) {
-    type Row = { label: string; views: number; unique_visitors: number }
-    const rows = data.referrers as Row[]
-
-    // Merge vessels.greenwaterfoundation.org into vesselconnect.org
-    const merged: Row[] = []
-    for (const r of rows) {
-      const label = r.label === 'vessels.greenwaterfoundation.org' ? 'vesselconnect.org' : r.label
-      const existing = merged.find(e => e.label === label)
-      if (existing) {
-        existing.views += r.views
-        existing.unique_visitors += r.unique_visitors
-      } else {
-        merged.push({ ...r, label })
-      }
-    }
-    merged.sort((a, b) => b.views - a.views)
-
-    // Strip self-referrals
-    const appSelf = new Set(['vesselconnect.org'])
-    const cmsSelf = new Set(['greenwaterfoundation.org'])
-    data.referrers = merged.filter(r => {
-      const h = r.label.toLowerCase()
-      if ((site === 'app'  || site === 'both') && appSelf.has(h)) return false
-      if ((site === 'cms'  || site === 'both') && cmsSelf.has(h)) return false
-      return true
-    })
-  }
-
-  // Resolve country codes to display names
+  // Resolve country codes to display names; keep the code — the UI sends it
+  // back for the per-country pages drill-down.
   if (Array.isArray(data?.countries)) {
     data.countries = (data.countries as Array<{ label: string; unique_visitors: number }>).map(c => ({
       label: c.label === 'Unknown' ? 'Unknown' : countryCodeToName(c.label),
+      code: c.label,
       unique_visitors: c.unique_visitors,
     }))
   }

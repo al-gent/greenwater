@@ -1,12 +1,18 @@
--- Analytics v2: parameterized RPC with bot/staff filtering, funnel, normalized referrers.
+-- Analytics v2: parameterized RPC with bot/staff filtering, funnel, normalized referrers,
+-- and audience segmentation (registered vs anonymous, per-role breakdown).
 -- Run once in Supabase SQL Editor.
--- Called via supabaseAdmin.rpc('get_analytics_v2', { p_days_back, p_site_filter, p_exclude_bots, p_exclude_staff })
+-- Called via supabaseAdmin.rpc('get_analytics_v2', { p_days_back, p_site_filter, p_exclude_bots, p_exclude_staff, p_segment })
+
+-- Signature changed (p_segment added) — drop the old 4-arg version so PostgREST
+-- doesn't see two ambiguous overloads.
+DROP FUNCTION IF EXISTS get_analytics_v2(integer, text, boolean, boolean);
 
 CREATE OR REPLACE FUNCTION get_analytics_v2(
   p_days_back     integer DEFAULT 30,
   p_site_filter   text    DEFAULT 'app',   -- 'app' | 'cms' | 'both'
   p_exclude_bots  boolean DEFAULT true,
-  p_exclude_staff boolean DEFAULT true
+  p_exclude_staff boolean DEFAULT true,
+  p_segment       text    DEFAULT 'all'    -- 'all' | 'registered' | 'anon'
 )
 RETURNS json
 LANGUAGE plpgsql
@@ -26,7 +32,8 @@ WITH
 
   -- Visitor hashes that touched /admin in this period — used to identify staff.
   -- Note: hashes are daily, so staff are only excluded for days they visited /admin
-  -- within the selected time range.
+  -- within the selected time range. Rows with user_role='admin' are excluded
+  -- directly (exact), the hash heuristic covers admins' logged-out browsing.
   staff_hashes AS (
     SELECT DISTINCT visitor_hash
     FROM page_views
@@ -35,7 +42,7 @@ WITH
       AND visitor_hash IS NOT NULL
   ),
 
-  -- Core filtered dataset: applies site, bot, and staff filters.
+  -- Core filtered dataset: applies site, bot, staff, and segment filters.
   -- Referrer normalization happens here so GROUP BY downstream gets correct aggregates.
   filtered AS (
     SELECT
@@ -44,6 +51,7 @@ WITH
       pv.visitor_hash,
       pv.created_at,
       pv.country,
+      pv.user_role,
       CASE
         WHEN pv.referrer IS NULL           THEN NULL  -- direct
         WHEN pv.referrer ~* '^https?://'   THEN (
@@ -74,8 +82,18 @@ WITH
       )
       AND (
         NOT p_exclude_staff
-        OR pv.visitor_hash IS NULL
-        OR pv.visitor_hash NOT IN (SELECT visitor_hash FROM staff_hashes)
+        OR (
+          pv.user_role IS DISTINCT FROM 'admin'
+          AND (
+            pv.visitor_hash IS NULL
+            OR pv.visitor_hash NOT IN (SELECT visitor_hash FROM staff_hashes)
+          )
+        )
+      )
+      AND (
+        p_segment = 'all'
+        OR (p_segment = 'registered' AND pv.user_role IS NOT NULL)
+        OR (p_segment = 'anon'       AND pv.user_role IS NULL)
       )
   ),
 
@@ -95,8 +113,18 @@ WITH
       )
       AND (
         NOT p_exclude_staff
-        OR pv.visitor_hash IS NULL
-        OR pv.visitor_hash NOT IN (SELECT visitor_hash FROM staff_hashes)
+        OR (
+          pv.user_role IS DISTINCT FROM 'admin'
+          AND (
+            pv.visitor_hash IS NULL
+            OR pv.visitor_hash NOT IN (SELECT visitor_hash FROM staff_hashes)
+          )
+        )
+      )
+      AND (
+        p_segment = 'all'
+        OR (p_segment = 'registered' AND pv.user_role IS NOT NULL)
+        OR (p_segment = 'anon'       AND pv.user_role IS NULL)
       )
   ),
 
@@ -106,7 +134,7 @@ WITH
       COUNT(DISTINCT visitor_hash)::int                                  AS unique_visitors,
       COUNT(*)::int                                                      AS total_views,
       COUNT(*) FILTER (WHERE path ~ '^/vessels/[0-9]+')::int            AS vessel_views,
-      COUNT(*) FILTER (WHERE path = '/list')::int                       AS list_visits
+      COUNT(*) FILTER (WHERE path = '/list-your-vessel')::int             AS list_visits
     FROM filtered
   ),
 
@@ -226,13 +254,13 @@ WITH
     LIMIT 10
   ),
 
-  -- Referrer breakdown specifically for /list visits (operator acquisition source)
+  -- Referrer breakdown for the listing page (operator acquisition source)
   list_sources AS (
     SELECT
       COALESCE(ref_host, 'Direct') AS label,
       COUNT(*)::int                AS views
     FROM filtered
-    WHERE path = '/list'
+    WHERE path = '/list-your-vessel'
     GROUP BY ref_host
     ORDER BY views DESC
     LIMIT 8
@@ -247,6 +275,19 @@ WITH
     GROUP BY country
     ORDER BY unique_visitors DESC
     LIMIT 15
+  ),
+
+  -- Audience: views/uniques per role (anonymous = no session at view time).
+  -- user_role only exists on rows written after the segmentation deploy;
+  -- older rows count as anonymous.
+  role_breakdown AS (
+    SELECT
+      COALESCE(user_role, 'anonymous')     AS label,
+      COUNT(*)::int                        AS views,
+      COUNT(DISTINCT visitor_hash)::int    AS unique_visitors
+    FROM filtered
+    GROUP BY user_role
+    ORDER BY views DESC
   )
 
 SELECT json_build_object(
@@ -278,7 +319,8 @@ SELECT json_build_object(
     'nonVessel',   (SELECT COALESCE(json_agg(row_to_json(nv)), '[]'::json) FROM top_non_vessel_pages nv)
   ),
   'listSources', (SELECT COALESCE(json_agg(row_to_json(ls)), '[]'::json) FROM list_sources ls),
-  'countries',   (SELECT COALESCE(json_agg(row_to_json(co)), '[]'::json) FROM top_countries co)
+  'countries',   (SELECT COALESCE(json_agg(row_to_json(co)), '[]'::json) FROM top_countries co),
+  'roles',       (SELECT COALESCE(json_agg(row_to_json(rb)), '[]'::json) FROM role_breakdown rb)
 )
 INTO result;
 

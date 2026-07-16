@@ -565,3 +565,26 @@ create table if not exists loitering_events (
 
 create index if not exists idx_loitering_vessel_started
   on loitering_events (vessel_id, started_at desc);
+
+-- ── Page-view analytics ──────────────────────────────────────────────────────
+-- (mirrors supabase/migrations/20260423_page_views*.sql + 20260715_page_views_user_role.sql)
+-- Written by POST /api/analytics/pageview; read by get_analytics_v2 /
+-- get_country_pages RPCs (supabase/get_analytics_v2.sql, supabase/get_country_pages.sql).
+create table if not exists page_views (
+  id           uuid        primary key default gen_random_uuid(),
+  site         text        not null check (site in ('app', 'cms')),
+  path         text        not null,
+  referrer     text,
+  user_agent   text,
+  country      text,                    -- ISO code from x-vercel-ip-country
+  visitor_hash text,                    -- daily-rotating sha256(date:ip:ua) prefix
+  user_role    text,                    -- null = anonymous; 'scientist' | 'operator' | 'admin'
+  created_at   timestamptz not null default now()
+);
+
+create index if not exists page_views_created_at_idx   on page_views (created_at desc);
+create index if not exists page_views_site_path_idx    on page_views (site, path);
+create index if not exists page_views_visitor_hash_idx on page_views (visitor_hash, created_at);
+
+alter table page_views enable row level security;
+create policy "anon_insert_page_views" on page_views for insert to anon with check (true);

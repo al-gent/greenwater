@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getServerUser } from '@/lib/supabase-server'
 
 function dailyVisitorHash(ip: string | null, ua: string | null): string {
   const date = new Date().toISOString().slice(0, 10)
@@ -29,11 +30,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // Every real browser sends Accept-Language; scripted clients often don't.
+  if (!request.headers.get('accept-language')) {
+    return NextResponse.json({ ok: true })
+  }
+
   const country = request.headers.get('x-vercel-ip-country') || null
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
     null
+
+  // Segment by auth status: null = anonymous, else the profile role.
+  // Analytics must never fail (or stall) a page view: errors and slow auth
+  // both degrade to anonymous via the timeout race.
+  let userRole: string | null = null
+  try {
+    userRole = await Promise.race([
+      (async () => {
+        const user = await getServerUser()
+        if (!user) return null
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        return profile?.role ?? 'scientist'
+      })(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+    ])
+  } catch {
+    /* anonymous */
+  }
 
   const { error } = await supabaseAdmin.from('page_views').insert({
     site: 'app',
@@ -42,6 +70,7 @@ export async function POST(request: NextRequest) {
     user_agent: user_agent || null,
     country,
     visitor_hash: dailyVisitorHash(ip, user_agent || null),
+    user_role: userRole,
   })
 
   if (error) console.error('[analytics/pageview]', error.message)

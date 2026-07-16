@@ -6,7 +6,8 @@ import { useState, useEffect, useCallback } from 'react'
 
 interface Filters {
   days: 7 | 30 | 90
-  site: 'app' | 'cms' | 'both'
+  site: 'app' | 'cms'
+  segment: 'all' | 'registered' | 'anon'
   bots: boolean   // true = include bots in results
   staff: boolean  // true = include staff in results
 }
@@ -63,8 +64,21 @@ interface Analytics {
     nonVessel: TopPage[]
   }
   listSources: LabeledRow[]
-  countries: LabeledRow[]
+  countries: { label: string; code: string; unique_visitors: number }[]
+  roles: { label: string; views: number; unique_visitors: number }[]
   vesselsCreated: number
+}
+
+interface CountryPages {
+  total: { total_views: number; unique_visitors: number }
+  pages: TopPage[]
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  anonymous: 'Not signed in',
+  scientist: 'Scientists',
+  operator: 'Operators',
+  admin: 'Admins (staff)',
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -135,23 +149,25 @@ function BarDataTable({ rows, limit = 12 }: { rows: LabeledRow[]; limit?: number
 
 function BarChart({ data, days }: { data: DailyPoint[]; days: number }) {
   const W = 800
-  const H = 150
+  const H = 160
   const Y_W = 30    // y-axis label column width
   const X_H = 20    // x-axis label row height
-  const PLOT_H = H - X_H
+  const PAD_T = 10  // headroom so the top axis label isn't clipped
+  const PLOT_H = H - X_H - PAD_T
 
   if (data.length === 0) return null
 
   const maxVal = Math.max(...data.map(d => d.unique_visitors), 1)
   const barW = (W - Y_W) / data.length
   const labelEvery = days <= 7 ? 1 : days <= 30 ? 5 : 14
-  const gridVals = [maxVal, Math.round(maxVal / 2), 0]
+  const gridVals = Array.from(new Set([maxVal, Math.round(maxVal / 2), 0]))
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+    <div className="overflow-x-auto">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px]">
       {/* Y gridlines + labels */}
       {gridVals.map(v => {
-        const y = PLOT_H - (v / maxVal) * PLOT_H
+        const y = PAD_T + PLOT_H - (v / maxVal) * PLOT_H
         return (
           <g key={v}>
             <line x1={Y_W} y1={y} x2={W} y2={y} stroke="#f3f4f6" strokeWidth={1} />
@@ -168,7 +184,7 @@ function BarChart({ data, days }: { data: DailyPoint[]; days: number }) {
         return (
           <g key={d.date}>
             {h > 0 && (
-              <rect x={x + 1} y={PLOT_H - h} width={Math.max(barW - 2, 1)} height={h} fill="#1B3A6B" rx={1}>
+              <rect x={x + 1} y={PAD_T + PLOT_H - h} width={Math.max(barW - 2, 1)} height={h} fill="#1B3A6B" rx={1}>
                 <title>{d.date}: {n(d.unique_visitors)} unique sessions · {n(d.total_views)} views</title>
               </rect>
             )}
@@ -180,28 +196,34 @@ function BarChart({ data, days }: { data: DailyPoint[]; days: number }) {
           </g>
         )
       })}
-    </svg>
+      </svg>
+    </div>
   )
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-const DEFAULTS: Filters = { days: 30, site: 'app', bots: false, staff: false }
+const DEFAULTS: Filters = { days: 30, site: 'app', segment: 'all', bots: false, staff: false }
 
 export default function AnalyticsTab() {
   const [filters, setFilters] = useState<Filters>(DEFAULTS)
   const [data, setData] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [countryDrill, setCountryDrill] = useState<{ code: string; label: string } | null>(null)
+  const [countryPages, setCountryPages] = useState<CountryPages | null>(null)
+  const [countryLoading, setCountryLoading] = useState(false)
 
   const loadData = useCallback(() => {
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({
-      days:  String(filters.days),
-      site:  filters.site,
-      bots:  String(filters.bots),
-      staff: String(filters.staff),
+      days:    String(filters.days),
+      site:    filters.site,
+      // CMS traffic is anonymous by definition (separate site, no app session)
+      segment: filters.site === 'cms' ? 'all' : filters.segment,
+      bots:    String(filters.bots),
+      staff:   String(filters.staff),
     })
     fetch(`/api/admin/analytics?${params}`)
       .then(r => r.json())
@@ -217,6 +239,37 @@ export default function AnalyticsTab() {
   }, [filters])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // Per-country top pages drill-down; refetches when filters change so the
+  // panel always matches the dashboard's time range / segment.
+  useEffect(() => {
+    if (!countryDrill) { setCountryPages(null); return }
+    let cancelled = false
+    setCountryLoading(true)
+    setCountryPages(null) // never show the previous country's data under a new header
+    const params = new URLSearchParams({
+      country: countryDrill.code,
+      days:    String(filters.days),
+      site:    filters.site,
+      // must match loadData's coercion or the drill-down disagrees with the list
+      segment: filters.site === 'cms' ? 'all' : filters.segment,
+      bots:    String(filters.bots),
+      staff:   String(filters.staff),
+    })
+    fetch(`/api/admin/analytics/country-pages?${params}`)
+      .then(r => r.json())
+      .then((d: CountryPages & { error?: string }) => {
+        if (cancelled) return
+        setCountryPages(d?.pages ? d : null)
+        setCountryLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCountryPages(null)
+        setCountryLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [countryDrill, filters])
 
   function set<K extends keyof Filters>(key: K, val: Filters[K]) {
     setFilters(f => ({ ...f, [key]: val }))
@@ -260,7 +313,7 @@ export default function AnalyticsTab() {
 
         {/* Property */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-          {([['app', 'App'], ['cms', 'Site'], ['both', 'Both']] as const).map(([val, label]) => (
+          {([['app', 'App'], ['cms', 'Site']] as const).map(([val, label]) => (
             <button
               key={val}
               onClick={() => set('site', val)}
@@ -272,6 +325,21 @@ export default function AnalyticsTab() {
             </button>
           ))}
         </div>
+
+        {/* Audience segment — app only; the CMS has no app sessions */}
+        {filters.site !== 'cms' && <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+          {([['all', 'Everyone'], ['registered', 'Signed in'], ['anon', 'Anonymous']] as const).map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => set('segment', val)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                filters.segment === val ? 'bg-white text-navy shadow-sm' : 'text-gray-500 hover:text-navy'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>}
 
         {/* Toggle switches */}
         <div className="flex items-center gap-4 ml-auto">
@@ -317,33 +385,52 @@ export default function AnalyticsTab() {
       {data && (
         <div className={`space-y-5 transition-opacity ${loading ? 'opacity-50' : 'opacity-100'}`}>
 
-          {/* ── Headline cards ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* ── Headline cards — signups / vessels / list are app concepts ── */}
+          <div className={`grid grid-cols-2 gap-4 ${filters.site !== 'cms' ? 'lg:grid-cols-4' : ''}`}>
             <HeadlineCard
               label="Unique sessions"
               value={data.headlines.uniqueVisitors}
               change={change}
               large
             />
-            <HeadlineCard
-              label="Signups"
-              value={data.headlines.signups}
-              sub="new accounts"
-            />
-            <HeadlineCard
-              label="Vessel views"
-              value={data.headlines.vesselViews}
-              sub="detail page hits"
-            />
-            <HeadlineCard
-              label="/list visits"
-              value={data.headlines.listVisits}
-              sub="operator self-serve"
-            />
+            {filters.site === 'cms' ? (
+              <HeadlineCard
+                label="Total views"
+                value={data.headlines.totalViews}
+                sub="all page hits"
+              />
+            ) : (
+              <>
+                {filters.segment === 'all' ? (
+                  <HeadlineCard
+                    label="Signups"
+                    value={data.headlines.signups}
+                    sub="new accounts"
+                  />
+                ) : (
+                  // signups aren't a per-view metric — swap in Total views when segmented
+                  <HeadlineCard
+                    label="Total views"
+                    value={data.headlines.totalViews}
+                    sub="all page hits"
+                  />
+                )}
+                <HeadlineCard
+                  label="Vessel views"
+                  value={data.headlines.vesselViews}
+                  sub="detail page hits"
+                />
+                <HeadlineCard
+                  label="Listing page visits"
+                  value={data.headlines.listVisits}
+                  sub="operator self-serve"
+                />
+              </>
+            )}
           </div>
 
-          {/* ── Funnel ─────────────────────────────────────────────────────── */}
-          {filters.site !== 'cms' && <div className="bg-white rounded-2xl shadow-card p-5">
+          {/* ── Funnel — spans anonymous→signup, meaningless inside one segment ── */}
+          {filters.site !== 'cms' && filters.segment === 'all' && <div className="bg-white rounded-2xl shadow-card p-5">
             <h3 className="text-sm font-semibold text-navy mb-4">Acquisition funnel</h3>
             <div className="flex items-center gap-0.5 overflow-x-auto pb-1">
               {funnelSteps.map((step, i) => (
@@ -431,14 +518,14 @@ export default function AnalyticsTab() {
             </div>
           </div>
 
-          {/* ── Operator metrics ───────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* ── Operator metrics — app only ────────────────────────────────── */}
+          {filters.site !== 'cms' && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2 bg-white rounded-2xl shadow-card p-5">
               <h3 className="text-sm font-semibold text-navy mb-3">
-                /list page — where visitors come from
+                /list-your-vessel — where visitors come from
               </h3>
               {data.listSources.length === 0 ? (
-                <p className="text-xs text-gray-400">No /list traffic in this period.</p>
+                <p className="text-xs text-gray-400">No listing-page traffic in this period.</p>
               ) : (
                 <BarDataTable rows={data.listSources} />
               )}
@@ -448,15 +535,17 @@ export default function AnalyticsTab() {
                 <p className="text-3xl font-bold text-navy">{n(data.vesselsCreated)}</p>
                 <p className="text-xs text-gray-400 mt-0.5">vessels added this period</p>
               </div>
-              <div>
-                <p className="text-3xl font-bold text-navy">{n(data.headlines.signups)}</p>
-                <p className="text-xs text-gray-400 mt-0.5">new accounts</p>
-              </div>
+              {filters.segment === 'all' && (
+                <div>
+                  <p className="text-3xl font-bold text-navy">{n(data.headlines.signups)}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">new accounts</p>
+                </div>
+              )}
               <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
                 Claims and submissions are in the other tabs.
               </p>
             </div>
-          </div>
+          </div>}
 
           {/* ── Time series ────────────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-card p-5">
@@ -471,12 +560,98 @@ export default function AnalyticsTab() {
             <BarChart data={data.daily} days={filters.days} />
           </div>
 
-          {/* ── Countries ──────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl shadow-card p-5">
-            <h3 className="text-sm font-semibold text-navy mb-3">Countries</h3>
-            <BarDataTable
-              rows={data.countries.map(c => ({ label: c.label, views: c.unique_visitors }))}
-            />
+          {/* ── Audience & Countries — audience is app only ────────────────── */}
+          <div className={`grid grid-cols-1 gap-4 ${filters.site !== 'cms' ? 'sm:grid-cols-2' : ''}`}>
+            {filters.site !== 'cms' && <div className="bg-white rounded-2xl shadow-card p-5">
+              <h3 className="text-sm font-semibold text-navy mb-3">Audience</h3>
+              <BarDataTable
+                rows={(data.roles ?? []).map(r => ({
+                  label: ROLE_LABELS[r.label] ?? r.label,
+                  views: r.views,
+                }))}
+              />
+              <p className="text-[11px] text-gray-400 mt-3 pt-2 border-t border-gray-100">
+                Signed-in status is captured at view time. Views recorded before this
+                feature shipped count as “Not signed in.”
+              </p>
+            </div>}
+
+            <div className="bg-white rounded-2xl shadow-card p-5">
+              <div className="flex items-baseline justify-between mb-3 gap-2">
+                <h3 className="text-sm font-semibold text-navy">Countries</h3>
+                <span className="text-[11px] text-gray-400">click a country for its top pages</span>
+              </div>
+              {data.countries.length === 0 ? (
+                <p className="text-xs text-gray-400">No data yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {data.countries.slice(0, 12).map(c => {
+                    const max = Math.max(...data.countries.map(x => x.unique_visitors), 1)
+                    const selected = countryDrill?.code === c.code
+                    return (
+                      <button
+                        key={c.code}
+                        onClick={() => setCountryDrill(selected ? null : { code: c.code, label: c.label })}
+                        className={`block w-full text-left rounded-lg px-1.5 py-1 -mx-1.5 transition-colors ${
+                          selected ? 'bg-teal-50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className={`text-xs truncate max-w-[200px] ${selected ? 'text-teal font-semibold' : 'text-gray-600'}`}>
+                            {c.label}
+                          </span>
+                          <span className="text-xs font-semibold text-navy ml-2 flex-shrink-0">{n(c.unique_visitors)}</span>
+                        </div>
+                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${selected ? 'bg-teal' : 'bg-teal/50'}`}
+                            style={{ width: `${Math.round((c.unique_visitors / max) * 100)}%` }}
+                          />
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {countryDrill && (
+                <div className="mt-4 pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-semibold text-navy">
+                      Top pages — {countryDrill.label}
+                      {countryPages?.total && (
+                        <span className="text-gray-400 font-normal ml-1.5">
+                          {n(countryPages.total.total_views)} views · {n(countryPages.total.unique_visitors)} uniq
+                        </span>
+                      )}
+                    </h4>
+                    <button
+                      onClick={() => setCountryDrill(null)}
+                      className="text-xs text-gray-400 hover:text-navy transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {countryLoading ? (
+                    <p className="text-xs text-gray-400 py-2">Loading…</p>
+                  ) : !countryPages || countryPages.pages.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-2">No pages in this period.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {countryPages.pages.map(p => (
+                        <div key={p.path} className="flex items-center justify-between py-0.5">
+                          <span className="text-xs text-gray-500 font-mono truncate max-w-[200px]">{p.path}</span>
+                          <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                            <span className="text-xs text-gray-400">{n(p.unique_visitors)} uniq</span>
+                            <span className="text-xs font-semibold text-navy">{n(p.views)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
         </div>
