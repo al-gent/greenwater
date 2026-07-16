@@ -95,8 +95,56 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
   const [uploadKind, setUploadKind] = useState<'photo' | 'doc'>('photo')
   const [docError, setDocError] = useState<string | null>(null)
 
+  // createMode: no vessel id exists yet, so files are staged locally and
+  // uploaded/attached right after the create call returns the new id.
+  const [pendingPhotos, setPendingPhotos] = useState<{ file: File; preview: string }[]>([])
+  const [pendingDocs, setPendingDocs] = useState<{ file: File | null; url: string | null; label: string }[]>([])
+
+  const removePendingPhoto = (i: number) =>
+    setPendingPhotos((prev) => {
+      URL.revokeObjectURL(prev[i].preview)
+      return prev.filter((_, idx) => idx !== i)
+    })
+
+  // POST one doc (uploaded path or external url) to the attach API
+  const attachDoc = async (
+    body: Record<string, unknown>,
+    vid: number,
+  ): Promise<{ docs: VesselDoc[] | null; error: string | null }> => {
+    await createClient().auth.getSession() // refresh token like the photo path
+    const res = await fetch('/api/vessels/docs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vessel_id: vid, ...body }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (res.ok) return { docs: data.docs, error: null }
+    return { docs: null, error: data.error ?? `Failed (${res.status}).` }
+  }
+
+  // Upload a PDF to storage, then attach it (server verifies the stored bytes)
+  const uploadDocFile = async (
+    file: File,
+    label: string,
+    vid: number,
+  ): Promise<{ docs: VesselDoc[] | null; error: string | null }> => {
+    const supabase = createClient()
+    await supabase.auth.getSession()
+    const safe = file.name.replace(/[^\p{L}\p{N}._-]/gu, '_').replace(/_{2,}/g, '_').slice(0, 80)
+    const path = `${vid}/${Date.now()}-${safe.toLowerCase().endsWith('.pdf') ? safe : safe + '.pdf'}`
+    const { error: upErr } = await supabase.storage.from('vessel-docs').upload(path, file, { contentType: 'application/pdf' })
+    if (upErr) return { docs: null, error: `Upload failed: ${upErr.message}` }
+    return attachDoc({ path, description: label || undefined }, vid)
+  }
+
   const addDoc = async () => {
     if (!docUrl.trim() || docBusy) return
+    if (createMode) {
+      setPendingDocs((prev) => [...prev, { file: null, url: docUrl.trim(), label: docLabel.trim() }])
+      setDocUrl('')
+      setDocLabel('')
+      return
+    }
     setDocBusy(true)
     setDocError(null)
     await createClient().auth.getSession() // refresh token like the photo path
@@ -125,29 +173,18 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
       setDocError('PDFs up to 25 MB.')
       return
     }
-    setDocBusy(true)
-    const supabase = createClient()
-    await supabase.auth.getSession()
-    const safe = file.name.replace(/[^\p{L}\p{N}._-]/gu, '_').replace(/_{2,}/g, '_').slice(0, 80)
-    const path = `${vesselId}/${Date.now()}-${safe.toLowerCase().endsWith('.pdf') ? safe : safe + '.pdf'}`
-    const { error: upErr } = await supabase.storage.from('vessel-docs').upload(path, file, { contentType: 'application/pdf' })
-    if (upErr) {
-      setDocError(`Upload failed: ${upErr.message}`)
-      setDocBusy(false)
+    if (createMode) {
+      setPendingDocs((prev) => [...prev, { file, url: null, label: docLabel.trim() }])
+      setDocLabel('')
       return
     }
-    // server verifies the stored bytes are a real PDF before attaching
-    const res = await fetch('/api/vessels/docs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vessel_id: vesselId, path, description: docLabel.trim() || undefined }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (res.ok) {
-      setDocs(data.docs)
+    setDocBusy(true)
+    const { docs: newDocs, error: attachErr } = await uploadDocFile(file, docLabel.trim(), vesselId!)
+    if (newDocs) {
+      setDocs(newDocs)
       setDocLabel('')
     } else {
-      setDocError(data.error ?? `Failed (${res.status}).`)
+      setDocError(attachErr)
     }
     setDocBusy(false)
   }
@@ -200,34 +237,27 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
   // and (before this was added) the failure was silent — photos uploaded to
   // storage but never landed in the DB. getSession() auto-refreshes an expired
   // token and rewrites the auth cookies the route reads.
-  const savePhotoUrls = async (urls: string[]): Promise<string | null> => {
+  const savePhotoUrls = async (urls: string[], vid: number): Promise<string | null> => {
     await createClient().auth.getSession()
     const res = await fetch('/api/vessels/update', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vessel_id: vesselId, photo_urls: urls }),
+      body: JSON.stringify({ vessel_id: vid, photo_urls: urls }),
     })
     if (res.ok) return null
     const data = await res.json().catch(() => ({}))
     return data.error ?? `Save failed (${res.status}). Please try again.`
   }
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? [])
-    if (!files.length) return
-    setUploading(true)
-    setUploadError(null)
+  // Upload photo files (+ best-effort thumbnails) to storage; returns public URLs
+  const uploadPhotoFiles = async (files: File[], vid: number): Promise<{ urls: string[]; error: string | null }> => {
     const supabase = createClient()
     const newUrls: string[] = []
     for (const file of files) {
       const ext = file.name.split('.').pop()
-      const path = `${vesselId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const path = `${vid}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
       const { data, error } = await supabase.storage.from('vessel-photos').upload(path, file)
-      if (error) {
-        setUploadError(`Upload failed: ${error.message}`)
-        setUploading(false)
-        return
-      }
+      if (error) return { urls: newUrls, error: `Upload failed: ${error.message}` }
       // thumbnail for cards/maps — best-effort, never blocks the upload
       const thumb = await makeThumbnail(file)
       if (thumb) {
@@ -236,8 +266,27 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
       const { data: { publicUrl } } = supabase.storage.from('vessel-photos').getPublicUrl(data.path)
       newUrls.push(publicUrl)
     }
+    return { urls: newUrls, error: null }
+  }
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    if (createMode) {
+      setPendingPhotos((prev) => [...prev, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))])
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    setUploading(true)
+    setUploadError(null)
+    const { urls: newUrls, error: upErr } = await uploadPhotoFiles(files, vesselId!)
+    if (upErr) {
+      setUploadError(upErr)
+      setUploading(false)
+      return
+    }
     const updated = [...photos, ...newUrls]
-    const saveError = await savePhotoUrls(updated)
+    const saveError = await savePhotoUrls(updated, vesselId!)
     if (saveError) {
       setUploadError(saveError)
     } else {
@@ -252,7 +301,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
     const updated = photos.filter((p) => p !== url)
     setPhotos(updated) // optimistic — rolled back on failure
     setUploadError(null)
-    const saveError = await savePhotoUrls(updated)
+    const saveError = await savePhotoUrls(updated, vesselId!)
     if (saveError) {
       setPhotos(prev)
       setUploadError(saveError)
@@ -277,15 +326,36 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      setSaving(false)
-      if (res.ok) {
-        const { id } = await res.json()
-        setSaved(true)
-        setTimeout(() => router.push(`/admin/vessels/${id}/edit`), 1500)
-      } else {
+      if (!res.ok) {
+        setSaving(false)
         const data = await res.json().catch(() => ({}))
         setError(data.error ?? 'Create failed. Please try again.')
+        return
       }
+      const { id } = await res.json()
+
+      // Attach staged photos/docs now that the vessel id exists. The vessel is
+      // already created, so failures here don't block the redirect — anything
+      // that didn't attach can be retried on the edit page we land on.
+      let attachError: string | null = null
+      if (pendingPhotos.length) {
+        const { urls, error: upErr } = await uploadPhotoFiles(pendingPhotos.map((p) => p.file), id)
+        if (urls.length) {
+          attachError = await savePhotoUrls(urls, id)
+        }
+        if (upErr) attachError = upErr
+      }
+      for (const d of pendingDocs) {
+        const { error: docErr } = d.file
+          ? await uploadDocFile(d.file, d.label, id)
+          : await attachDoc({ url: d.url, description: d.label || undefined }, id)
+        if (docErr) attachError = docErr
+      }
+      if (attachError) console.error('post-create attach:', attachError)
+
+      setSaving(false)
+      setSaved(true)
+      setTimeout(() => router.push(`/admin/vessels/${id}/edit`), 1500)
       return
     }
 
@@ -375,21 +445,72 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
         </div>
       )}
 
-      {!createMode && (
-        <CollapsibleSection open={open.photos} onToggle={() => toggle('photos')} label="Photos & Documents" count={photos.length + docs.length}>
+      <CollapsibleSection
+        open={open.photos}
+        onToggle={() => toggle('photos')}
+        label="Photos & Documents"
+        count={createMode ? pendingPhotos.length + pendingDocs.length : photos.length + docs.length}
+      >
           <div className="space-y-4">
-            {photos.length > 0 && (
+            {createMode && (
+              <p className="text-xs text-gray-400">
+                Files are staged here and uploaded when you press Create Vessel.
+              </p>
+            )}
+            {(createMode ? pendingPhotos.length : photos.length) > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {photos.map((url) => (
-                  <div key={url} className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                {createMode
+                  ? pendingPhotos.map((p, i) => (
+                      <div key={p.preview} className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
+                        <img src={p.preview} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removePendingPhoto(i)}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove photo"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))
+                  : photos.map((url) => (
+                      <div key={url} className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(url)}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove photo"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+              </div>
+            )}
+            {createMode && pendingDocs.length > 0 && (
+              <div className="space-y-2">
+                {pendingDocs.map((d, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-navy truncate">
+                        {d.label || d.file?.name || d.url}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {d.file ? `${d.file.name} · ${Math.round(d.file.size / 1024)} KB` : d.url}
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => removePhoto(url)}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="Remove photo"
+                      onClick={() => setPendingDocs((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                      aria-label="Remove document"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
@@ -397,7 +518,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
                 ))}
               </div>
             )}
-            {docs.length > 0 && (
+            {!createMode && docs.length > 0 && (
               <div className="space-y-2">
                 {docs.map((d) => (
                   <div key={d.url} className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100">
@@ -485,9 +606,8 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
                 </button>
               </div>
             )}
-          </div>
-        </CollapsibleSection>
-      )}
+        </div>
+      </CollapsibleSection>
 
       <CollapsibleSection open={open.identity} onToggle={() => toggle('identity')} label="Identity & Classification" count={7}>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
