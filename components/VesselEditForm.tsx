@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import type { Vessel, VesselDoc } from '@/lib/vessel-utils'
+import type { Vessel, VesselDoc, PhotoDetail } from '@/lib/vessel-utils'
 import { RATE_CURRENCIES } from '@/lib/vessel-utils'
 import { makeThumbnail } from '@/lib/image-thumb'
 import { createClient } from '@/lib/supabase-browser'
@@ -43,7 +43,7 @@ const NUM_FIELDS = new Set([
 // become '' in the form, and formToPayload would then send them back as
 // explicit null on Save — wiping e.g. a photo uploaded moments earlier.
 const NON_FORM_FIELDS = new Set([
-  'id', 'photo_urls', 'doc_details', 'operating_area_geojson',
+  'id', 'photo_urls', 'photo_details', 'doc_details', 'operating_area_geojson',
   'vessel_id_gfw', 'last_updated', 'created_at', 'vessel_of_opportunity',
 ])
 
@@ -73,7 +73,7 @@ function formToPayload(form: FormState, vesselId: number): Record<string, unknow
 }
 
 interface Props {
-  vessel: Partial<EditableVessel> & { name: string; photo_urls?: string[] | null; doc_details?: VesselDoc[] | null }
+  vessel: Partial<EditableVessel> & { name: string; photo_urls?: string[] | null; photo_details?: PhotoDetail[] | null; doc_details?: VesselDoc[] | null }
   vesselId?: number
   backHref: string
   createMode?: boolean
@@ -87,6 +87,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
     () => (vessel.operating_area_geojson as GeoJSON.FeatureCollection | null) ?? null,
   )
   const [photos, setPhotos] = useState<string[]>(() => vessel.photo_urls ?? [])
+  const [photoDetails, setPhotoDetails] = useState<PhotoDetail[]>(() => vessel.photo_details ?? [])
   const [voo, setVoo] = useState<boolean>(vessel.vessel_of_opportunity === true)
   const [docs, setDocs] = useState<VesselDoc[]>(() => vessel.doc_details ?? [])
   const [docUrl, setDocUrl] = useState('')
@@ -97,7 +98,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
 
   // createMode: no vessel id exists yet, so files are staged locally and
   // uploaded/attached right after the create call returns the new id.
-  const [pendingPhotos, setPendingPhotos] = useState<{ file: File; preview: string }[]>([])
+  const [pendingPhotos, setPendingPhotos] = useState<{ file: File; preview: string; credit: string }[]>([])
   const [pendingDocs, setPendingDocs] = useState<{ file: File | null; url: string | null; label: string }[]>([])
 
   const removePendingPhoto = (i: number) =>
@@ -237,16 +238,38 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
   // and (before this was added) the failure was silent — photos uploaded to
   // storage but never landed in the DB. getSession() auto-refreshes an expired
   // token and rewrites the auth cookies the route reads.
-  const savePhotoUrls = async (urls: string[], vid: number): Promise<string | null> => {
+  const savePhotoUrls = async (urls: string[], details: PhotoDetail[], vid: number): Promise<string | null> => {
     await createClient().auth.getSession()
+    // Keep credits consistent with the photo list: drop empties and entries
+    // for URLs no longer present (e.g. after a photo is removed).
+    const cleaned = details
+      .map((d) => ({ url: d.url, credit: d.credit.trim() }))
+      .filter((d) => d.credit && urls.includes(d.url))
     const res = await fetch('/api/vessels/update', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vessel_id: vid, photo_urls: urls }),
+      body: JSON.stringify({ vessel_id: vid, photo_urls: urls, photo_details: cleaned.length ? cleaned : null }),
     })
     if (res.ok) return null
     const data = await res.json().catch(() => ({}))
     return data.error ?? `Save failed (${res.status}). Please try again.`
+  }
+
+  // Update a photo's credit in local state; persisted on blur via saveCredits
+  const [creditsDirty, setCreditsDirty] = useState(false)
+  const setCredit = (url: string, credit: string) => {
+    setCreditsDirty(true)
+    setPhotoDetails((prev) => {
+      const rest = prev.filter((d) => d.url !== url)
+      return credit ? [...rest, { url, credit }] : rest
+    })
+  }
+
+  const saveCredits = async () => {
+    if (createMode || !creditsDirty) return
+    setCreditsDirty(false)
+    const saveError = await savePhotoUrls(photos, photoDetails, vesselId!)
+    if (saveError) setUploadError(saveError)
   }
 
   // Upload photo files (+ best-effort thumbnails) to storage; returns public URLs
@@ -273,7 +296,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
     const files = Array.from(e.target.files ?? [])
     if (!files.length) return
     if (createMode) {
-      setPendingPhotos((prev) => [...prev, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))])
+      setPendingPhotos((prev) => [...prev, ...files.map((file) => ({ file, preview: URL.createObjectURL(file), credit: '' }))])
       if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
@@ -286,7 +309,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
       return
     }
     const updated = [...photos, ...newUrls]
-    const saveError = await savePhotoUrls(updated, vesselId!)
+    const saveError = await savePhotoUrls(updated, photoDetails, vesselId!)
     if (saveError) {
       setUploadError(saveError)
     } else {
@@ -298,12 +321,16 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
 
   const removePhoto = async (url: string) => {
     const prev = photos
+    const prevDetails = photoDetails
     const updated = photos.filter((p) => p !== url)
+    const updatedDetails = photoDetails.filter((d) => d.url !== url)
     setPhotos(updated) // optimistic — rolled back on failure
+    setPhotoDetails(updatedDetails)
     setUploadError(null)
-    const saveError = await savePhotoUrls(updated, vesselId!)
+    const saveError = await savePhotoUrls(updated, updatedDetails, vesselId!)
     if (saveError) {
       setPhotos(prev)
+      setPhotoDetails(prevDetails)
       setUploadError(saveError)
     }
   }
@@ -341,7 +368,10 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
       if (pendingPhotos.length) {
         const { urls, error: upErr } = await uploadPhotoFiles(pendingPhotos.map((p) => p.file), id)
         if (urls.length) {
-          attachError = await savePhotoUrls(urls, id)
+          // uploadPhotoFiles returns URLs in input order, so index i maps back
+          // to pendingPhotos[i] and its staged credit
+          const details = urls.map((url, i) => ({ url, credit: pendingPhotos[i]?.credit ?? '' }))
+          attachError = await savePhotoUrls(urls, details, id)
         }
         if (upErr) attachError = upErr
       }
@@ -461,33 +491,52 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {createMode
                   ? pendingPhotos.map((p, i) => (
-                      <div key={p.preview} className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
-                        <img src={p.preview} alt="" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removePendingPhoto(i)}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label="Remove photo"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                      <div key={p.preview}>
+                        <div className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
+                          <img src={p.preview} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removePendingPhoto(i)}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label="Remove photo"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={p.credit}
+                          onChange={(e) => setPendingPhotos((prev) => prev.map((pp, idx) => idx === i ? { ...pp, credit: e.target.value } : pp))}
+                          placeholder="Photo credit (optional)"
+                          className="mt-1.5 w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+                        />
                       </div>
                     ))
                   : photos.map((url) => (
-                      <div key={url} className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
-                        <img src={url} alt="" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(url)}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label="Remove photo"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                      <div key={url}>
+                        <div className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(url)}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label="Remove photo"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={photoDetails.find((d) => d.url === url)?.credit ?? ''}
+                          onChange={(e) => setCredit(url, e.target.value)}
+                          onBlur={saveCredits}
+                          placeholder="Photo credit (optional)"
+                          className="mt-1.5 w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+                        />
                       </div>
                     ))}
               </div>

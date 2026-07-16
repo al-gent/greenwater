@@ -113,11 +113,13 @@ export async function PATCH(request: Request) {
     if (submission.photo_urls?.length) {
       const bucketPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vessel-photos/`
       const movedUrls: string[] = []
+      const urlMap = new Map<string, string>() // staging URL → final URL (for credit remapping)
       for (const url of submission.photo_urls as string[]) {
         const stagingPath = url.startsWith(bucketPrefix) ? url.slice(bucketPrefix.length) : null
         const fileName = stagingPath?.split('/').pop()
         if (!stagingPath || !fileName) {
           movedUrls.push(url)
+          urlMap.set(url, url)
           continue
         }
         const destPath = `${newVessel.id}/${fileName}`
@@ -127,6 +129,7 @@ export async function PATCH(request: Request) {
         if (copyError && !/already exists/i.test(copyError.message)) {
           console.error(`photo copy failed for ${stagingPath}:`, copyError.message)
           movedUrls.push(url)
+          urlMap.set(url, url)
           continue
         }
         // thumbnail is best-effort — cards fall back to the original without it
@@ -135,15 +138,37 @@ export async function PATCH(request: Request) {
           .copy(`thumbs/${stagingPath}`, `thumbs/${destPath}`)
           .catch(() => {})
         movedUrls.push(bucketPrefix + destPath)
+        urlMap.set(url, bucketPrefix + destPath)
       }
-      await supabaseAdmin.from('vessels').update({ photo_urls: movedUrls }).eq('id', newVessel.id)
+      // Carry per-photo credits over, re-keyed to the moved URLs
+      const photoDetails = Array.isArray(submission.photo_details)
+        ? (submission.photo_details as { url: string; credit: string }[])
+            .map((d) => ({ url: urlMap.get(d.url) ?? d.url, credit: d.credit }))
+            .filter((d) => typeof d.credit === 'string' && d.credit.trim() && movedUrls.includes(d.url))
+        : []
+      await supabaseAdmin
+        .from('vessels')
+        .update({ photo_urls: movedUrls, photo_details: photoDetails.length ? photoDetails : null })
+        .eq('id', newVessel.id)
     }
 
-    // Link the submitter's profile to the new vessel and promote to operator
+    // Link the submitter's profile to the new vessel and promote to operator.
+    // Never overwrite an admin's role — an admin submitter keeps admin and
+    // only gets the vessel link.
     if (submission.user_id) {
+      const { data: submitterProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', submission.user_id)
+        .single()
+
+      const profileUpdate = submitterProfile?.role === 'admin'
+        ? { vessel_id: newVessel.id }
+        : { role: 'operator', vessel_id: newVessel.id }
+
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({ role: 'operator', vessel_id: newVessel.id })
+        .update(profileUpdate)
         .eq('id', submission.user_id)
 
       if (profileError) {

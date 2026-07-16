@@ -1,16 +1,18 @@
 'use client'
 
 import { useState } from 'react'
+import type { PhotoDetail } from '@/lib/vessel-utils'
 
 interface Props {
   photos: string[]
   vesselName: string
   country?: string | null
+  details?: PhotoDetail[] | null
 }
 
 const PLACEHOLDER_URL = 'https://jmpxcsihkmyotidxjuyv.supabase.co/storage/v1/object/public/vessel-photos/placeholder.jpg'
 
-export default function VesselPhotoGallery({ photos, vesselName, country }: Props) {
+export default function VesselPhotoGallery({ photos, vesselName, country, details }: Props) {
   const [index, setIndex] = useState(0)
   const [broken, setBroken] = useState<Set<string>>(new Set())
 
@@ -20,6 +22,7 @@ export default function VesselPhotoGallery({ photos, vesselName, country }: Prop
   const isPlaceholder = photos.length === 0
   const current = isPlaceholder ? PLACEHOLDER_URL : photos[index]
   const src = broken.has(current) ? PLACEHOLDER_URL : current
+  const credit = broken.has(current) ? undefined : details?.find((d) => d.url === current)?.credit
 
   return (
     <div className="relative rounded-3xl overflow-hidden bg-gray-100" style={{ aspectRatio: '16/9' }}>
@@ -39,6 +42,12 @@ export default function VesselPhotoGallery({ photos, vesselName, country }: Prop
       {country && (
         <span className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-navy text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm">
           {country}
+        </span>
+      )}
+
+      {credit && (
+        <span className="absolute bottom-3 right-3 max-w-[60%] truncate bg-black/45 text-white/90 text-[10px] px-2 py-1 rounded-md" title={credit}>
+          {credit}
         </span>
       )}
 

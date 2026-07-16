@@ -250,6 +250,11 @@ alter table vessels
   add column if not exists photo_urls  text[],
   add column if not exists doc_urls    text[];
 
+-- Photo credits: array of {url, credit} matching entries in photo_urls
+-- (mirrors supabase/migrations/20260716_photo_details.sql)
+alter table vessels
+  add column if not exists photo_details jsonb;
+
 -- Timestamps
 alter table vessels
   add column if not exists last_updated timestamptz;
@@ -415,6 +420,10 @@ alter table vessel_submissions
 -- Photos staged during the list-your-vessel flow
 -- (mirrors supabase/migrations/20260714_submission_photos.sql)
 alter table vessel_submissions add column if not exists photo_urls text[];
+
+-- Per-photo credits: {url, credit}[] matching photo_urls entries
+-- (mirrors supabase/migrations/20260716_submission_photo_details.sql)
+alter table vessel_submissions add column if not exists photo_details jsonb;
 
 -- (includes 20260714_submission_thumbs_policy.sql: thumbs/submissions/ is
 -- writable too, for browser-generated thumbnails at upload time)

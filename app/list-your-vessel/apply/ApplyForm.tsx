@@ -70,6 +70,7 @@ export default function ApplyForm({ userEmail }: Props) {
   // submission row exists; approval copies the URLs onto the vessel.
   const [draftId] = useState(() => crypto.randomUUID())
   const [photos, setPhotos] = useState<string[]>([])
+  const [photoCredits, setPhotoCredits] = useState<Record<string, string>>({}) // url → credit
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [homePortCoords, setHomePortCoords] = useState<{ lat: number; lon: number } | null>(null)
@@ -130,6 +131,7 @@ export default function ApplyForm({ userEmail }: Props) {
 
   const removeStagedPhoto = async (url: string) => {
     setPhotos((p) => p.filter((u) => u !== url))
+    setPhotoCredits(({ [url]: _removed, ...rest }) => rest)
     // best-effort cleanup of the staged file + its thumb; the submission only stores URLs
     const path = url.split('/vessel-photos/')[1]
     if (path) await createClient().storage.from('vessel-photos').remove([path, `thumbs/${path}`])
@@ -196,6 +198,9 @@ export default function ApplyForm({ userEmail }: Props) {
         daily_rate: form.daily_rate,
         daily_rate_currency: form.daily_rate_currency,
         photo_urls: photos,
+        photo_details: photos
+          .map((url) => ({ url, credit: (photoCredits[url] ?? '').trim() }))
+          .filter((d) => d.credit),
       }),
     })
 
@@ -343,18 +348,27 @@ export default function ApplyForm({ userEmail }: Props) {
                     {photos.length > 0 && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
                         {photos.map((url) => (
-                          <div key={url} className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
-                            <img src={url} alt="" className="w-full h-full object-cover" />
-                            <button
-                              type="button"
-                              onClick={() => removeStagedPhoto(url)}
-                              className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                              aria-label="Remove photo"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
+                          <div key={url}>
+                            <div className="relative group rounded-xl overflow-hidden aspect-video bg-gray-100">
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => removeStagedPhoto(url)}
+                                className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label="Remove photo"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              value={photoCredits[url] ?? ''}
+                              onChange={(e) => setPhotoCredits((c) => ({ ...c, [url]: e.target.value }))}
+                              placeholder="Photo credit (optional)"
+                              className="mt-1.5 w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+                            />
                           </div>
                         ))}
                       </div>

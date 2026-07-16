@@ -47,6 +47,25 @@ export async function POST(request: Request) {
       ? rawGeo
       : null
 
+  // only accept photos the applicant staged in our own bucket
+  const photo_urls = Array.isArray(body.photo_urls)
+    ? body.photo_urls
+        .filter((u: unknown): u is string =>
+          typeof u === 'string' &&
+          u.startsWith(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vessel-photos/submissions/`))
+        .slice(0, 12)
+    : null
+
+  // per-photo credits, keyed to accepted photo URLs only
+  const photo_details = Array.isArray(body.photo_details) && photo_urls?.length
+    ? body.photo_details
+        .filter((d: any): d is { url: string; credit: string } =>
+          d && typeof d.url === 'string' && typeof d.credit === 'string' &&
+          d.credit.trim() !== '' && photo_urls.includes(d.url))
+        .map((d: { url: string; credit: string }) => ({ url: d.url, credit: d.credit.trim().slice(0, 300) }))
+        .slice(0, 12)
+    : []
+
   const { error } = await supabase.from('vessel_submissions').insert({
     user_id: user.id,
     vessel_name: vessel_name.trim(),
@@ -82,14 +101,8 @@ export async function POST(request: Request) {
     daily_rate_currency: typeof body.daily_rate_currency === 'string' && /^[A-Za-z]{3}$/.test(body.daily_rate_currency)
       ? body.daily_rate_currency.toUpperCase()
       : null,
-    // only accept photos the applicant staged in our own bucket
-    photo_urls: Array.isArray(body.photo_urls)
-      ? body.photo_urls
-          .filter((u: unknown): u is string =>
-            typeof u === 'string' &&
-            u.startsWith(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vessel-photos/submissions/`))
-          .slice(0, 12)
-      : null,
+    photo_urls,
+    photo_details: photo_details.length ? photo_details : null,
   })
 
   if (error) {

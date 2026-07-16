@@ -180,7 +180,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             {/* Hero photo + map, side by side on wide viewports */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
               <div className={showMap ? '' : 'lg:col-span-2'}>
-                <VesselPhotoGallery photos={photos} vesselName={vessel.name} country={vessel.country} />
+                <VesselPhotoGallery photos={photos} vesselName={vessel.name} country={vessel.country} details={vessel.photo_details} />
                 {activity && (
                   <p className="text-gray-600 text-sm leading-relaxed mt-3">{activity}</p>
                 )}

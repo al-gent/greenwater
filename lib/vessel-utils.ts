@@ -11,6 +11,12 @@ export interface VesselDoc {
   contentLength: number | null
 }
 
+/** Per-photo attribution; url matches an entry in photo_urls. */
+export interface PhotoDetail {
+  url: string
+  credit: string
+}
+
 export interface Vessel {
   id: number
   name: string
@@ -51,6 +57,7 @@ export interface Vessel {
 
   // Extended fields (backfilled from vessel_details JSONs)
   photo_urls: string[] | null
+  photo_details: PhotoDetail[] | null
   doc_details: VesselDoc[] | null
   last_updated: string | null // human listing edits (legacy rows: source registry date)
   created_at: string | null // when the vessel entered our system (null = legacy import)
