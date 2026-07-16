@@ -63,7 +63,54 @@ Deferred — **gazetteer-backed region picker** (pre-built, then pulled out befo
 
 - **Auto-save on blur instead of an explicit Save button** — patch each field (or section) to `/api/vessels/update` when it loses focus, with a subtle "Saved" indicator, rather than collecting the whole form and submitting once. Removes the "did my change persist?" ambiguity and the full-form re-submit (which is what surfaced the geocode-overwrite bug — every save re-sent every field). Consider debouncing, optimistic UI, and a per-field saved/saving/error state. Applies to `VesselEditForm`; the update route already accepts partial patches.
 
+## Roles & Permissions
+
+> **Full redesign scoped:** see `VESSEL_OPERATORS_PLAN.md` (2026-07-16) — many-to-many
+> `vessel_operators` join table, role collapse, phased migration. It supersedes the items below,
+> which are kept as the raw symptom inventory.
+
+- **Admin + vessel_id doesn't work** (surveyed 2026-07-16). `profiles.role` is single-valued
+  (`scientist | operator | admin`) but several admins also have a vessel via `profiles.vessel_id`,
+  and everything operator-facing is gated on `role === 'operator'`, so an admin with a vessel is
+  locked out of their own vessel features. Affected gates:
+  - `app/dashboard/page.tsx:21` and `app/dashboard/edit/page.tsx:24` — redirect unless
+    `role === 'operator' && vessel_id`; admins can't see their vessel dashboard/inquiries or use
+    the operator edit form (workaround: `/admin/vessels/[id]/edit`).
+  - `app/api/messages/[threadId]/read/route.ts:18` — mark-as-read requires `role === 'operator'`;
+    an admin can never mark their vessel's inquiries read.
+  - `app/api/messages/[threadId]/reply/route.ts:36` — `isOperator` requires `role === 'operator'`;
+    an admin replying on their own vessel's thread is misclassified as the non-operator side.
+  - `components/Navbar.tsx` (desktop + mobile menu) — "My Vessel" / "Messages" links only render
+    for `role === 'operator'`; admins with a vessel get no entry point.
+  - Fine as is: `/api/vessels/update` and `/api/vessels/docs` already special-case admins.
+
+  **Recommended direction:** keep `role` as the permission tier and treat "operates a vessel" as
+  an orthogonal fact (`vessel_id != null`). Add a shared helper (e.g. `canOperateVessel(profile,
+  vesselId)`), gate the dashboard pages / message routes / Navbar links on it, and let an admin
+  with a vessel see both Admin and My Vessel links. Watch the same pattern on
+  `role === 'scientist' && verified` (Inbox) — an admin-scientist has the same class of problem.
+
+- **Role demotion on approval**: FIXED 2026-07-16 in both routes — submissions and claims
+  approval now preserve `role='admin'` and set only `vessel_id` for admin submitters/claimants.
+  (Non-admins still get promoted to operator as before.) Superseded by the join-table redesign,
+  which removes role writes from approval entirely.
+
+- **`profiles.vessel_id` FK has no ON DELETE behavior** — deleting a vessel a profile points at
+  fails with an FK error (hit manually 2026-07-16). If vessel deletions become routine:
+  `alter table profiles drop constraint profiles_vessel_id_fkey, add constraint
+  profiles_vessel_id_fkey foreign key (vessel_id) references vessels(id) on delete set null;`
+  Current strict behavior does prevent silently orphaning an operator's dashboard, so this is a
+  judgment call.
+
+## Photo Credits (follow-ups to the 2026-07-16 feature)
+
+- **Show credits in the admin submissions review UI** — credits are captured on `/list-your-vessel`
+  and carried through approval, but the AdminDashboard submissions tab doesn't display them.
+- **Normalize messy legacy credit strings** (`photo:MBARI`, `credit_dave_allen_niwa`, trailing
+  commas) — either clean in DB or strip prefixes/punctuation at render time.
+- **One unmatched legacy credit**: vessel 1180 (Cosmo) — source file `IMG_1239-scaled.jpeg` has a
+  credit but no matching URL in `photo_urls` (photo likely never uploaded or was replaced).
+
 ## General
 
-- **Mobile nav links**: Inbox, My Vessel, and Admin links are currently hidden on mobile (`hidden sm:block`). Add a hamburger menu or bottom nav for mobile users.
 - **Email delivery monitoring**: Add webhook logging for Brevo delivery events.

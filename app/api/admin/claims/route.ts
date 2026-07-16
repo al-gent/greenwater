@@ -59,11 +59,23 @@ export async function PATCH(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // On approval: promote user to operator and link vessel
+  // On approval: promote user to operator and link vessel.
+  // Never overwrite an admin's role — an admin claiming a vessel must not
+  // demote themselves; they only get the vessel link.
   if (status === 'approved' && claim.user_id) {
+    const { data: claimantProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', claim.user_id)
+      .single()
+
+    const profileUpdate = claimantProfile?.role === 'admin'
+      ? { vessel_id: claim.vessel_id }
+      : { role: 'operator', vessel_id: claim.vessel_id }
+
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({ role: 'operator', vessel_id: claim.vessel_id })
+      .update(profileUpdate)
       .eq('id', claim.user_id)
 
     if (profileError) {
