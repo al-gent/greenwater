@@ -15,7 +15,20 @@ export default function NotificationPrefsMenu() {
   const [prefs, setPrefs] = useState<Record<string, boolean>>({})
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
+  // On phones the 256px panel anchored to the bell overflows the left screen
+  // edge, so below sm it goes fixed + full-width; top is measured on open.
+  const [mobileTop, setMobileTop] = useState<number | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  const toggleOpen = () => {
+    setMobileTop(
+      !open && btnRef.current && window.innerWidth < 640
+        ? btnRef.current.getBoundingClientRect().bottom + 8
+        : null,
+    )
+    setOpen((o) => !o)
+  }
 
   useEffect(() => {
     fetch('/api/notification-prefs')
@@ -58,7 +71,8 @@ export default function NotificationPrefsMenu() {
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        ref={btnRef}
+        onClick={toggleOpen}
         title="Email notifications"
         className={`p-2 rounded-xl border transition-colors ${
           open ? 'border-navy text-navy bg-white' : 'border-gray-200 text-gray-500 hover:text-navy hover:border-gray-300 bg-white'
@@ -70,7 +84,12 @@ export default function NotificationPrefsMenu() {
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-lg border border-gray-100 p-4 z-20">
+        <div
+          className={`bg-white rounded-2xl shadow-lg border border-gray-100 p-4 z-20 ${
+            mobileTop != null ? 'fixed inset-x-4' : 'absolute right-0 mt-2 w-64'
+          }`}
+          style={mobileTop != null ? { top: mobileTop } : undefined}
+        >
           <p className="text-sm font-semibold text-navy mb-3">Email me about</p>
           {!loaded ? (
             <p className="text-sm text-gray-400">Loading…</p>
