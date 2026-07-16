@@ -13,6 +13,18 @@ export default function Navbar() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
+
+  // Items awaiting review (submissions + claims + unverified scientists) for
+  // the badge on the Admin link
+  useEffect(() => {
+    if (profile?.role !== 'admin') { setPendingCount(0); return }
+    fetch('/api/admin/pending-count')
+      .then((r) => r.json())
+      .then((d) => setPendingCount(typeof d?.count === 'number' ? d.count : 0))
+      .catch(() => {})
+  }, [profile?.role])
 
   useEffect(() => {
     const supabase = createClient()
@@ -105,22 +117,27 @@ export default function Navbar() {
                 {profile?.role === 'admin' && (
                   <Link
                     href="/admin"
-                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden sm:block"
+                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
                   >
                     Admin
+                    {pendingCount > 0 && (
+                      <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                        {pendingCount}
+                      </span>
+                    )}
                   </Link>
                 )}
                 {profile?.role === 'operator' && (
                   <>
                     <Link
                       href="/dashboard"
-                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden sm:block"
+                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:block"
                     >
                       My Vessel
                     </Link>
                     <Link
                       href="/dashboard#inquiries"
-                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden sm:block"
+                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:block"
                     >
                       Messages
                     </Link>
@@ -129,7 +146,7 @@ export default function Navbar() {
                 {profile?.role === 'scientist' && profile?.verified && (
                   <Link
                     href="/inbox"
-                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden sm:block"
+                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:block"
                   >
                     Inbox
                   </Link>
@@ -138,7 +155,7 @@ export default function Navbar() {
                   <Link
                     href="/profile/edit"
                     title={user.email ?? 'Your profile'}
-                    className="w-8 h-8 rounded-full bg-navy text-white hover:bg-navy/80 transition-colors flex items-center justify-center text-xs font-semibold tracking-wide"
+                    className="w-8 h-8 rounded-full bg-navy text-white hover:bg-navy/80 transition-colors hidden md:flex items-center justify-center text-xs font-semibold tracking-wide"
                   >
                     {(() => {
                       const f = (user.user_metadata?.first_name as string)?.[0] ?? ''
@@ -148,7 +165,7 @@ export default function Navbar() {
                   </Link>
                   <button
                     onClick={handleSignOut}
-                    className="text-sm font-medium text-gray-500 hover:text-navy transition-colors border border-gray-200 px-3 py-1.5 rounded-full hover:border-gray-300"
+                    className="hidden md:block text-sm font-medium text-gray-500 hover:text-navy transition-colors border border-gray-200 px-3 py-1.5 rounded-full hover:border-gray-300"
                   >
                     Sign Out
                   </button>
@@ -162,8 +179,74 @@ export default function Navbar() {
                 Sign In
               </Link>
             )}
+
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              className="md:hidden p-2 -mr-2 text-gray-600 hover:text-navy transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                {menuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
+
+        {/* Mobile menu */}
+        {menuOpen && (
+          <div className="md:hidden border-t border-gray-100 py-2">
+            <Link href="/" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+              Home
+            </Link>
+            <Link href="/list-your-vessel" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+              List Your Vessel
+            </Link>
+            {profile?.role === 'admin' && (
+              <Link href="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                Admin
+                {pendingCount > 0 && (
+                  <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+            )}
+            {profile?.role === 'operator' && (
+              <>
+                <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                  My Vessel
+                </Link>
+                <Link href="/dashboard#inquiries" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                  Messages
+                </Link>
+              </>
+            )}
+            {profile?.role === 'scientist' && profile?.verified && (
+              <Link href="/inbox" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                Inbox
+              </Link>
+            )}
+            {user && (
+              <>
+                <Link href="/profile/edit" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                  Profile
+                </Link>
+                <button
+                  onClick={() => { setMenuOpen(false); handleSignOut() }}
+                  className="block w-full text-left py-2.5 text-sm font-medium text-gray-500 hover:text-navy transition-colors"
+                >
+                  Sign Out
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </nav>
     </div>

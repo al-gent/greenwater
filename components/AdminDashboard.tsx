@@ -438,7 +438,7 @@ export default function AdminDashboard() {
     <div className="pt-[88px] min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-navy">Admin Dashboard</h1>
             <p className="text-sm text-gray-500 mt-0.5">
@@ -452,12 +452,12 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-card mb-4 w-fit">
+        <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-card mb-4 w-fit max-w-full overflow-x-auto">
           {(['submissions', 'claims', 'scientists', 'vessels', 'messages', 'changes', 'analytics'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${
+              className={`shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 rounded-xl text-sm font-medium transition-all ${
                 tab === t ? 'bg-navy text-white shadow-sm' : 'text-gray-500 hover:text-navy'
               }`}
             >
@@ -875,7 +875,7 @@ export default function AdminDashboard() {
 
             {tab === 'changes' && (
                 <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-                  <div className="px-6 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                  <div className="px-4 sm:px-6 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-1 flex-wrap">
                       {CHANGES_WINDOWS.map((w) => (
                         <button
@@ -889,13 +889,13 @@ export default function AdminDashboard() {
                         </button>
                       ))}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                       <p className="text-xs text-gray-400">
                         {changesLoading ? 'Searching…' : `${changes.length} change${changes.length === 1 ? '' : 's'}${changesCapped ? ' (showing first 1,000)' : ''}`}
                       </p>
                       <form
                         onSubmit={(e) => { e.preventDefault(); setChangesQuery(changesSearch.trim()) }}
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 flex-1 sm:flex-none min-w-0"
                       >
                         <input
                           type="search"
@@ -905,11 +905,11 @@ export default function AdminDashboard() {
                             if (e.target.value === '') setChangesQuery('') // clearing resets immediately
                           }}
                           placeholder="Search vessel, user, field, value…"
-                          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+                          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-full sm:w-56 min-w-0 focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
                         />
                         <button
                           type="submit"
-                          className="bg-navy text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-navy-600 transition-colors"
+                          className="bg-navy text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-navy-600 transition-colors shrink-0"
                         >
                           Search
                         </button>
@@ -922,7 +922,51 @@ export default function AdminDashboard() {
                     </div>
                   )}
                   {changes.length > 0 && (
-                  <div className="overflow-x-auto">
+                  <>
+                  {/* Mobile: stacked cards (table is unreadable at phone widths) */}
+                  <div className="sm:hidden divide-y divide-gray-50">
+                    {sortedChanges.map((c) => (
+                      <div key={c.id} className="px-4 py-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-xs min-w-0">
+                            {c.vessel_id ? (
+                              <a href={`/vessels/${c.vessel_id}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline font-medium break-words">
+                                {c.vessel_name ?? `vessel ${c.vessel_id}`}
+                              </a>
+                            ) : (
+                              <span className="text-gray-500">{c.table_name.replace('vessel_', '')}</span>
+                            )}
+                            {c.table_name !== 'vessels' && c.vessel_id != null && (
+                              <span className="ml-1 text-gray-300">({c.table_name.replace('vessel_', '')})</span>
+                            )}
+                          </span>
+                          <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">
+                            {new Date(c.changed_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 text-xs flex items-center gap-1.5 flex-wrap">
+                          <span className={c.actor === 'service_role' || c.actor === 'postgres' ? 'text-gray-400' : 'font-medium text-navy'}>
+                            {c.actor === 'service_role' || c.actor === 'postgres' ? 'script' : c.actor ?? '—'}
+                          </span>
+                          {c.batch !== 'trigger:update' && (
+                            <span className="bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded-full break-all">{c.batch}</span>
+                          )}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-600 font-mono break-all">{c.field}</div>
+                        <div className="mt-0.5 text-xs">
+                          <span className="text-gray-400 line-through break-all" title={c.old_value ?? ''}>
+                            {c.old_value ? (c.old_value.length > 42 ? c.old_value.slice(0, 42) + '…' : c.old_value) : '∅'}
+                          </span>
+                          <span className="text-gray-300 mx-1.5">→</span>
+                          <span className="text-gray-800 break-all" title={c.new_value ?? ''}>
+                            {c.new_value ? (c.new_value.length > 42 ? c.new_value.slice(0, 42) + '…' : c.new_value) : '∅'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* ≥sm: sortable table */}
+                  <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-left text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
@@ -978,6 +1022,7 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
+                  </>
                   )}
                 </div>
             )}

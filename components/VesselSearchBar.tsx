@@ -52,7 +52,7 @@ export default function VesselSearchBar({
               loading={loc.loading}
             />
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 shrink-0 pt-0.5">
+          <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
             <button
               onClick={onToggleAdvanced}
               title="Advanced search"
@@ -85,14 +85,12 @@ export default function VesselSearchBar({
         </div>
       </div>
       {showAdvanced && (
-        <div className="hidden sm:block">
-          <AdvancedSearch
-            value={advanced}
-            onChange={onAdvancedChange}
-            onClear={() => onAdvancedChange(EMPTY_ADVANCED)}
-            countries={countries}
-          />
-        </div>
+        <AdvancedSearch
+          value={advanced}
+          onChange={onAdvancedChange}
+          onClear={() => onAdvancedChange(EMPTY_ADVANCED)}
+          countries={countries}
+        />
       )}
     </>
   )
