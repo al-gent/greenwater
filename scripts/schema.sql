@@ -129,6 +129,11 @@ alter table profiles
   add column if not exists profile_url  text,
   add column if not exists verified     boolean not null default false;
 
+-- Per-user email notification preferences (opt-out: missing key = subscribed).
+-- First consumers: admin notifications 'new_claim' / 'new_submission'.
+alter table profiles
+  add column if not exists notification_prefs jsonb not null default '{}';
+
 -- Update trigger to populate new fields from signup metadata
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$

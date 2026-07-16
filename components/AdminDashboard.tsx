@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AnalyticsTab from './AnalyticsTab'
+import NotificationPrefsMenu from './NotificationPrefsMenu'
 import { fmtDailyRate } from '@/lib/vessel-utils'
 
 type SubmissionStatus = 'pending' | 'approved' | 'rejected'
@@ -444,7 +445,10 @@ export default function AdminDashboard() {
               {pendingSubs} pending submission{pendingSubs !== 1 ? 's' : ''} · {pendingClaims} pending claim{pendingClaims !== 1 ? 's' : ''} · {pendingScientists} unverified scientist{pendingScientists !== 1 ? 's' : ''}
             </p>
           </div>
-          <a href="/admin/vessels/new" className="bg-navy text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-navy-600 transition-colors">+ Add Vessel</a>
+          <div className="flex items-center gap-2">
+            <NotificationPrefsMenu />
+            <a href="/admin/vessels/new" className="bg-navy text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-navy-600 transition-colors">+ Add Vessel</a>
+          </div>
         </div>
 
         {/* Tabs */}

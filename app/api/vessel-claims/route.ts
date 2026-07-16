@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { notifyAdmins } from '@/lib/admin-notify'
+import { newClaimAdminEmail } from '@/lib/brevo'
 
 export async function POST(request: Request) {
   const serverClient = createServerSupabaseClient()
@@ -49,6 +51,21 @@ export async function POST(request: Request) {
     console.error('vessel_claims insert error:', error)
     return NextResponse.json({ error: 'Failed to submit claim. Please try again.' }, { status: 500 })
   }
+
+  const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin`
+  await notifyAdmins(
+    'new_claim',
+    `New vessel claim: ${vessel_name.trim()}`,
+    newClaimAdminEmail(
+      vessel_name.trim(),
+      claimantName,
+      email,
+      profile?.title ?? '',
+      profile?.institution ?? '',
+      message.trim(),
+      adminUrl,
+    ),
+  )
 
   return NextResponse.json({ success: true }, { status: 201 })
 }

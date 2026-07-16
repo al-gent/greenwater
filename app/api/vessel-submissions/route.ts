@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { notifyAdmins } from '@/lib/admin-notify'
+import { newSubmissionAdminEmail } from '@/lib/brevo'
 
 export async function POST(request: Request) {
   const supabase = createServerSupabaseClient()
@@ -94,6 +96,18 @@ export async function POST(request: Request) {
     console.error('vessel_submissions insert error:', error)
     return NextResponse.json({ error: 'Failed to submit. Please try again.' }, { status: 500 })
   }
+
+  const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin`
+  await notifyAdmins(
+    'new_submission',
+    `New vessel listing request: ${vessel_name.trim()}`,
+    newSubmissionAdminEmail(
+      vessel_name.trim(),
+      operator_name.trim(),
+      (user.email ?? '').toLowerCase(),
+      adminUrl,
+    ),
+  )
 
   return NextResponse.json({ success: true }, { status: 201 })
 }

@@ -194,6 +194,52 @@ export function newInquiryOperatorEmail(
   `)
 }
 
+export function newClaimAdminEmail(
+  vesselName: string,
+  claimantName: string,
+  claimantEmail: string,
+  role: string,
+  organization: string,
+  message: string,
+  adminUrl: string,
+) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">New vessel claim: ${vesselName}</h2>
+    <p>
+      <strong>${claimantName}</strong> (${claimantEmail})${role || organization ? ` — ${[role, organization].filter(Boolean).join(', ')}` : ''}
+      has claimed <strong>${vesselName}</strong>.
+    </p>
+    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+      <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+    </div>
+    <p>
+      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        Review in Admin Dashboard
+      </a>
+    </p>
+  `)
+}
+
+export function newSubmissionAdminEmail(
+  vesselName: string,
+  operatorName: string,
+  submitterEmail: string,
+  adminUrl: string,
+) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">New vessel listing request: ${vesselName}</h2>
+    <p>
+      <strong>${operatorName}</strong> (${submitterEmail}) has requested to list
+      <strong>${vesselName}</strong> on the marketplace.
+    </p>
+    <p>
+      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        Review in Admin Dashboard
+      </a>
+    </p>
+  `)
+}
+
 export function operatorReplyEmail(
   vesselName: string,
   operatorName: string,
