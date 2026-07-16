@@ -134,7 +134,8 @@ WITH
       COUNT(DISTINCT visitor_hash)::int                                  AS unique_visitors,
       COUNT(*)::int                                                      AS total_views,
       COUNT(*) FILTER (WHERE path ~ '^/vessels/[0-9]+')::int            AS vessel_views,
-      COUNT(*) FILTER (WHERE path = '/list-your-vessel')::int             AS list_visits
+      -- listing page renamed /list → /list-your-vessel on 2026-05-27; count both
+      COUNT(*) FILTER (WHERE path IN ('/list', '/list-your-vessel'))::int AS list_visits
     FROM filtered
   ),
 
@@ -254,13 +255,14 @@ WITH
     LIMIT 10
   ),
 
-  -- Referrer breakdown for the listing page (operator acquisition source)
+  -- Referrer breakdown for the listing page (operator acquisition source).
+  -- Renamed /list → /list-your-vessel on 2026-05-27; count both for history.
   list_sources AS (
     SELECT
       COALESCE(ref_host, 'Direct') AS label,
       COUNT(*)::int                AS views
     FROM filtered
-    WHERE path = '/list-your-vessel'
+    WHERE path IN ('/list', '/list-your-vessel')
     GROUP BY ref_host
     ORDER BY views DESC
     LIMIT 8
