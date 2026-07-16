@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { sendEmail } from '@/lib/brevo'
 
-export type AdminNotificationType = 'new_claim' | 'new_submission'
+export type AdminNotificationType = 'new_claim' | 'new_submission' | 'new_signup'
 
 /**
  * Emails of admins subscribed to a notification type. Prefs live in

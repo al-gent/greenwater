@@ -220,6 +220,31 @@ export function newClaimAdminEmail(
   `)
 }
 
+export function newUserAdminEmail(
+  name: string,
+  email: string,
+  accountType: string,
+  institution: string,
+  title: string,
+  adminUrl: string,
+) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">New user signed up</h2>
+    <p>
+      <strong>${name}</strong> (${email}) just confirmed their account
+      as a <strong>${accountType === 'vessel' ? 'vessel operator' : 'researcher'}</strong>${
+        institution || title ? ` — ${[title, institution].filter(Boolean).join(', ')}` : ''
+      }.
+    </p>
+    ${accountType !== 'vessel' ? '<p>Researchers need verification before they can message operators.</p>' : ''}
+    <p>
+      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        View in Admin Dashboard
+      </a>
+    </p>
+  `)
+}
+
 export function newSubmissionAdminEmail(
   vesselName: string,
   operatorName: string,

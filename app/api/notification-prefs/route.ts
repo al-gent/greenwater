@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 // Keys any user may set in profiles.notification_prefs. Opt-out model:
 // missing key = subscribed, false = muted.
-const ALLOWED_KEYS = ['new_claim', 'new_submission'] as const
+const ALLOWED_KEYS = ['new_claim', 'new_submission', 'new_signup'] as const
 
 export async function GET() {
   const supabase = createServerSupabaseClient()
