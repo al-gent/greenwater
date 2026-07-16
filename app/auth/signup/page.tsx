@@ -78,7 +78,7 @@ function SignUpForm() {
     setError(null)
 
     const supabase = createClient()
-    const { error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -97,6 +97,12 @@ function SignUpForm() {
     setLoading(false)
     if (authError) {
       setError(authError.message)
+      return
+    }
+    // Supabase returns a fake success for existing emails (anti-enumeration),
+    // identifiable by an empty identities array — don't show "check your email".
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      setError('An account with this email already exists. Sign in below, or reset your password if you’ve forgotten it.')
       return
     }
     setDone(true)
