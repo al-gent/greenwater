@@ -6,7 +6,14 @@ import NewsletterForm from '@/components/NewsletterForm'
 import { Analytics } from '@vercel/analytics/react'
 import PageViewTracker from '@/components/PageViewTracker'
 
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vesselconnect.org').replace(/\/$/, '')
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  // Self-referencing canonical on every page: the app is served on both
+  // vesselconnect.org and vessels.greenwaterfoundation.org, and without an
+  // explicit canonical Google flags one host's pages as duplicates.
+  alternates: { canonical: './' },
   title: 'VesselConnect — Research Vessel Marketplace',
   description:
     'Connect marine scientists with research vessels worldwide. Find and book research ships for oceanographic expeditions.',
@@ -15,7 +22,7 @@ export const metadata: Metadata = {
     title: 'VesselConnect by Greenwater Foundation',
     description: 'Connecting marine scientists with research vessels worldwide.',
     type: 'website',
-    url: 'https://vessels.greenwaterfoundation.org',
+    url: SITE_URL,
     siteName: 'VesselConnect',
     images: [
       {

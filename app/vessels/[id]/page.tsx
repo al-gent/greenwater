@@ -31,6 +31,10 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   return {
     title,
     description,
+    alternates: { canonical: url },
+    // Only active vessels belong in search results; retired/inactive pages
+    // stay reachable by direct link but tell crawlers to drop them.
+    ...(vessel.status !== 'active' ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       title,
       description,
@@ -92,23 +96,8 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const hasArea = !!operatingArea && (operatingArea.features?.length ?? 0) > 0
   const showMap = hasCoords || hasPortCall || hasArea || initialWindow.events.length > 0
 
-  // Schema.org structured data for rich search results
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Vehicle',
-    name: vessel.name,
-    url: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vesselconnect.org'}/vessels/${id}`,
-    ...(photos.length ? { image: photos } : {}),
-    ...(activity ? { description: activity } : {}),
-    ...(vessel.year_built ? { modelDate: String(vessel.year_built) } : {}),
-    ...(vessel.operator_name || vessel.affiliation
-      ? { brand: { '@type': 'Organization', name: vessel.operator_name ?? vessel.affiliation } }
-      : {}),
-  }
-
   return (
     <div className="pt-[88px] bg-white min-h-screen">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <SignupNudge vesselId={id} isAuthenticated={!!user} />
       {/* Retired / inactive banner */}
       {(vessel.status === 'retired' || vessel.status === 'inactive') && (
