@@ -35,6 +35,47 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // UA strings are trivially spoofed (the SG bot fleet rotates real Chrome UAs),
+  // so also verify the headers the browser sets itself and scripts rarely fake.
+
+  // The body UA comes from navigator.userAgent; a browser's own fetch() sends the
+  // identical string in the User-Agent header. Direct API posts often only fake one.
+  if (user_agent !== request.headers.get('user-agent')) {
+    return NextResponse.json({ ok: true })
+  }
+
+  // Browsers always attach Origin to POSTs; PageViewTracker is same-origin only.
+  const origin = request.headers.get('origin')
+  const host = request.headers.get('host')
+  try {
+    if (!origin || !host || new URL(origin).host !== host) {
+      return NextResponse.json({ ok: true })
+    }
+  } catch {
+    return NextResponse.json({ ok: true })
+  }
+
+  // Sec-Fetch-Site is browser-controlled; when present it must be same-origin.
+  const secFetchSite = request.headers.get('sec-fetch-site')
+  if (secFetchSite && secFetchSite !== 'same-origin') {
+    return NextResponse.json({ ok: true })
+  }
+
+  // A UA claiming desktop/Android Chrome must behave like Chrome:
+  // Chrome ≥76 always sends Sec-Fetch-*, and ≥89 always sends Sec-CH-UA with the
+  // REAL engine version — a headless Chrome 149 wearing a "Chrome/103" UA fails here.
+  const chromeMajor = Number(user_agent.match(/Chrome\/(\d+)/)?.[1] ?? 0)
+  if (chromeMajor >= 76 && !secFetchSite) {
+    return NextResponse.json({ ok: true })
+  }
+  if (chromeMajor >= 89) {
+    const secChUa = request.headers.get('sec-ch-ua') || ''
+    const brandVersions = [...secChUa.matchAll(/v="(\d+)/g)].map((m) => Number(m[1]))
+    if (/headless/i.test(secChUa) || !brandVersions.includes(chromeMajor)) {
+      return NextResponse.json({ ok: true })
+    }
+  }
+
   const country = request.headers.get('x-vercel-ip-country') || null
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
