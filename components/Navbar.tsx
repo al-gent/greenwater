@@ -17,13 +17,18 @@ export default function Navbar() {
   const [pendingCount, setPendingCount] = useState(0)
 
   // Items awaiting review (submissions + claims + unverified scientists) for
-  // the badge on the Admin link
+  // the badge on the Admin link. AdminDashboard dispatches the event after
+  // every approve/reject so the badge updates without a page reload.
   useEffect(() => {
     if (profile?.role !== 'admin') { setPendingCount(0); return }
-    fetch('/api/admin/pending-count')
-      .then((r) => r.json())
-      .then((d) => setPendingCount(typeof d?.count === 'number' ? d.count : 0))
-      .catch(() => {})
+    const refresh = () =>
+      fetch('/api/admin/pending-count')
+        .then((r) => r.json())
+        .then((d) => setPendingCount(typeof d?.count === 'number' ? d.count : 0))
+        .catch(() => {})
+    refresh()
+    window.addEventListener('gw:pending-count-changed', refresh)
+    return () => window.removeEventListener('gw:pending-count-changed', refresh)
   }, [profile?.role])
 
   useEffect(() => {

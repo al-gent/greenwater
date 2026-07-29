@@ -409,20 +409,29 @@ export default function AdminDashboard() {
       return next
     })
 
-  const updateSubmission = (id: string, status: 'approved' | 'rejected', notes: string) =>
+  // Tell the navbar to refetch its Admin-link badge after any review action.
+  const notifyPendingChanged = () => window.dispatchEvent(new Event('gw:pending-count-changed'))
+
+  const updateSubmission = (id: string, status: 'approved' | 'rejected', notes: string) => {
     setSubmissions((prev) =>
       prev.map((s) => s.id === id ? { ...s, status, admin_notes: notes, reviewed_at: new Date().toISOString() } : s)
     )
+    notifyPendingChanged()
+  }
 
-  const updateClaim = (id: string, status: 'approved' | 'rejected', notes: string) =>
+  const updateClaim = (id: string, status: 'approved' | 'rejected', notes: string) => {
     setClaims((prev) =>
       prev.map((c) => c.id === id ? { ...c, status, admin_notes: notes, reviewed_at: new Date().toISOString() } : c)
     )
+    notifyPendingChanged()
+  }
 
-  const updateScientist = (id: string, verified: boolean) =>
+  const updateScientist = (id: string, verified: boolean) => {
     setScientists((prev) =>
       prev.map((s) => s.id === id ? { ...s, verified } : s)
     )
+    notifyPendingChanged()
+  }
 
   const pendingSubs = submissions.filter((s) => s.status === 'pending').length
   const pendingClaims = claims.filter((c) => c.status === 'pending').length
