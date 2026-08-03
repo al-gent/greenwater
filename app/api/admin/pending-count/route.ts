@@ -19,7 +19,7 @@ export async function GET() {
   const [subs, claims, scientists] = await Promise.all([
     supabaseAdmin.from('vessel_submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabaseAdmin.from('vessel_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-    supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'scientist').eq('verified', false),
+    supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }).in('role', ['scientist', 'operator']).eq('verified', false),
   ])
 
   const submissions = subs.count ?? 0

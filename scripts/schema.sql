@@ -517,12 +517,15 @@ declare
   end;
 begin
   -- x-audit-actor: user email set by API routes (supabaseAdminAs) — the
-  -- service-role connection otherwise hides who the human was
+  -- service-role connection otherwise hides who the human was. Fallback
+  -- carries application_name so psql ('postgres via Supavisor') and the
+  -- Supabase dashboard's pg-meta service are distinguishable.
   actor := coalesce(
     nullif(nullif(current_setting('request.headers', true), '')::jsonb ->> 'x-audit-actor', ''),
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub',
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
     session_user::text
+      || coalesce(' via ' || nullif(current_setting('application_name', true), ''), '')
   );
   vid := case TG_TABLE_NAME
     when 'vessels' then (oldj ->> 'id')::integer

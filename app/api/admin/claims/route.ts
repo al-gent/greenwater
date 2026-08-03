@@ -71,9 +71,12 @@ export async function PATCH(request: Request) {
       .eq('id', claim.user_id)
       .single()
 
+    // Approving a claim IS identity vetting — grant verified alongside the
+    // role so operators aren't stranded unverified (they used to vanish from
+    // the scientists-only verification tab).
     const profileUpdate = claimantProfile?.role === 'admin'
-      ? { vessel_id: claim.vessel_id }
-      : { role: 'operator', vessel_id: claim.vessel_id }
+      ? { vessel_id: claim.vessel_id, verified: true }
+      : { role: 'operator', vessel_id: claim.vessel_id, verified: true }
 
     const { error: profileError } = await db
       .from('profiles')

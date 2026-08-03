@@ -21,10 +21,12 @@ export async function GET() {
   const admin = await checkAdmin()
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Operators are listed too: verification gates messaging for everyone, and
+  // an operator-only profile would otherwise never appear anywhere verifiable.
   const { data, error } = await supabaseAdmin
     .from('profiles')
-    .select('id, email, first_name, last_name, institution, title, profile_url, verified, created_at')
-    .eq('role', 'scientist')
+    .select('id, email, first_name, last_name, institution, title, profile_url, verified, created_at, role')
+    .in('role', ['scientist', 'operator'])
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

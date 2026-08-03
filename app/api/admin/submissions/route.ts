@@ -164,9 +164,10 @@ export async function PATCH(request: Request) {
         .eq('id', submission.user_id)
         .single()
 
+      // Approval = vetting: grant verified with the vessel link (see claims route)
       const profileUpdate = submitterProfile?.role === 'admin'
-        ? { vessel_id: newVessel.id }
-        : { role: 'operator', vessel_id: newVessel.id }
+        ? { vessel_id: newVessel.id, verified: true }
+        : { role: 'operator', vessel_id: newVessel.id, verified: true }
 
       const { error: profileError } = await db
         .from('profiles')

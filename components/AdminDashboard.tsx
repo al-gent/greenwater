@@ -70,6 +70,7 @@ interface Scientist {
   profile_url: string | null
   verified: boolean
   created_at: string
+  role?: 'scientist' | 'operator'
 }
 
 interface VesselRow {
@@ -123,6 +124,20 @@ interface DataChange {
   batch: string
   changed_at: string
 }
+
+// Audit-feed actor → display label. App edits carry the user's email; the
+// rest are machine paths: 'service_role' = app/sync writes without a user,
+// 'postgres via Supavisor' = pooled psql sessions, pg-meta = the Supabase
+// dashboard's table/SQL editor. Bare 'postgres' covers pre-granularity rows.
+function actorLabel(actor: string | null | undefined): string {
+  if (!actor) return '—'
+  if (actor === 'service_role' || actor === 'postgres') return 'script'
+  if (actor === 'postgres via Supavisor') return 'psql'
+  const via = actor.match(/^postgres via (.+)$/)?.[1]
+  if (via) return /meta/i.test(via) ? 'dashboard' : via
+  return actor
+}
+const MACHINE_LABELS = new Set(['script', 'psql', 'dashboard', '—'])
 
 interface AdminMessage {
   id: string
@@ -957,8 +972,8 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                         <div className="mt-0.5 text-xs flex items-center gap-1.5 flex-wrap">
-                          <span className={c.actor === 'service_role' || c.actor === 'postgres' ? 'text-gray-400' : 'font-medium text-navy'}>
-                            {c.actor === 'service_role' || c.actor === 'postgres' ? 'script' : c.actor ?? '—'}
+                          <span className={MACHINE_LABELS.has(actorLabel(c.actor)) ? 'text-gray-400' : 'font-medium text-navy'}>
+                            {actorLabel(c.actor)}
                           </span>
                           {c.batch !== 'trigger:update' && (
                             <span className="bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded-full break-all">{c.batch}</span>
@@ -1000,8 +1015,8 @@ export default function AdminDashboard() {
                               {new Date(c.changed_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                             </td>
                             <td className="px-3 py-2 text-xs max-w-[130px]">
-                              <span className={`break-words ${c.actor === 'service_role' || c.actor === 'postgres' ? 'text-gray-400' : 'font-medium text-navy'}`}>
-                                {c.actor === 'service_role' || c.actor === 'postgres' ? 'script' : c.actor ?? '—'}
+                              <span className={`break-words ${MACHINE_LABELS.has(actorLabel(c.actor)) ? 'text-gray-400' : 'font-medium text-navy'}`}>
+                                {actorLabel(c.actor)}
                               </span>
                               {c.batch !== 'trigger:update' && (
                                 <span className="block w-fit mt-0.5 bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded-full break-all">{c.batch}</span>
@@ -1116,6 +1131,11 @@ export default function AdminDashboard() {
                         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${scientist.verified ? 'bg-teal-50 text-teal border-teal/20' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
                           {scientist.verified ? 'verified' : 'pending'}
                         </span>
+                        {scientist.role === 'operator' && (
+                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-navy/5 text-navy border-navy/15">
+                            operator
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
                         {scientist.institution && <span>{scientist.institution}</span>}
