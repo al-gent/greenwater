@@ -144,6 +144,10 @@ export async function POST(request: NextRequest) {
     /* anonymous */
   }
 
+  // Team browsing is not traffic: admins polluted 40% of rows before this
+  // (their whole sessions, incl. vessel pages, were purged 2026-08-03).
+  if (userRole === 'admin') return ok()
+
   const { error } = await supabaseAdmin.from('page_views').insert({
     site,
     path,
