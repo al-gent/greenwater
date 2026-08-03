@@ -10,7 +10,7 @@ import { useVesselViewTracker } from '@/hooks/useVesselViewTracker'
 // Set mode to 'banner' for a soft nudge: dismissable bottom bar, content stays visible.
 export const NUDGE_CONFIG = {
   mode: 'gate' as 'banner' | 'gate',
-  threshold: 6,
+  threshold: 3,
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
