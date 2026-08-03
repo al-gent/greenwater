@@ -2,9 +2,12 @@ interface EmailOptions {
   to: string
   subject: string
   html: string
+  /** Brevo tags — echoed back in webhook events (used to tie delivery/bounce
+   *  events to a message thread, e.g. `inquiry-<threadId>`). */
+  tags?: string[]
 }
 
-export async function sendEmail({ to, subject, html }: EmailOptions) {
+export async function sendEmail({ to, subject, html, tags }: EmailOptions) {
   const apiKey = process.env.BREVO_API_KEY
   const fromEmail = process.env.BREVO_FROM_EMAIL ?? 'noreply@greenwaterfoundation.org'
   if (!apiKey) {
@@ -22,6 +25,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
       to: [{ email: to }],
       subject,
       htmlContent: html,
+      ...(tags?.length ? { tags } : {}),
     }),
   })
   if (!res.ok) {
@@ -260,6 +264,88 @@ export function newSubmissionAdminEmail(
     <p>
       <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
         Review in Admin Dashboard
+      </a>
+    </p>
+  `)
+}
+
+export function unclaimedVesselInquiryEmail(
+  vesselName: string,
+  contactName: string,
+  scientistName: string,
+  affiliation: string,
+  body: string,
+  dates: string,
+  vesselUrl: string,
+) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">A researcher is interested in chartering ${vesselName}</h2>
+    <p>${contactName ? `Hi ${contactName},` : 'Hello,'}</p>
+    <p>
+      <strong>${scientistName}</strong>${affiliation ? ` (${affiliation})` : ''} sent an inquiry about
+      <strong>${vesselName}</strong> through VesselConnect, the Greenwater Foundation's marketplace
+      connecting marine scientists with research vessels.${dates ? ` Requested dates: <strong>${dates}</strong>.` : ''}
+    </p>
+    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+      <p style="margin: 0; white-space: pre-wrap;">${body}</p>
+    </div>
+    <p>
+      Your vessel is listed on VesselConnect, but no one has claimed its operator account yet.
+      Create a free account to respond to this inquiry, receive future ones, and keep your
+      vessel's information up to date.
+    </p>
+    <p>
+      <a href="${vesselUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        View Your Listing &amp; Claim Your Vessel
+      </a>
+    </p>
+    <p style="color: #666; font-size: 14px; margin-top: 24px;">
+      Not the right contact for ${vesselName}? We'd be grateful if you could forward this to
+      whoever handles charters — or reply to this email and we'll update our records.
+    </p>
+  `)
+}
+
+export function unroutedInquiryAdminEmail(
+  vesselName: string,
+  scientistName: string,
+  affiliation: string,
+  body: string,
+  adminUrl: string,
+) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">Inquiry needs hand-routing: ${vesselName}</h2>
+    <p>
+      <strong>${scientistName}</strong>${affiliation ? ` (${affiliation})` : ''} sent an inquiry about
+      <strong>${vesselName}</strong>, but the vessel is unclaimed and has no contact email on file —
+      nobody was notified. It needs a human to connect the dots.
+    </p>
+    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+      <p style="margin: 0; white-space: pre-wrap;">${body}</p>
+    </div>
+    <p>
+      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        View in Admin Dashboard
+      </a>
+    </p>
+  `)
+}
+
+export function scientistReplyOperatorEmail(
+  vesselName: string,
+  scientistName: string,
+  replyBody: string,
+  dashboardUrl: string,
+) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">${scientistName} replied about ${vesselName}</h2>
+    <p>There's a new message in an inquiry thread for <strong>${vesselName}</strong>.</p>
+    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+      <p style="margin: 0; white-space: pre-wrap;">${replyBody}</p>
+    </div>
+    <p>
+      <a href="${dashboardUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        View &amp; Reply in Dashboard
       </a>
     </p>
   `)

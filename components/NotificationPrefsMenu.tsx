@@ -6,6 +6,7 @@ const PREF_OPTIONS: { key: string; label: string }[] = [
   { key: 'new_claim', label: 'New vessel claims' },
   { key: 'new_submission', label: 'New listing requests' },
   { key: 'new_signup', label: 'New user signups' },
+  { key: 'unrouted_inquiry', label: 'Inquiries needing hand-routing' },
 ]
 
 /** Bell dropdown for per-admin email notification toggles.

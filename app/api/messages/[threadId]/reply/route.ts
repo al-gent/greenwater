@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerUser } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { sendEmail, operatorReplyEmail } from '@/lib/brevo'
+import { sendEmail, operatorReplyEmail, scientistReplyOperatorEmail } from '@/lib/brevo'
 
 export async function POST(
   request: Request,
@@ -81,6 +81,39 @@ export async function POST(
         }
       } catch (e) {
         console.error('Scientist notification failed:', e)
+      }
+    })()
+  } else {
+    // Scientist replied: flip the thread back to unread for the operator side
+    // and email the vessel's operator(s) — previously these replies were silent.
+    await supabaseAdmin.from('messages').update({ status: 'new' }).eq('id', threadId)
+
+    ;(async () => {
+      try {
+        const { data: operators } = await supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .eq('vessel_id', root.vessel_id)
+          .eq('role', 'operator')
+        const operatorEmails = (operators ?? []).map((o) => o.email).filter(Boolean) as string[]
+        if (operatorEmails.length === 0) return // unclaimed vessel — contact already got the invite email
+
+        const { data: vessel } = await supabaseAdmin
+          .from('vessels').select('name').eq('id', root.vessel_id).single()
+        const scientistName =
+          [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'The researcher'
+        const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/dashboard`
+        await Promise.allSettled(
+          operatorEmails.map((to) =>
+            sendEmail({
+              to,
+              subject: `New reply about ${vessel?.name ?? 'your vessel'} — Greenwater Foundation`,
+              html: scientistReplyOperatorEmail(vessel?.name ?? 'your vessel', scientistName, body.trim(), dashboardUrl),
+            }).catch((e) => console.error('Operator reply notification failed for', to, e)),
+          ),
+        )
+      } catch (e) {
+        console.error('Operator reply notification failed:', e)
       }
     })()
   }

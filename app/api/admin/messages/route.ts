@@ -20,7 +20,7 @@ export async function GET() {
 
   const { data: messages, error } = await supabaseAdmin
     .from('messages')
-    .select('id, thread_id, vessel_id, author_id, author_role, body, status, created_at')
+    .select('id, thread_id, vessel_id, author_id, author_role, body, status, created_at, notified_via, notified_email, delivery_status')
     .order('created_at', { ascending: false })
     .limit(200)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

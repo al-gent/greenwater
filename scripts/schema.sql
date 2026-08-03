@@ -163,13 +163,17 @@ create table messages (
   start_date  date,
   end_date    date,
   status      text    not null default 'new',
-  created_at  timestamptz default now()
+  created_at  timestamptz default now(),
+  -- Inquiry-notification bookkeeping (root rows only, 20260803):
+  notified_via    text,   -- 'operator' | 'vessel_email' | 'unrouted'
+  notified_email  text,   -- address the inquiry email went to
+  delivery_status text    -- 'sent' → brevo webhook: 'delivered' | 'bounced' | 'blocked' | 'spam'
 );
 alter table messages enable row level security;
 
-create policy "authenticated_insert"
-  on messages for insert to authenticated
-  with check (auth.uid() = author_id);
+-- No insert policy: all writes go through the API (service role). The old
+-- "authenticated_insert" policy was dropped 20260803 — it allowed any signed-in
+-- user to forge rows (incl. author_role='operator') directly via PostgREST.
 
 -- Scientists can read threads they started (root + replies)
 create policy "scientist_read_own"

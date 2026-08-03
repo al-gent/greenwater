@@ -138,6 +138,9 @@ interface AdminMessage {
   author_email: string | null
   author_institution: string | null
   vessel_name: string
+  notified_via: 'operator' | 'vessel_email' | 'unrouted' | null
+  notified_email: string | null
+  delivery_status: string | null
 }
 type Filter = 'all' | 'pending' | 'approved' | 'rejected'
 
@@ -1057,6 +1060,21 @@ export default function AdminDashboard() {
                         }`}>
                           {m.is_root ? 'new thread' : 'reply'}
                         </span>
+                        {m.is_root && m.notified_via && (
+                          <span
+                            title={m.notified_email ?? undefined}
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                              m.notified_via === 'unrouted' || ['bounced', 'blocked', 'spam'].includes(m.delivery_status ?? '')
+                                ? 'bg-red-50 text-red-600 border-red-200'
+                                : 'bg-gray-50 text-gray-500 border-gray-200'
+                            }`}
+                          >
+                            {m.notified_via === 'operator' && 'operator notified'}
+                            {m.notified_via === 'vessel_email' &&
+                              `vessel emailed${m.delivery_status && m.delivery_status !== 'sent' ? ` · ${m.delivery_status}` : ''}`}
+                            {m.notified_via === 'unrouted' && 'needs hand-routing'}
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
                         {m.author_institution && <span>{m.author_institution}</span>}
