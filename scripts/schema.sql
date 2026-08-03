@@ -167,8 +167,36 @@ create table messages (
   -- Inquiry-notification bookkeeping (root rows only, 20260803):
   notified_via    text,   -- 'operator' | 'vessel_email' | 'unrouted'
   notified_email  text,   -- address the inquiry email went to
-  delivery_status text    -- 'sent' → brevo webhook: 'delivered' | 'bounced' | 'blocked' | 'spam'
+  delivery_status text,   -- 'sent' → brevo webhook: 'delivered' | 'bounced' | 'blocked' | 'spam'
+  -- Scientist-side read marker (root rows only, 20260803); operator side
+  -- lives in the status machine ('new' | 'read' | 'responded')
+  scientist_read_at timestamptz
 );
+
+-- Unread-thread count for the navbar badge (see /api/messages/unread-count)
+create or replace function message_unread_count(p_user_id uuid) returns integer as $$
+declare
+  prof record;
+  n integer := 0;
+begin
+  select role, vessel_id into prof from profiles where id = p_user_id;
+
+  if prof.role = 'operator' and prof.vessel_id is not null then
+    select count(*) into n from messages
+    where vessel_id = prof.vessel_id and thread_id = id and status = 'new';
+  else
+    select count(*) into n from messages root
+    where root.author_id = p_user_id and root.thread_id = root.id
+      and exists (
+        select 1 from messages m
+        where m.thread_id = root.id and m.author_role = 'operator'
+          and m.created_at > coalesce(root.scientist_read_at, '-infinity'::timestamptz)
+      );
+  end if;
+
+  return coalesce(n, 0);
+end
+$$ language plpgsql stable;
 alter table messages enable row level security;
 
 -- No insert policy: all writes go through the API (service role). The old

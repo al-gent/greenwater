@@ -126,5 +126,71 @@ curl -s -o /dev/null -X POST "$BASE?token=$SECRET" -H "Content-Type: application
   -d "{\"event\":\"hard_bounce\",\"tags\":[\"inquiry-00000000-0000-0000-0000-000000000000\"]}"
 [ "$(status_now)" = "blocked" ] && pass "B7 non-matching tag leaves row untouched" || fail "B7 row changed by foreign tag: $(status_now)"
 
+# ── C. message_unread_count RPC (rolled back; repurposes two real profiles
+#      and an unmessaged vessel inside the transaction) ───────────────────────
+
+OUT=$(psql "$SUPABASE_DB_URL" -t -A 2>&1 <<'SQL'
+begin;
+do $$
+declare
+  sci uuid; op uuid; v integer; tid uuid := gen_random_uuid(); b0 int; n int;
+begin
+  select id into sci from profiles order by id limit 1;
+  select id into op from profiles where id <> sci order by id limit 1;
+  select id into v from vessels where id not in (select distinct vessel_id from messages) limit 1;
+  if op is null or v is null then raise notice 'RESULT: C-skip'; return; end if;
+  update profiles set role = 'scientist' where id = sci;
+  update profiles set role = 'operator', vessel_id = v where id = op;
+  b0 := message_unread_count(sci);  -- sci may have real unread threads; assert deltas
+
+  insert into messages (id, thread_id, vessel_id, author_id, author_role, body, status)
+  values (tid, tid, v, sci, 'scientist', 'unread test', 'new');
+
+  n := message_unread_count(op);
+  if n <> 1 then raise exception 'C1 FAIL: operator expected 1, got %', n; end if;
+  raise notice 'RESULT: C1-pass';
+
+  n := message_unread_count(sci);
+  if n <> b0 then raise exception 'C2 FAIL: scientist expected %, got %', b0, n; end if;
+  raise notice 'RESULT: C2-pass';
+
+  insert into messages (thread_id, vessel_id, author_id, author_role, body)
+  values (tid, v, op, 'operator', 'reply');
+
+  n := message_unread_count(sci);
+  if n <> b0 + 1 then raise exception 'C3 FAIL: scientist expected %, got %', b0 + 1, n; end if;
+  raise notice 'RESULT: C3-pass';
+
+  update messages set scientist_read_at = now() where id = tid;
+  n := message_unread_count(sci);
+  if n <> b0 then raise exception 'C4 FAIL: scientist expected % after read, got %', b0, n; end if;
+  raise notice 'RESULT: C4-pass';
+
+  update messages set status = 'read' where id = tid;
+  n := message_unread_count(op);
+  if n <> 0 then raise exception 'C5 FAIL: operator expected 0 after read, got %', n; end if;
+  raise notice 'RESULT: C5-pass';
+end $$;
+rollback;
+SQL
+)
+if echo "$OUT" | grep -q "C-skip"; then
+  echo "SKIP: C tests need 2 profiles and an unmessaged vessel"
+else
+  for t in C1 C2 C3 C4 C5; do
+    if echo "$OUT" | grep -q "RESULT: $t-pass"; then
+      case $t in
+        C1) pass "C1 new thread counts for operator" ;;
+        C2) pass "C2 own thread w/o operator reply not unread for scientist" ;;
+        C3) pass "C3 operator reply makes thread unread for scientist" ;;
+        C4) pass "C4 scientist_read_at clears scientist unread" ;;
+        C5) pass "C5 status=read clears operator unread" ;;
+      esac
+    else
+      fail "$t — $(echo "$OUT" | grep -m1 'FAIL' || echo 'no result emitted')"
+    fi
+  done
+fi
+
 echo
 if [ "$FAILS" -eq 0 ]; then echo "ALL TESTS PASSED"; else echo "$FAILS TEST(S) FAILED"; exit 1; fi

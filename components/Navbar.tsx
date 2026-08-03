@@ -15,6 +15,7 @@ export default function Navbar() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   // Items awaiting review (submissions + claims + unverified scientists) for
   // the badge on the Admin link. AdminDashboard dispatches the event after
@@ -30,6 +31,27 @@ export default function Navbar() {
     window.addEventListener('gw:pending-count-changed', refresh)
     return () => window.removeEventListener('gw:pending-count-changed', refresh)
   }, [profile?.role])
+
+  // Unread message threads for the badge on Messages (operator) / Inbox
+  // (scientist). Thread components dispatch the event after opening a thread
+  // or replying so the badge updates without a page reload.
+  useEffect(() => {
+    const eligible =
+      profile?.role === 'operator' || (profile?.role === 'scientist' && profile?.verified)
+    if (!eligible) { setUnreadCount(0); return }
+    const refresh = () =>
+      fetch('/api/messages/unread-count')
+        .then((r) => r.json())
+        .then((d) => setUnreadCount(typeof d?.count === 'number' ? d.count : 0))
+        .catch(() => {})
+    refresh()
+    window.addEventListener('gw:unread-changed', refresh)
+    window.addEventListener('focus', refresh)
+    return () => {
+      window.removeEventListener('gw:unread-changed', refresh)
+      window.removeEventListener('focus', refresh)
+    }
+  }, [profile?.role, profile?.verified])
 
   useEffect(() => {
     const supabase = createClient()
@@ -142,18 +164,28 @@ export default function Navbar() {
                     </Link>
                     <Link
                       href="/dashboard#inquiries"
-                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:block"
+                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
                     >
                       Messages
+                      {unreadCount > 0 && (
+                        <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                          {unreadCount}
+                        </span>
+                      )}
                     </Link>
                   </>
                 )}
                 {profile?.role === 'scientist' && profile?.verified && (
                   <Link
                     href="/inbox"
-                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:block"
+                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
                   >
                     Inbox
+                    {unreadCount > 0 && (
+                      <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                        {unreadCount}
+                      </span>
+                    )}
                   </Link>
                 )}
                 <div className="flex items-center gap-2">
@@ -227,14 +259,24 @@ export default function Navbar() {
                 <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
                   My Vessel
                 </Link>
-                <Link href="/dashboard#inquiries" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                <Link href="/dashboard#inquiries" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
                   Messages
+                  {unreadCount > 0 && (
+                    <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                      {unreadCount}
+                    </span>
+                  )}
                 </Link>
               </>
             )}
             {profile?.role === 'scientist' && profile?.verified && (
-              <Link href="/inbox" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+              <Link href="/inbox" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
                 Inbox
+                {unreadCount > 0 && (
+                  <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                    {unreadCount}
+                  </span>
+                )}
               </Link>
             )}
             {user && (

@@ -51,7 +51,9 @@ function OperatorThread({ root, replies, profile }: {
 
   const handleOpen = () => {
     if (root.status === 'new') {
-      fetch(`/api/messages/${root.id}/read`, { method: 'PATCH' }).catch(() => {})
+      fetch(`/api/messages/${root.id}/read`, { method: 'PATCH' })
+        .then(() => window.dispatchEvent(new Event('gw:unread-changed')))
+        .catch(() => {})
     }
   }
 

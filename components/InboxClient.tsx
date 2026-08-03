@@ -5,6 +5,7 @@ import ChatThread, { type ChatMessage } from './ChatThread'
 
 interface Message extends ChatMessage {
   vessel_name?: string
+  scientist_read_at?: string | null
 }
 
 export default function InboxClient({ roots, replies }: { roots: Message[]; replies: Message[] }) {
@@ -12,6 +13,20 @@ export default function InboxClient({ roots, replies }: { roots: Message[]; repl
   for (const r of replies ?? []) {
     if (!replyMap[r.thread_id]) replyMap[r.thread_id] = []
     replyMap[r.thread_id].push(r)
+  }
+
+  // Opening a thread stamps scientist_read_at and refreshes the navbar badge
+  const markRead = (threadId: string) => {
+    fetch(`/api/messages/${threadId}/read`, { method: 'PATCH' })
+      .then(() => window.dispatchEvent(new Event('gw:unread-changed')))
+      .catch(() => {})
+  }
+
+  const hasUnread = (root: Message) => {
+    const readAt = root.scientist_read_at ? new Date(root.scientist_read_at).getTime() : 0
+    return (replyMap[root.id] ?? []).some(
+      (m) => m.author_role === 'operator' && new Date(m.created_at).getTime() > readAt,
+    )
   }
 
   if (!roots || roots.length === 0) {
@@ -49,6 +64,14 @@ export default function InboxClient({ roots, replies }: { roots: Message[]; repl
             header={vesselName}
             subheader={dateLine || undefined}
             headerLink={`/vessels/${root.vessel_id}`}
+            onOpen={() => markRead(root.id)}
+            statusBadge={
+              hasUnread(root) ? (
+                <span className="bg-gold text-navy text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  new reply
+                </span>
+              ) : undefined
+            }
           />
         )
       })}

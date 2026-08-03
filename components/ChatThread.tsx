@@ -56,10 +56,12 @@ export default function ChatThread({
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
+  // Scroll the message list itself to the latest message — never the page
+  // (scrollIntoView also scrolled the document, yanking the view down).
   useEffect(() => {
-    if (expanded) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (expanded && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
   }, [messages, expanded])
 
   const handleExpand = () => {
@@ -127,7 +129,7 @@ export default function ChatThread({
       {expanded && (
         <>
           {/* Message bubbles */}
-          <div className="px-5 py-3 space-y-3 max-h-96 overflow-y-auto border-t border-gray-100">
+          <div ref={listRef} className="px-5 py-3 space-y-3 max-h-96 overflow-y-auto border-t border-gray-100">
             {messages.map((msg) => {
               const isMe = msg.author_role === myRole
               return (
@@ -145,7 +147,6 @@ export default function ChatThread({
                 </div>
               )
             })}
-            <div ref={bottomRef} />
           </div>
 
           {/* Reply box */}
