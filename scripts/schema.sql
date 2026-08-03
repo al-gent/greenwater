@@ -599,4 +599,6 @@ create index if not exists page_views_site_path_idx    on page_views (site, path
 create index if not exists page_views_visitor_hash_idx on page_views (visitor_hash, created_at);
 
 alter table page_views enable row level security;
-create policy "anon_insert_page_views" on page_views for insert to anon with check (true);
+-- No anon insert policy: all writes go through POST /api/analytics/pageview
+-- (service role, bot-filtered). Dropped 20260803 — the CMS's old direct-insert
+-- path was the bots' way in.
