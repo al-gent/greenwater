@@ -484,7 +484,10 @@ declare
     else array[]::text[]
   end;
 begin
+  -- x-audit-actor: user email set by API routes (supabaseAdminAs) — the
+  -- service-role connection otherwise hides who the human was
   actor := coalesce(
+    nullif(nullif(current_setting('request.headers', true), '')::jsonb ->> 'x-audit-actor', ''),
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub',
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
     session_user::text

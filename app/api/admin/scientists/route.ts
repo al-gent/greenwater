@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { supabaseAdmin, supabaseAdminAs } from '@/lib/supabase-admin'
 import { sendEmail, scientistApprovedEmail, scientistRejectedEmail } from '@/lib/brevo'
 
 async function checkAdmin() {
@@ -50,7 +50,7 @@ export async function PATCH(request: Request) {
   if (!profile) return NextResponse.json({ error: 'Scientist not found' }, { status: 404 })
 
   if (action === 'approve') {
-    const { error } = await supabaseAdmin
+    const { error } = await supabaseAdminAs(admin.email ?? admin.id)
       .from('profiles')
       .update({ verified: true })
       .eq('id', id)

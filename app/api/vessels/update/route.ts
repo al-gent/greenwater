@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { supabaseAdmin, supabaseAdminAs } from '@/lib/supabase-admin'
 
 export async function PATCH(request: Request) {
   const supabase = createServerSupabaseClient()
@@ -75,7 +75,7 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await supabaseAdminAs(user.email ?? user.id)
     .from('vessels')
     .update(safeUpdates)
     .eq('id', vessel_id)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { supabaseAdmin, supabaseAdminAs } from '@/lib/supabase-admin'
 
 const VALID_STATUSES = ['active', 'retired', 'inactive', 'deleted'] as const
 type VesselStatus = typeof VALID_STATUSES[number]
@@ -50,7 +50,7 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await supabaseAdminAs(admin.email ?? admin.id)
     .from('vessels')
     .update({ status })
     .eq('id', id)

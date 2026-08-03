@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { supabaseAdmin, supabaseAdminAs } from '@/lib/supabase-admin'
 
 // Keys any user may set in profiles.notification_prefs. Opt-out model:
 // missing key = subscribed, false = muted.
@@ -62,7 +62,7 @@ export async function PATCH(request: Request) {
   }
 
   const merged = { ...(current?.notification_prefs ?? {}), ...updates }
-  const { error } = await supabaseAdmin
+  const { error } = await supabaseAdminAs(user.email ?? user.id)
     .from('profiles')
     .update({ notification_prefs: merged })
     .eq('id', user.id)

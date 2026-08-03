@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { supabaseAdmin, supabaseAdminAs } from '@/lib/supabase-admin'
 import { sendEmail, claimApprovedEmail, claimRejectedEmail } from '@/lib/brevo'
 
 async function checkAdmin() {
@@ -40,6 +40,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
+  const db = supabaseAdminAs(admin.email ?? admin.id)
+
   // Fetch the claim
   const { data: claim, error: fetchError } = await supabaseAdmin
     .from('vessel_claims')
@@ -52,7 +54,7 @@ export async function PATCH(request: Request) {
   }
 
   // Update claim status
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('vessel_claims')
     .update({ status, admin_notes: admin_notes ?? null, reviewed_at: new Date().toISOString() })
     .eq('id', id)
@@ -73,7 +75,7 @@ export async function PATCH(request: Request) {
       ? { vessel_id: claim.vessel_id }
       : { role: 'operator', vessel_id: claim.vessel_id }
 
-    const { error: profileError } = await supabaseAdmin
+    const { error: profileError } = await db
       .from('profiles')
       .update(profileUpdate)
       .eq('id', claim.user_id)
@@ -81,7 +83,7 @@ export async function PATCH(request: Request) {
     if (profileError) {
       console.error('Failed to update profile on claim approval:', profileError)
       // Roll back claim status
-      await supabaseAdmin
+      await db
         .from('vessel_claims')
         .update({ status: 'pending', admin_notes: null, reviewed_at: null })
         .eq('id', id)

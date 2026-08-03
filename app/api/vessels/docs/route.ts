@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { supabaseAdmin, supabaseAdminAs } from '@/lib/supabase-admin'
 import type { VesselDoc } from '@/lib/vessel-utils'
 
 const MAX_BYTES = 25 * 1024 * 1024 // 25 MB
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
     contentLength: size,
   }
   const docs = [...(vessel?.doc_details ?? []), doc]
-  const { error: dbErr } = await supabaseAdmin
+  const { error: dbErr } = await supabaseAdminAs(user.email ?? user.id)
     .from('vessels')
     .update({ doc_details: docs, last_updated: new Date().toISOString() })
     .eq('id', vesselId)
@@ -159,7 +159,7 @@ export async function DELETE(request: Request) {
   if (remaining.length === docs.length) {
     return NextResponse.json({ error: 'Document not found on this vessel.' }, { status: 404 })
   }
-  const { error: dbErr } = await supabaseAdmin
+  const { error: dbErr } = await supabaseAdminAs(user.email ?? user.id)
     .from('vessels')
     .update({ doc_details: remaining.length ? remaining : null, last_updated: new Date().toISOString() })
     .eq('id', vesselId)

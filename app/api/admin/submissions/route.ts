@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { supabaseAdmin, supabaseAdminAs } from '@/lib/supabase-admin'
 import { sendEmail, submissionApprovedEmail, submissionRejectedEmail } from '@/lib/brevo'
 
 async function checkAdmin() {
@@ -40,6 +40,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
+  const db = supabaseAdminAs(admin.email ?? admin.id)
+
   // Fetch the submission first so we have email + names
   const { data: submission, error: fetchError } = await supabaseAdmin
     .from('vessel_submissions')
@@ -51,7 +53,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Submission not found' }, { status: 404 })
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('vessel_submissions')
     .update({ status, admin_notes: admin_notes ?? null, reviewed_at: new Date().toISOString() })
     .eq('id', id)
@@ -99,7 +101,7 @@ export async function PATCH(request: Request) {
     if (insertError || !newVessel) {
       console.error('vessel insert error on approval:', insertError)
       // Roll back the status update
-      await supabaseAdmin
+      await db
         .from('vessel_submissions')
         .update({ status: 'pending', admin_notes: null, reviewed_at: null })
         .eq('id', id)
@@ -149,7 +151,7 @@ export async function PATCH(request: Request) {
       await supabaseAdmin
         .from('vessels')
         .update({ photo_urls: movedUrls, photo_details: photoDetails.length ? photoDetails : null })
-        .eq('id', newVessel.id)
+        .eq('id', newVessel.id) // still supabaseAdmin: photo-move bookkeeping, not an admin edit
     }
 
     // Link the submitter's profile to the new vessel and promote to operator.
@@ -166,7 +168,7 @@ export async function PATCH(request: Request) {
         ? { vessel_id: newVessel.id }
         : { role: 'operator', vessel_id: newVessel.id }
 
-      const { error: profileError } = await supabaseAdmin
+      const { error: profileError } = await db
         .from('profiles')
         .update(profileUpdate)
         .eq('id', submission.user_id)
