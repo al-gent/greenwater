@@ -306,6 +306,30 @@ export function unclaimedVesselInquiryEmail(
   `)
 }
 
+export function newMessageAdminEmail(
+  vesselName: string,
+  fromName: string,
+  fromRole: string,
+  body: string,
+  adminUrl: string,
+) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">New message: ${vesselName}</h2>
+    <p>
+      <strong>${fromName}</strong> (${fromRole}) sent a message in a thread about
+      <strong>${vesselName}</strong>.
+    </p>
+    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+      <p style="margin: 0; white-space: pre-wrap;">${body}</p>
+    </div>
+    <p>
+      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
+        View in Admin Dashboard
+      </a>
+    </p>
+  `)
+}
+
 export function unroutedInquiryAdminEmail(
   vesselName: string,
   scientistName: string,

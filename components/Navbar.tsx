@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import type { User } from '@supabase/supabase-js'
+import NotificationPrefsMenu, { USER_PREF_OPTIONS } from './NotificationPrefsMenu'
 
 type Profile = { role: string; vessel_id: number | null; verified?: boolean; first_name?: string | null; last_name?: string | null }
 
@@ -189,6 +190,10 @@ export default function Navbar() {
                   </Link>
                 )}
                 <div className="flex items-center gap-2">
+                  {(profile?.role === 'operator' ||
+                    (profile?.role === 'scientist' && profile?.verified)) && (
+                    <NotificationPrefsMenu options={USER_PREF_OPTIONS} />
+                  )}
                   <Link
                     href="/profile/edit"
                     title={user.email ?? 'Your profile'}

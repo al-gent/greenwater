@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServerUser } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { sendEmail, operatorReplyEmail, scientistReplyOperatorEmail } from '@/lib/brevo'
+import { sendEmail, operatorReplyEmail, scientistReplyOperatorEmail, newMessageAdminEmail } from '@/lib/brevo'
+import { notifyAdmins } from '@/lib/admin-notify'
+import { operatorRecipients, wantsMessageEmails } from '@/lib/message-notify'
 
 export async function POST(
   request: Request,
@@ -63,22 +65,27 @@ export async function POST(
   if (isOperator) {
     await supabaseAdmin.from('messages').update({ status: 'responded' }).eq('id', threadId)
 
-    // Notify scientist
+    // Notify scientist (unless they muted platform messages) + admin feed
     ;(async () => {
       try {
         const { data: scientistProfile } = await supabaseAdmin
-          .from('profiles').select('email, first_name').eq('id', root.author_id).single()
+          .from('profiles').select('email, first_name, notification_prefs').eq('id', root.author_id).single()
         const { data: vessel } = await supabaseAdmin
           .from('vessels').select('name').eq('id', root.vessel_id).single()
-        if (scientistProfile?.email) {
+        const operatorName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'The operator'
+        if (scientistProfile?.email && wantsMessageEmails(scientistProfile.notification_prefs)) {
           const inboxUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/inbox`
-          const operatorName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'The operator'
           await sendEmail({
             to: scientistProfile.email,
             subject: `New reply about ${vessel?.name ?? 'your inquiry'} — Greenwater Foundation`,
             html: operatorReplyEmail(vessel?.name ?? 'your inquiry', operatorName, body.trim(), inboxUrl),
           })
         }
+        await notifyAdmins(
+          'messages',
+          `New message: ${operatorName} → ${vessel?.name ?? `vessel ${root.vessel_id}`}`,
+          newMessageAdminEmail(vessel?.name ?? `vessel ${root.vessel_id}`, operatorName, 'operator', body.trim(), `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin`),
+        )
       } catch (e) {
         console.error('Scientist notification failed:', e)
       }
@@ -90,27 +97,26 @@ export async function POST(
 
     ;(async () => {
       try {
-        const { data: operators } = await supabaseAdmin
-          .from('profiles')
-          .select('email')
-          .eq('vessel_id', root.vessel_id)
-          .eq('role', 'operator')
-        const operatorEmails = (operators ?? []).map((o) => o.email).filter(Boolean) as string[]
-        if (operatorEmails.length === 0) return // unclaimed vessel — contact already got the invite email
-
+        const recipients = await operatorRecipients(root.vessel_id)
         const { data: vessel } = await supabaseAdmin
           .from('vessels').select('name').eq('id', root.vessel_id).single()
+        const vesselName = vessel?.name ?? 'your vessel'
         const scientistName =
           [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'The researcher'
         const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/dashboard`
         await Promise.allSettled(
-          operatorEmails.map((to) =>
+          recipients.map((to) =>
             sendEmail({
               to,
-              subject: `New reply about ${vessel?.name ?? 'your vessel'} — Greenwater Foundation`,
-              html: scientistReplyOperatorEmail(vessel?.name ?? 'your vessel', scientistName, body.trim(), dashboardUrl),
+              subject: `New reply about ${vesselName} — Greenwater Foundation`,
+              html: scientistReplyOperatorEmail(vesselName, scientistName, body.trim(), dashboardUrl),
             }).catch((e) => console.error('Operator reply notification failed for', to, e)),
           ),
+        )
+        await notifyAdmins(
+          'messages',
+          `New message: ${scientistName} → ${vesselName}`,
+          newMessageAdminEmail(vesselName, scientistName, 'scientist', body.trim(), `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin`),
         )
       } catch (e) {
         console.error('Operator reply notification failed:', e)

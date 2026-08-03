@@ -2,16 +2,25 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-const PREF_OPTIONS: { key: string; label: string }[] = [
+const ADMIN_PREF_OPTIONS: { key: string; label: string }[] = [
   { key: 'new_claim', label: 'New vessel claims' },
   { key: 'new_submission', label: 'New listing requests' },
   { key: 'new_signup', label: 'New user signups' },
-  { key: 'unrouted_inquiry', label: 'Inquiries needing hand-routing' },
+  { key: 'messages', label: 'Messages on the platform' },
 ]
 
-/** Bell dropdown for per-admin email notification toggles.
- *  Opt-out model: a missing key means subscribed. */
-export default function NotificationPrefsMenu() {
+export const USER_PREF_OPTIONS: { key: string; label: string }[] = [
+  { key: 'messages', label: 'Messages on the platform' },
+]
+
+/** Bell dropdown for per-user email notification toggles.
+ *  Opt-out model: a missing key means subscribed. Admins get the full
+ *  option list (default); operators/scientists pass USER_PREF_OPTIONS. */
+export default function NotificationPrefsMenu({
+  options = ADMIN_PREF_OPTIONS,
+}: {
+  options?: { key: string; label: string }[]
+} = {}) {
   const [open, setOpen] = useState(false)
   const [prefs, setPrefs] = useState<Record<string, boolean>>({})
   const [loaded, setLoaded] = useState(false)
@@ -96,7 +105,7 @@ export default function NotificationPrefsMenu() {
             <p className="text-sm text-gray-400">Loading…</p>
           ) : (
             <div className="space-y-2.5">
-              {PREF_OPTIONS.map(({ key, label }) => {
+              {options.map(({ key, label }) => {
                 const enabled = prefs[key] !== false
                 return (
                   <label key={key} className="flex items-center justify-between gap-3 cursor-pointer">

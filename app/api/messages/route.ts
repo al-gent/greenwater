@@ -4,10 +4,13 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import {
   sendEmail,
   newInquiryOperatorEmail,
+  scientistReplyOperatorEmail,
   unclaimedVesselInquiryEmail,
   unroutedInquiryAdminEmail,
+  newMessageAdminEmail,
 } from '@/lib/brevo'
 import { notifyAdmins } from '@/lib/admin-notify'
+import { operatorRecipients } from '@/lib/message-notify'
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -32,6 +35,74 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'vessel_id and body are required' }, { status: 400 })
   }
 
+  const scientistName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'A researcher'
+  const affiliation = [profile.title, profile.institution].filter(Boolean).join(', ')
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+  const adminUrl = `${siteUrl}/admin`
+
+  // One conversation per scientist ↔ vessel: a repeat "Connect" send continues
+  // the existing thread instead of spawning a parallel one. (PostgREST can't
+  // compare two columns, so roots are picked out in JS.)
+  const { data: authorMessages } = await supabaseAdmin
+    .from('messages')
+    .select('id, thread_id, created_at')
+    .eq('author_id', user.id)
+    .eq('vessel_id', vessel_id)
+  const existingRoot = (authorMessages ?? [])
+    .filter((m) => m.thread_id === m.id)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+
+  const { data: vessel } = await supabaseAdmin
+    .from('vessels')
+    .select('name, email, contact_email, contact')
+    .eq('id', vessel_id)
+    .single()
+  const vesselName = vessel?.name ?? 'your vessel'
+
+  // ── Continue an existing conversation ────────────────────────────────────
+  if (existingRoot) {
+    const { error: replyError } = await supabaseAdmin.from('messages').insert({
+      thread_id: existingRoot.id,
+      vessel_id,
+      author_id: user.id,
+      author_role: 'scientist',
+      body: messageBody.trim(),
+      start_date: start_date ?? null,
+      end_date: end_date ?? null,
+    })
+    if (replyError) {
+      console.error('Message insert error:', replyError)
+      return NextResponse.json({ error: replyError.message }, { status: 500 })
+    }
+    await supabaseAdmin.from('messages').update({ status: 'new' }).eq('id', existingRoot.id)
+
+    ;(async () => {
+      try {
+        const recipients = await operatorRecipients(vessel_id)
+        const dashboardUrl = `${siteUrl}/dashboard`
+        await Promise.allSettled(
+          recipients.map((to) =>
+            sendEmail({
+              to,
+              subject: `New message about ${vesselName} — Greenwater Foundation`,
+              html: scientistReplyOperatorEmail(vesselName, scientistName, messageBody.trim(), dashboardUrl),
+            }).catch((e) => console.error('Operator notification failed for', to, e)),
+          ),
+        )
+        await notifyAdmins(
+          'messages',
+          `New message: ${scientistName} → ${vesselName}`,
+          newMessageAdminEmail(vesselName, scientistName, 'scientist', messageBody.trim(), adminUrl),
+        )
+      } catch (e) {
+        console.error('Message notification failed:', e)
+      }
+    })()
+
+    return NextResponse.json({ success: true, thread_id: existingRoot.id }, { status: 201 })
+  }
+
+  // ── New conversation ─────────────────────────────────────────────────────
   const newId = crypto.randomUUID()
   const { error: insertError } = await supabaseAdmin.from('messages').insert({
     id: newId,
@@ -53,35 +124,18 @@ export async function POST(request: Request) {
   // Notify the vessel side in background — never fail the insert.
   // Routing: registered operator(s) → their accounts' emails; unclaimed but
   // vessel has a contact email on file → invite-to-claim email; neither →
-  // admins get pinged to facilitate by hand. The route taken is stamped on
-  // the thread root (notified_via / notified_email / delivery_status).
+  // nothing (admins see every message anyway, unrouted ones flagged). The
+  // route taken is stamped on the thread root.
   ;(async () => {
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
-      const scientistName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'A researcher'
-      const affiliation = [profile.title, profile.institution].filter(Boolean).join(', ')
-
-      const { data: vessel } = await supabaseAdmin
-        .from('vessels')
-        .select('name, email, contact_email, contact')
-        .eq('id', vessel_id)
-        .single()
-      const vesselName = vessel?.name ?? 'your vessel'
-
-      // All operators for the vessel — a vessel can legitimately have several
-      const { data: operators } = await supabaseAdmin
-        .from('profiles')
-        .select('email')
-        .eq('vessel_id', vessel_id)
-        .eq('role', 'operator')
-      const operatorEmails = (operators ?? []).map((o) => o.email).filter(Boolean) as string[]
+      const recipients = await operatorRecipients(vessel_id)
 
       let notified: { notified_via: string; notified_email: string | null; delivery_status: string | null }
 
-      if (operatorEmails.length > 0) {
+      if (recipients.length > 0) {
         const dashboardUrl = `${siteUrl}/dashboard`
         await Promise.allSettled(
-          operatorEmails.map((to) =>
+          recipients.map((to) =>
             sendEmail({
               to,
               subject: `New inquiry for ${vesselName} — Greenwater Foundation`,
@@ -97,14 +151,14 @@ export async function POST(request: Request) {
             }).catch((e) => console.error('Operator notification failed for', to, e)),
           ),
         )
-        notified = { notified_via: 'operator', notified_email: operatorEmails.join(', '), delivery_status: 'sent' }
+        notified = { notified_via: 'operator', notified_email: recipients.join(', '), delivery_status: 'sent' }
       } else {
+        notified = { notified_via: 'unrouted', notified_email: null, delivery_status: null }
+
         // Vessel contact emails are scraped data — take the first plausible one
         const vesselEmail = [vessel?.email, vessel?.contact_email]
           .map((e) => e?.trim())
           .find((e) => e && EMAIL_SHAPE.test(e))
-
-        notified = { notified_via: 'unrouted', notified_email: null, delivery_status: null }
 
         if (vesselEmail) {
           try {
@@ -127,20 +181,24 @@ export async function POST(request: Request) {
             })
             notified = { notified_via: 'vessel_email', notified_email: vesselEmail, delivery_status: 'sent' }
           } catch (e) {
-            console.error('Vessel-email notification failed, falling back to admins:', e)
+            console.error('Vessel-email notification failed:', e)
           }
-        }
-
-        if (notified.notified_via === 'unrouted') {
-          await notifyAdmins(
-            'unrouted_inquiry',
-            `Inquiry needs hand-routing: ${vesselName}`,
-            unroutedInquiryAdminEmail(vesselName, scientistName, affiliation, messageBody.trim(), `${siteUrl}/admin`),
-          )
         }
       }
 
       await supabaseAdmin.from('messages').update(notified).eq('id', newId)
+
+      // Admins hear about every message; unrouted ones arrive flagged for
+      // hand-routing (and show a red badge in the admin Messages tab).
+      await notifyAdmins(
+        'messages',
+        notified.notified_via === 'unrouted'
+          ? `Inquiry needs hand-routing: ${vesselName}`
+          : `New inquiry: ${scientistName} → ${vesselName}`,
+        notified.notified_via === 'unrouted'
+          ? unroutedInquiryAdminEmail(vesselName, scientistName, affiliation, messageBody.trim(), adminUrl)
+          : newMessageAdminEmail(vesselName, scientistName, 'scientist', messageBody.trim(), adminUrl),
+      )
     } catch (e) {
       console.error('Inquiry notification failed:', e)
     }
