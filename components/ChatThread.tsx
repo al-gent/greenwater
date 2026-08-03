@@ -24,6 +24,7 @@ interface ChatThreadProps {
   statusBadge?: React.ReactNode    // operator side passes a badge
   onOpen?: () => void              // operator side fires mark-as-read
   headerLink?: string              // "View vessel →" for scientist side
+  readOnly?: boolean               // admin view: conversation only, no reply box
 }
 
 function fmtTime(dateStr: string) {
@@ -50,6 +51,7 @@ export default function ChatThread({
   statusBadge,
   onOpen,
   headerLink,
+  readOnly = false,
 }: ChatThreadProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [replyText, setReplyText] = useState('')
@@ -142,14 +144,25 @@ export default function ChatThread({
                     }`}>
                       {msg.body}
                     </div>
-                    <span className="text-[11px] text-gray-400 px-1">{fmtTime(msg.created_at)}</span>
+                    <span className="text-[11px] text-gray-400 px-1">
+                      {readOnly ? `${msg.author_role} · ` : ''}{fmtTime(msg.created_at)}
+                    </span>
                   </div>
                 </div>
               )
             })}
           </div>
 
-          {/* Reply box */}
+          {/* Reply box (hidden for read-only observers) */}
+          {readOnly ? (
+            headerLink ? (
+              <div className="px-5 pb-4 pt-2 border-t border-gray-100">
+                <a href={headerLink} target="_blank" rel="noopener noreferrer" className="text-xs text-teal hover:underline inline-block">
+                  View vessel →
+                </a>
+              </div>
+            ) : null
+          ) : (
           <div className="px-4 pb-4 pt-2 border-t border-gray-100">
             {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
             <div className="flex gap-2 items-end">
@@ -179,6 +192,7 @@ export default function ChatThread({
               </a>
             )}
           </div>
+          )}
         </>
       )}
     </div>

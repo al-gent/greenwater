@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AnalyticsTab from './AnalyticsTab'
 import NotificationPrefsMenu from './NotificationPrefsMenu'
+import ChatThread from './ChatThread'
 import { fmtDailyRate } from '@/lib/vessel-utils'
 
 type SubmissionStatus = 'pending' | 'approved' | 'rejected'
@@ -1054,68 +1055,53 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            {tab === 'messages' && (
-              messages.length === 0 ? (
+            {tab === 'messages' && (() => {
+              // Group the flat feed into conversations, newest activity first
+              const byThread = new Map<string, AdminMessage[]>()
+              for (const m of messages) {
+                const list = byThread.get(m.thread_id) ?? []
+                list.push(m)
+                byThread.set(m.thread_id, list)
+              }
+              const threads = [...byThread.values()]
+                .map((list) => {
+                  list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                  return { root: list.find((m) => m.is_root) ?? list[0], list, lastAt: list[list.length - 1].created_at }
+                })
+                .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
+
+              return threads.length === 0 ? (
                 <div className="text-center py-16 text-gray-400">No messages yet.</div>
-              ) : messages.map((m) => (
-                <div key={m.id} className="bg-white rounded-2xl shadow-card p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-navy">
-                          {m.author_name || m.author_email || '—'}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          ({m.author_role})
-                        </span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                          m.is_root
-                            ? 'bg-teal-50 text-teal border-teal/20'
+              ) : threads.map(({ root, list, lastAt }) => (
+                <ChatThread
+                  key={root.thread_id}
+                  threadId={root.thread_id}
+                  initialMessages={list}
+                  myRole="operator"
+                  readOnly
+                  header={`${root.author_name || root.author_email || '—'} ↔ ${root.vessel_name}`}
+                  subheader={[root.author_institution, root.author_email, fmt(lastAt)].filter(Boolean).join(' · ')}
+                  headerLink={`/vessels/${root.vessel_id}`}
+                  statusBadge={
+                    root.notified_via ? (
+                      <span
+                        title={root.notified_email ?? undefined}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          root.notified_via === 'unrouted' || ['bounced', 'blocked', 'spam'].includes(root.delivery_status ?? '')
+                            ? 'bg-red-50 text-red-600 border-red-200'
                             : 'bg-gray-50 text-gray-500 border-gray-200'
-                        }`}>
-                          {m.is_root ? 'new thread' : 'reply'}
-                        </span>
-                        {m.is_root && m.notified_via && (
-                          <span
-                            title={m.notified_email ?? undefined}
-                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                              m.notified_via === 'unrouted' || ['bounced', 'blocked', 'spam'].includes(m.delivery_status ?? '')
-                                ? 'bg-red-50 text-red-600 border-red-200'
-                                : 'bg-gray-50 text-gray-500 border-gray-200'
-                            }`}
-                          >
-                            {m.notified_via === 'operator' && 'operator notified'}
-                            {m.notified_via === 'vessel_email' &&
-                              `vessel emailed${m.delivery_status && m.delivery_status !== 'sent' ? ` · ${m.delivery_status}` : ''}`}
-                            {m.notified_via === 'unrouted' && 'needs hand-routing'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                        {m.author_institution && <span>{m.author_institution}</span>}
-                        {m.author_email && (
-                          <a href={`mailto:${m.author_email}`} className="text-teal hover:underline">
-                            {m.author_email}
-                          </a>
-                        )}
-                        <a
-                          href={`/vessels/${m.vessel_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-teal hover:underline"
-                        >
-                          → {m.vessel_name}
-                        </a>
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0">{fmt(m.created_at)}</span>
-                  </div>
-                  <p className="mt-3 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap line-clamp-3">
-                    {m.body}
-                  </p>
-                </div>
+                        }`}
+                      >
+                        {root.notified_via === 'operator' && 'operator notified'}
+                        {root.notified_via === 'vessel_email' &&
+                          `vessel emailed${root.delivery_status && root.delivery_status !== 'sent' ? ` · ${root.delivery_status}` : ''}`}
+                        {root.notified_via === 'unrouted' && 'needs hand-routing'}
+                      </span>
+                    ) : undefined
+                  }
+                />
               ))
-            )}
+            })()}
 
             {tab === 'scientists' && (
               filteredScientists.length === 0 ? (
