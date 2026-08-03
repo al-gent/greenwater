@@ -54,10 +54,28 @@ export async function POST(request: Request) {
 
   const { data: vessel } = await supabaseAdmin
     .from('vessels')
-    .select('name, email, contact_email, contact')
+    .select('name, email, contact_email, contact, operator_name, owner, url_ship, url_operator, country, port_city, port_state, imo_number, mmsi, call_sign, operator_add1, operator_add2, operator_add3')
     .eq('id', vessel_id)
     .single()
   const vesselName = vessel?.name ?? 'your vessel'
+
+  // Operator-hunting leads for the hand-routing email — whatever's on file
+  const str = (v: unknown) => (typeof v === 'string' ? v.trim() : v != null ? String(v) : '')
+  const vesselDetails: Array<[string, string]> = (
+    [
+      ['Vessel', `${vesselName} — ${siteUrl}/vessels/${vessel_id}`],
+      ['Operator', str(vessel?.operator_name)],
+      ['Owner', str(vessel?.owner)],
+      ['Contact person', str(vessel?.contact)],
+      ['Operator address', [vessel?.operator_add1, vessel?.operator_add2, vessel?.operator_add3].map(str).filter(Boolean).join(', ')],
+      ['Home port', [vessel?.port_city, vessel?.port_state, vessel?.country].map(str).filter(Boolean).join(', ')],
+      ['Vessel website', str(vessel?.url_ship)],
+      ['Operator website', str(vessel?.url_operator)],
+      ['IMO', str(vessel?.imo_number)],
+      ['MMSI', str(vessel?.mmsi)],
+      ['Call sign', str(vessel?.call_sign)],
+    ] as Array<[string, string]>
+  ).filter(([, v]) => v)
 
   // ── Continue an existing conversation ────────────────────────────────────
   if (existingRoot) {
@@ -196,7 +214,7 @@ export async function POST(request: Request) {
           ? `Inquiry needs hand-routing: ${vesselName}`
           : `New inquiry: ${scientistName} → ${vesselName}`,
         notified.notified_via === 'unrouted'
-          ? unroutedInquiryAdminEmail(vesselName, scientistName, affiliation, messageBody.trim(), adminUrl)
+          ? unroutedInquiryAdminEmail(vesselName, scientistName, affiliation, messageBody.trim(), adminUrl, vesselDetails)
           : newMessageAdminEmail(vesselName, scientistName, 'scientist', messageBody.trim(), adminUrl),
       )
     } catch (e) {

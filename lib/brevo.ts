@@ -336,7 +336,22 @@ export function unroutedInquiryAdminEmail(
   affiliation: string,
   body: string,
   adminUrl: string,
+  /** [label, value] pairs of whatever the vessel record knows about its
+   *  operator — leads for the web search to find a real contact. */
+  vesselDetails: Array<[string, string]> = [],
 ) {
+  const isUrl = (v: string) => /^https?:\/\//i.test(v)
+  const detailRows = vesselDetails
+    .map(
+      ([label, value]) => `
+      <tr>
+        <td style="padding: 4px 12px 4px 0; color: #666; font-size: 13px; white-space: nowrap; vertical-align: top;">${label}</td>
+        <td style="padding: 4px 0; font-size: 13px;">${
+          isUrl(value) ? `<a href="${value}" style="color: #2A7B6F;">${value}</a>` : value
+        }</td>
+      </tr>`,
+    )
+    .join('')
   return base(`
     <h2 style="color: #1B3A6B; margin-top: 0;">Inquiry needs hand-routing: ${vesselName}</h2>
     <p>
@@ -347,6 +362,9 @@ export function unroutedInquiryAdminEmail(
     <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
       <p style="margin: 0; white-space: pre-wrap;">${body}</p>
     </div>
+    ${detailRows ? `
+    <p style="margin-bottom: 8px;"><strong>Everything we know about this vessel's operator:</strong></p>
+    <table style="border-collapse: collapse; margin-bottom: 16px;">${detailRows}</table>` : ''}
     <p>
       <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
         View in Admin Dashboard
