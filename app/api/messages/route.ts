@@ -109,7 +109,7 @@ export async function POST(request: Request) {
         )
         await notifyAdmins(
           'messages',
-          `New message: ${scientistName} → ${vesselName}`,
+          `${scientistName} messaged ${vesselName}`,
           newMessageAdminEmail(vesselName, scientistName, 'scientist', messageBody.trim(), adminUrl),
         )
       } catch (e) {
@@ -211,8 +211,8 @@ export async function POST(request: Request) {
       await notifyAdmins(
         'messages',
         notified.notified_via === 'unrouted'
-          ? `Inquiry needs hand-routing: ${vesselName}`
-          : `New inquiry: ${scientistName} → ${vesselName}`,
+          ? `${scientistName} messaged ${vesselName} — needs hand-routing`
+          : `${scientistName} messaged ${vesselName}`,
         notified.notified_via === 'unrouted'
           ? unroutedInquiryAdminEmail(vesselName, scientistName, affiliation, messageBody.trim(), adminUrl, vesselDetails)
           : newMessageAdminEmail(vesselName, scientistName, 'scientist', messageBody.trim(), adminUrl),

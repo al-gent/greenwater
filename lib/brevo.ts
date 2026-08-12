@@ -198,6 +198,52 @@ export function newInquiryOperatorEmail(
   `)
 }
 
+// ── Internal admin notifications ─────────────────────────────────────────────
+// These go to the team, not to users: no banner, no marketing footer. Layout
+// is a colored type-eyebrow, label/value rows, optional quoted message, and a
+// button — notifyAdmins() appends the monthly stats line directly below it.
+
+const isUrl = (v: string) => /^https?:\/\//i.test(v)
+
+const adminBase = (eyebrow: string, color: string, body: string) => `
+<div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px 8px; color: #1a1a1a;">
+  <p style="color: ${color}; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 18px;">${eyebrow}</p>
+  ${body}
+</div>
+`
+
+/** Label/value rows; rows with empty values are dropped, URL values become links. */
+const adminRows = (pairs: Array<[string, string]>) => `
+  <table style="border-collapse: collapse; margin: 0 0 4px;">
+    ${pairs
+      .filter(([, value]) => value)
+      .map(
+        ([label, value]) => `
+    <tr>
+      <td style="padding: 4px 18px 4px 0; color: #667085; font-size: 14px; white-space: nowrap; vertical-align: top;">${label}</td>
+      <td style="padding: 4px 0; font-size: 16px;">${
+        isUrl(value) ? `<a href="${value}" style="color: #2A7B6F;">${value}</a>` : value
+      }</td>
+    </tr>`,
+      )
+      .join('')}
+  </table>
+`
+
+const adminQuote = (text: string) => `
+  <div style="border-left: 3px solid #e5e7eb; padding: 2px 0 2px 14px; margin: 14px 0; color: #374151;">
+    <p style="margin: 0; white-space: pre-wrap; font-size: 16px;">${text}</p>
+  </div>
+`
+
+const adminButton = (href: string, label: string) => `
+  <p style="margin: 18px 0 0;">
+    <a href="${href}" style="background: #2A7B6F; color: white; padding: 11px 22px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block;">
+      ${label}
+    </a>
+  </p>
+`
+
 export function newClaimAdminEmail(
   vesselName: string,
   claimantName: string,
@@ -207,20 +253,16 @@ export function newClaimAdminEmail(
   message: string,
   adminUrl: string,
 ) {
-  return base(`
-    <h2 style="color: #1B3A6B; margin-top: 0;">New vessel claim: ${vesselName}</h2>
-    <p>
-      <strong>${claimantName}</strong> (${claimantEmail})${role || organization ? ` — ${[role, organization].filter(Boolean).join(', ')}` : ''}
-      has claimed <strong>${vesselName}</strong>.
-    </p>
-    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-      <p style="margin: 0; white-space: pre-wrap;">${message}</p>
-    </div>
-    <p>
-      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
-        Review in Admin Dashboard
-      </a>
-    </p>
+  return adminBase('Vessel claim', '#D97706', `
+    ${adminRows([
+      ['Vessel', vesselName],
+      ['Claimant', claimantName],
+      ['Role', role],
+      ['Organization', organization],
+      ['Email', claimantEmail],
+    ])}
+    ${adminQuote(message)}
+    ${adminButton(adminUrl, 'Review claim')}
   `)
 }
 
@@ -232,20 +274,16 @@ export function newUserAdminEmail(
   title: string,
   adminUrl: string,
 ) {
-  return base(`
-    <h2 style="color: #1B3A6B; margin-top: 0;">New user signed up</h2>
-    <p>
-      <strong>${name}</strong> (${email}) just confirmed their account
-      as a <strong>${accountType === 'vessel' ? 'vessel operator' : 'researcher'}</strong>${
-        institution || title ? ` — ${[title, institution].filter(Boolean).join(', ')}` : ''
-      }.
-    </p>
-    ${accountType !== 'vessel' ? '<p>Researchers need verification before they can message operators.</p>' : ''}
-    <p>
-      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
-        View in Admin Dashboard
-      </a>
-    </p>
+  return adminBase('New signup', '#2A7B6F', `
+    ${adminRows([
+      ['Name', name],
+      ['Signed up as', accountType === 'vessel' ? 'vessel operator' : 'researcher'],
+      ['Title', title],
+      ['Institution', institution],
+      ['Email', email],
+    ])}
+    ${accountType !== 'vessel' ? '<p style="font-size: 14px; color: #667085; margin: 10px 0 0;">Researchers need verification before they can message operators.</p>' : ''}
+    ${adminButton(adminUrl, 'Review signup')}
   `)
 }
 
@@ -255,17 +293,13 @@ export function newSubmissionAdminEmail(
   submitterEmail: string,
   adminUrl: string,
 ) {
-  return base(`
-    <h2 style="color: #1B3A6B; margin-top: 0;">New vessel listing request: ${vesselName}</h2>
-    <p>
-      <strong>${operatorName}</strong> (${submitterEmail}) has requested to list
-      <strong>${vesselName}</strong> on the marketplace.
-    </p>
-    <p>
-      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
-        Review in Admin Dashboard
-      </a>
-    </p>
+  return adminBase('Listing request', '#1B3A6B', `
+    ${adminRows([
+      ['Vessel', vesselName],
+      ['Submitted by', operatorName],
+      ['Email', submitterEmail],
+    ])}
+    ${adminButton(adminUrl, 'Review listing request')}
   `)
 }
 
@@ -313,20 +347,13 @@ export function newMessageAdminEmail(
   body: string,
   adminUrl: string,
 ) {
-  return base(`
-    <h2 style="color: #1B3A6B; margin-top: 0;">New message: ${vesselName}</h2>
-    <p>
-      <strong>${fromName}</strong> (${fromRole}) sent a message in a thread about
-      <strong>${vesselName}</strong>.
-    </p>
-    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-      <p style="margin: 0; white-space: pre-wrap;">${body}</p>
-    </div>
-    <p>
-      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
-        View in Admin Dashboard
-      </a>
-    </p>
+  return adminBase('Message', '#64748b', `
+    ${adminRows([
+      ['Vessel', vesselName],
+      ['From', `${fromName} (${fromRole})`],
+    ])}
+    ${adminQuote(body)}
+    ${adminButton(adminUrl, 'Open conversation')}
   `)
 }
 
@@ -340,36 +367,20 @@ export function unroutedInquiryAdminEmail(
    *  operator — leads for the web search to find a real contact. */
   vesselDetails: Array<[string, string]> = [],
 ) {
-  const isUrl = (v: string) => /^https?:\/\//i.test(v)
-  const detailRows = vesselDetails
-    .map(
-      ([label, value]) => `
-      <tr>
-        <td style="padding: 4px 12px 4px 0; color: #666; font-size: 13px; white-space: nowrap; vertical-align: top;">${label}</td>
-        <td style="padding: 4px 0; font-size: 13px;">${
-          isUrl(value) ? `<a href="${value}" style="color: #2A7B6F;">${value}</a>` : value
-        }</td>
-      </tr>`,
-    )
-    .join('')
-  return base(`
-    <h2 style="color: #1B3A6B; margin-top: 0;">Inquiry needs hand-routing: ${vesselName}</h2>
-    <p>
-      <strong>${scientistName}</strong>${affiliation ? ` (${affiliation})` : ''} sent an inquiry about
-      <strong>${vesselName}</strong>, but the vessel is unclaimed and has no contact email on file —
-      nobody was notified. It needs a human to connect the dots.
+  return adminBase('Needs hand-routing', '#dc2626', `
+    <p style="font-size: 16px; margin: 0 0 14px;">
+      This vessel is unclaimed and has no contact email on file — <strong>nobody was
+      notified</strong>. It needs a human to connect the dots.
     </p>
-    <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-      <p style="margin: 0; white-space: pre-wrap;">${body}</p>
-    </div>
-    ${detailRows ? `
-    <p style="margin-bottom: 8px;"><strong>Everything we know about this vessel's operator:</strong></p>
-    <table style="border-collapse: collapse; margin-bottom: 16px;">${detailRows}</table>` : ''}
-    <p>
-      <a href="${adminUrl}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">
-        View in Admin Dashboard
-      </a>
-    </p>
+    ${adminRows([
+      ['Vessel', vesselName],
+      ['From', `${scientistName}${affiliation ? ` (${affiliation})` : ''}`],
+    ])}
+    ${adminQuote(body)}
+    ${vesselDetails.length ? `
+    <p style="font-size: 14px; color: #667085; margin: 14px 0 6px;">Everything we know about this vessel's operator:</p>
+    ${adminRows(vesselDetails)}` : ''}
+    ${adminButton(adminUrl, 'Open admin dashboard')}
   `)
 }
 

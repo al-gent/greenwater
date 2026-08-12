@@ -123,7 +123,7 @@ export async function POST(request: Request) {
   const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin`
   await notifyAdmins(
     'new_submission',
-    `New vessel listing request: ${vessel_name.trim()}`,
+    `${operator_name.trim()} requested to list ${vessel_name.trim()}`,
     newSubmissionAdminEmail(
       vessel_name.trim(),
       operator_name.trim(),

@@ -83,7 +83,7 @@ export async function POST(
         }
         await notifyAdmins(
           'messages',
-          `New message: ${operatorName} → ${vessel?.name ?? `vessel ${root.vessel_id}`}`,
+          `${operatorName} replied about ${vessel?.name ?? `vessel ${root.vessel_id}`}`,
           newMessageAdminEmail(vessel?.name ?? `vessel ${root.vessel_id}`, operatorName, 'operator', body.trim(), `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin`),
         )
       } catch (e) {
@@ -115,7 +115,7 @@ export async function POST(
         )
         await notifyAdmins(
           'messages',
-          `New message: ${scientistName} → ${vesselName}`,
+          `${scientistName} replied about ${vesselName}`,
           newMessageAdminEmail(vesselName, scientistName, 'scientist', body.trim(), `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin`),
         )
       } catch (e) {

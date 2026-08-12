@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin`
   await notifyAdmins(
     'new_claim',
-    `New vessel claim: ${vessel_name.trim()}`,
+    `${claimantName} claimed ${vessel_name.trim()}`,
     newClaimAdminEmail(
       vessel_name.trim(),
       claimantName,

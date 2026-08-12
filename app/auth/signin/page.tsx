@@ -16,6 +16,8 @@ function SignInForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const confirmationFailed = searchParams.get('error') === 'confirmation_failed'
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -52,6 +54,13 @@ function SignInForm() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-card p-8">
+          {confirmationFailed && !error && (
+            <div className="mb-4 bg-blue-50 border border-blue-100 text-navy text-sm px-4 py-3 rounded-xl">
+              That confirmation link couldn&apos;t sign you in automatically — this usually happens
+              when it opens in a different browser. If you&apos;ve already confirmed your email, just
+              sign in below to finish up.
+            </div>
+          )}
           {error && (
             <div className="mb-4 bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
               {error}

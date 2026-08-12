@@ -31,6 +31,22 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
+-- New-signup webhook → /api/hooks/new-profile (admin notification + pending
+-- vessel claim from the /claim page). Fires at signup, before email
+-- confirmation. Replace __WEBHOOK_SECRET__ with SUPABASE_WEBHOOK_SECRET.
+-- See supabase/migrations/20260808_new_profile_webhook.sql
+drop trigger if exists profiles_new_user_webhook on public.profiles;
+create trigger profiles_new_user_webhook
+  after insert on public.profiles
+  for each row
+  execute function supabase_functions.http_request(
+    'https://vesselconnect.org/api/hooks/new-profile',
+    'POST',
+    '{"Content-Type":"application/json","x-webhook-secret":"__WEBHOOK_SECRET__"}',
+    '{}',
+    '5000'
+  );
+
 -- ── vessel_submissions: new listing requests from /list ──────────────────────
 create table vessel_submissions (
   id             uuid        primary key default gen_random_uuid(),
@@ -637,3 +653,150 @@ alter table page_views enable row level security;
 -- No anon insert policy: all writes go through POST /api/analytics/pageview
 -- (service role, bot-filtered). Dropped 20260803 — the CMS's old direct-insert
 -- path was the bots' way in.
+
+
+-- ============================================================
+-- Admin email stats footer
+-- (mirrors supabase/migrations/20260811_admin_stats_footer.sql)
+-- ============================================================
+-- Monthly signup/listing counts appended to every notifyAdmins() email.
+-- Counts by CURRENT profile role (role mutates on claim approval — accepted
+-- drift); vessels_listed by vessels.created_at (null = legacy import, skipped).
+create or replace function get_signup_stats()
+returns table (metric text, this_month bigint, last_month bigint)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with bounds as (
+    select date_trunc('month', now())                     as cur_start,
+           date_trunc('month', now()) - interval '1 month' as prev_start
+  )
+  select 'researcher_signups'::text,
+         count(*) filter (where p.created_at >= b.cur_start),
+         count(*) filter (where p.created_at >= b.prev_start and p.created_at < b.cur_start)
+    from profiles p, bounds b where p.role = 'scientist'
+  union all
+  select 'operator_signups',
+         count(*) filter (where p.created_at >= b.cur_start),
+         count(*) filter (where p.created_at >= b.prev_start and p.created_at < b.cur_start)
+    from profiles p, bounds b where p.role = 'operator'
+  union all
+  select 'vessels_listed',
+         count(*) filter (where v.created_at >= b.cur_start),
+         count(*) filter (where v.created_at >= b.prev_start and v.created_at < b.cur_start)
+    from vessels v, bounds b;
+$$;
+
+revoke execute on function get_signup_stats() from public, anon, authenticated;
+
+-- File the pending vessel claim in SQL at signup, in the same transaction as
+-- the profile. Previously done over HTTP by /api/hooks/new-profile, where a
+-- fire-and-forget pg_net delivery failure silently lost the claim. The webhook
+-- now only sends admin email. See 20260812_claim_insert_in_trigger.sql.
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+  declare
+    claim     jsonb := new.raw_user_meta_data -> 'pending_claim';
+    full_name text;
+  begin
+    insert into public.profiles (id, email, first_name, last_name, institution, title, profile_url)
+    values (
+      new.id,
+      new.email,
+      new.raw_user_meta_data->>'first_name',
+      new.raw_user_meta_data->>'last_name',
+      new.raw_user_meta_data->>'institution',
+      new.raw_user_meta_data->>'title',
+      new.raw_user_meta_data->>'profile_url'
+    );
+
+    -- Stashed by app/claim/ClaimSignupForm.tsx at signup.
+    if claim is not null
+       and coalesce(claim->>'vessel_id', '')   <> ''
+       and coalesce(claim->>'vessel_name', '') <> ''
+       and coalesce(claim->>'message', '')     <> ''
+    then
+      begin
+        full_name := nullif(trim(concat_ws(' ',
+          new.raw_user_meta_data->>'first_name',
+          new.raw_user_meta_data->>'last_name')), '');
+
+        -- role/organization/claimant_name are NOT NULL; metadata may not have them.
+        insert into public.vessel_claims
+          (vessel_id, vessel_name, user_id, claimant_name, email, role, organization, message)
+        values (
+          (claim->>'vessel_id')::int,
+          claim->>'vessel_name',
+          new.id,
+          coalesce(full_name, 'Unknown'),
+          coalesce(new.email, ''),
+          coalesce(new.raw_user_meta_data->>'title', ''),
+          coalesce(new.raw_user_meta_data->>'institution', ''),
+          claim->>'message'
+        );
+      exception when others then
+        -- A malformed claim must never block account creation.
+        raise warning 'handle_new_user: claim insert failed for user %: %', new.id, sqlerrm;
+      end;
+    end if;
+
+    return new;
+  end;
+$$;
+
+-- New-signup webhook: pg_net POST from the DB to /api/hooks/new-profile on
+-- profile creation. Email-only — the claim is filed by handle_new_user above.
+-- URL + secret live in app_config (the secret is inserted out of band, never
+-- committed). See 20260808_new_profile_webhook.sql.
+create extension if not exists pg_net;
+
+create table if not exists app_config (
+  key   text primary key,
+  value text not null
+);
+alter table app_config enable row level security;
+revoke all on app_config from public, anon, authenticated;
+
+insert into app_config (key, value)
+values ('new_profile_webhook_url', 'https://vesselconnect.org/api/hooks/new-profile')
+on conflict (key) do update set value = excluded.value;
+
+create or replace function public.notify_new_profile_webhook()
+returns trigger language plpgsql security definer set search_path = public as $$
+  declare
+    url    text;
+    secret text;
+  begin
+    select value into url    from app_config where key = 'new_profile_webhook_url';
+    select value into secret from app_config where key = 'webhook_secret';
+
+    if coalesce(url, '') = '' or coalesce(secret, '') = '' then
+      raise warning 'new-profile webhook unconfigured; skipped for user %', new.id;
+      return new;
+    end if;
+
+    perform net.http_post(
+      url     := url,
+      body    := jsonb_build_object(
+        'type', 'INSERT', 'table', 'profiles', 'schema', 'public',
+        'record', to_jsonb(new)
+      ),
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'x-webhook-secret', secret
+      )
+    );
+    return new;
+  exception when others then
+    -- Email is best-effort; never block the signup transaction.
+    raise warning 'new-profile webhook failed for user %: %', new.id, sqlerrm;
+    return new;
+  end;
+$$;
+
+drop trigger if exists profiles_new_user_webhook on public.profiles;
+create trigger profiles_new_user_webhook
+  after insert on public.profiles
+  for each row execute function public.notify_new_profile_webhook();
