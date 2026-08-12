@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase-browser'
 import { trackConversion } from '@/lib/gtag'
+import { getAdClick } from '@/lib/ad-attribution'
 
 type AccountType = 'researcher' | 'vessel' | null
 
@@ -90,6 +91,9 @@ function SignUpForm() {
           institution: accountType === 'researcher' ? institution : organization,
           title: accountType === 'researcher' ? title : vesselRole,
           profile_url: accountType === 'researcher' ? (profileUrl || undefined) : undefined,
+          // Which ad click (if any) brought this visitor — copied onto the
+          // profile row by handle_new_user for offline conversion upload.
+          ...(getAdClick() ?? {}),
         },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
