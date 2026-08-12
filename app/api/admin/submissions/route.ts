@@ -142,11 +142,11 @@ export async function PATCH(request: Request) {
         movedUrls.push(bucketPrefix + destPath)
         urlMap.set(url, bucketPrefix + destPath)
       }
-      // Carry per-photo credits over, re-keyed to the moved URLs
+      // Carry per-photo credits + provenance over, re-keyed to the moved URLs
       const photoDetails = Array.isArray(submission.photo_details)
-        ? (submission.photo_details as { url: string; credit: string }[])
-            .map((d) => ({ url: urlMap.get(d.url) ?? d.url, credit: d.credit }))
-            .filter((d) => typeof d.credit === 'string' && d.credit.trim() && movedUrls.includes(d.url))
+        ? (submission.photo_details as { url: string; credit?: string }[])
+            .map((d) => ({ ...d, url: urlMap.get(d.url) ?? d.url }))
+            .filter((d) => movedUrls.includes(d.url))
         : []
       await supabaseAdmin
         .from('vessels')

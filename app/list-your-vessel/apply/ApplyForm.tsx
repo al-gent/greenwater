@@ -71,6 +71,7 @@ export default function ApplyForm({ userEmail }: Props) {
   const [draftId] = useState(() => crypto.randomUUID())
   const [photos, setPhotos] = useState<string[]>([])
   const [photoCredits, setPhotoCredits] = useState<Record<string, string>>({}) // url → credit
+  const [rightsConfirmed, setRightsConfirmed] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [homePortCoords, setHomePortCoords] = useState<{ lat: number; lon: number } | null>(null)
@@ -146,6 +147,10 @@ export default function ApplyForm({ userEmail }: Props) {
       setValidationError('Photos are still uploading — one moment.')
       return
     }
+    if (photos.length > 0 && !rightsConfirmed) {
+      setValidationError('Please confirm you have the right to use the uploaded photos.')
+      return
+    }
     if (!form.operating_area.trim()) {
       setOpen((s) => ({ ...s, location: true }))
       setValidationError("Please add the vessel's operating area.")
@@ -198,9 +203,13 @@ export default function ApplyForm({ userEmail }: Props) {
         daily_rate: form.daily_rate,
         daily_rate_currency: form.daily_rate_currency,
         photo_urls: photos,
-        photo_details: photos
-          .map((url) => ({ url, credit: (photoCredits[url] ?? '').trim() }))
-          .filter((d) => d.credit),
+        // Every entry carries the submitter's rights assertion, credited or not
+        photo_details: photos.map((url) => ({
+          url,
+          credit: (photoCredits[url] ?? '').trim() || undefined,
+          origin: 'operator',
+          rights_asserted_at: new Date().toISOString(),
+        })),
       }),
     })
 
@@ -362,19 +371,34 @@ export default function ApplyForm({ userEmail }: Props) {
                                 </svg>
                               </button>
                             </div>
-                            <input
-                              type="text"
-                              value={photoCredits[url] ?? ''}
-                              onChange={(e) => setPhotoCredits((c) => ({ ...c, [url]: e.target.value }))}
-                              placeholder="Photo credit (optional)"
-                              className="mt-1.5 w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
-                            />
+                            <label className="block mt-1.5 text-[11px] font-medium text-gray-500">
+                              Photo credit <span className="font-normal text-gray-400">(optional)</span>
+                              <input
+                                type="text"
+                                value={photoCredits[url] ?? ''}
+                                onChange={(e) => setPhotoCredits((c) => ({ ...c, [url]: e.target.value }))}
+                                placeholder="e.g. photo: Jane Smith / WHOI"
+                                className="mt-0.5 w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-normal text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+                              />
+                            </label>
                           </div>
                         ))}
                       </div>
                     )}
                     {photoError && <p className="text-xs text-red-500 mb-2">{photoError}</p>}
-                    <label className={`flex items-center gap-2 w-fit cursor-pointer px-4 py-2 rounded-xl border border-dashed border-gray-300 hover:border-teal text-sm text-gray-500 hover:text-teal transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer mb-2">
+                      <input
+                        type="checkbox"
+                        checked={rightsConfirmed}
+                        onChange={(e) => setRightsConfirmed(e.target.checked)}
+                        className="mt-0.5 accent-teal"
+                      />
+                      <span>
+                        I confirm I have the right to use these photos and grant Greenwater
+                        Foundation permission to display them.
+                      </span>
+                    </label>
+                    <label className={`flex items-center gap-2 w-fit cursor-pointer px-4 py-2 rounded-xl border border-dashed border-gray-300 hover:border-teal text-sm text-gray-500 hover:text-teal transition-colors ${(uploading || !rightsConfirmed) ? 'opacity-50 pointer-events-none' : ''}`}>
                       {uploading ? (
                         <>
                           <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

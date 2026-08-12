@@ -204,6 +204,16 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
   }
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [rightsConfirmed, setRightsConfirmed] = useState(false)
+
+  // Provenance stamp for a freshly uploaded photo — the uploader just asserted
+  // rights via the checkbox; origin reflects who is doing the uploading.
+  const photoRights = (url: string, credit = ''): PhotoDetail => ({
+    url,
+    credit,
+    origin: isAdmin ? 'team' : 'operator',
+    rights_asserted_at: new Date().toISOString(),
+  })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -240,11 +250,13 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
   // token and rewrites the auth cookies the route reads.
   const savePhotoUrls = async (urls: string[], details: PhotoDetail[], vid: number): Promise<string | null> => {
     await createClient().auth.getSession()
-    // Keep credits consistent with the photo list: drop empties and entries
-    // for URLs no longer present (e.g. after a photo is removed).
+    // Keep entries consistent with the photo list: drop URLs no longer present.
+    // Preserve provenance fields (origin, source, uploaded_*, rights_asserted_at) —
+    // only the credit text is form-editable.
     const cleaned = details
-      .map((d) => ({ url: d.url, credit: d.credit.trim() }))
-      .filter((d) => d.credit && urls.includes(d.url))
+      .filter((d) => urls.includes(d.url))
+      .map((d) => ({ ...d, credit: d.credit?.trim() || undefined }))
+      .filter((d) => d.credit || d.origin || d.source || d.uploaded_at || d.rights_asserted_at)
     const res = await fetch('/api/vessels/update', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -260,8 +272,11 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
   const setCredit = (url: string, credit: string) => {
     setCreditsDirty(true)
     setPhotoDetails((prev) => {
+      const existing = prev.find((d) => d.url === url)
       const rest = prev.filter((d) => d.url !== url)
-      return credit ? [...rest, { url, credit }] : rest
+      // Keep the entry when it carries provenance even if the credit is cleared
+      if (!credit && !existing?.origin && !existing?.source && !existing?.rights_asserted_at) return rest
+      return [...rest, { ...existing, url, credit }]
     })
   }
 
@@ -295,6 +310,11 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     if (!files.length) return
+    if (!rightsConfirmed) {
+      setUploadError('Please confirm you have the right to use these photos before uploading.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
     if (createMode) {
       setPendingPhotos((prev) => [...prev, ...files.map((file) => ({ file, preview: URL.createObjectURL(file), credit: '' }))])
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -309,11 +329,13 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
       return
     }
     const updated = [...photos, ...newUrls]
-    const saveError = await savePhotoUrls(updated, photoDetails, vesselId!)
+    const stamped = [...photoDetails, ...newUrls.map((url) => photoRights(url))]
+    const saveError = await savePhotoUrls(updated, stamped, vesselId!)
     if (saveError) {
       setUploadError(saveError)
     } else {
       setPhotos(updated)
+      setPhotoDetails(stamped)
     }
     setUploading(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -370,7 +392,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
         if (urls.length) {
           // uploadPhotoFiles returns URLs in input order, so index i maps back
           // to pendingPhotos[i] and its staged credit
-          const details = urls.map((url, i) => ({ url, credit: pendingPhotos[i]?.credit ?? '' }))
+          const details = urls.map((url, i) => photoRights(url, pendingPhotos[i]?.credit ?? ''))
           attachError = await savePhotoUrls(urls, details, id)
         }
         if (upErr) attachError = upErr
@@ -505,13 +527,16 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
                             </svg>
                           </button>
                         </div>
-                        <input
-                          type="text"
-                          value={p.credit}
-                          onChange={(e) => setPendingPhotos((prev) => prev.map((pp, idx) => idx === i ? { ...pp, credit: e.target.value } : pp))}
-                          placeholder="Photo credit (optional)"
-                          className="mt-1.5 w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
-                        />
+                        <label className="block mt-1.5 text-[11px] font-medium text-gray-500">
+                          Photo credit <span className="font-normal text-gray-400">(optional)</span>
+                          <input
+                            type="text"
+                            value={p.credit}
+                            onChange={(e) => setPendingPhotos((prev) => prev.map((pp, idx) => idx === i ? { ...pp, credit: e.target.value } : pp))}
+                            placeholder="e.g. photo: Jane Smith / WHOI"
+                            className="mt-0.5 w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-normal text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+                          />
+                        </label>
                       </div>
                     ))
                   : photos.map((url) => (
@@ -529,14 +554,17 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
                             </svg>
                           </button>
                         </div>
-                        <input
-                          type="text"
-                          value={photoDetails.find((d) => d.url === url)?.credit ?? ''}
-                          onChange={(e) => setCredit(url, e.target.value)}
-                          onBlur={saveCredits}
-                          placeholder="Photo credit (optional)"
-                          className="mt-1.5 w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
-                        />
+                        <label className="block mt-1.5 text-[11px] font-medium text-gray-500">
+                          Photo credit <span className="font-normal text-gray-400">(optional)</span>
+                          <input
+                            type="text"
+                            value={photoDetails.find((d) => d.url === url)?.credit ?? ''}
+                            onChange={(e) => setCredit(url, e.target.value)}
+                            onBlur={saveCredits}
+                            placeholder="e.g. photo: Jane Smith / WHOI"
+                            className="mt-0.5 w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-normal text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal/40 focus:border-transparent"
+                          />
+                        </label>
                       </div>
                     ))}
               </div>
@@ -595,6 +623,21 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
             )}
             {(uploadError || docError) && <p className="text-xs text-red-500">{uploadError || docError}</p>}
 
+            {uploadKind === 'photo' && (
+              <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rightsConfirmed}
+                  onChange={(e) => setRightsConfirmed(e.target.checked)}
+                  className="mt-0.5 accent-teal"
+                />
+                <span>
+                  I confirm {isAdmin ? 'we have' : 'I have'} the right to use these photos and grant
+                  Greenwater Foundation permission to display them.
+                </span>
+              </label>
+            )}
+
             {/* one upload control; the toggle decides photo vs document handling */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
@@ -622,7 +665,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
                   className={`${editInputClass} sm:w-52`}
                 />
               )}
-              <label className={`flex items-center justify-center gap-2 cursor-pointer px-4 py-2 rounded-lg border border-dashed border-gray-300 hover:border-teal text-sm text-gray-500 hover:text-teal transition-colors whitespace-nowrap ${(uploading || docBusy) ? 'opacity-50 pointer-events-none' : ''}`}>
+              <label className={`flex items-center justify-center gap-2 cursor-pointer px-4 py-2 rounded-lg border border-dashed border-gray-300 hover:border-teal text-sm text-gray-500 hover:text-teal transition-colors whitespace-nowrap ${(uploading || docBusy || (uploadKind === 'photo' && !rightsConfirmed)) ? 'opacity-50 pointer-events-none' : ''}`}>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>

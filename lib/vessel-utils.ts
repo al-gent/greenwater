@@ -11,10 +11,19 @@ export interface VesselDoc {
   contentLength: number | null
 }
 
-/** Per-photo attribution; url matches an entry in photo_urls. */
+/** Per-photo attribution + provenance; url matches an entry in photo_urls. */
 export interface PhotoDetail {
   url: string
-  credit: string
+  credit?: string
+  /** License/source page (e.g. Wikimedia Commons file page) — credit renders as a link when set. */
+  source?: string | null
+  /** Rights provenance of the image. */
+  origin?: 'operator' | 'team' | 'institution' | 'public-domain' | 'wikimedia' | 'import' | 'unknown'
+  /** Uploader email from the storage auth trail, or 'script' for service-role uploads. */
+  uploaded_by?: string
+  uploaded_at?: string
+  /** Set when the uploader asserted they hold rights to the photo (upload-form checkbox). */
+  rights_asserted_at?: string
 }
 
 export interface Vessel {

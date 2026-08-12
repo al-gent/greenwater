@@ -22,7 +22,8 @@ export default function VesselPhotoGallery({ photos, vesselName, country, detail
   const isPlaceholder = photos.length === 0
   const current = isPlaceholder ? PLACEHOLDER_URL : photos[index]
   const src = broken.has(current) ? PLACEHOLDER_URL : current
-  const credit = broken.has(current) ? undefined : details?.find((d) => d.url === current)?.credit
+  const detail = broken.has(current) ? undefined : details?.find((d) => d.url === current)
+  const credit = detail?.credit
 
   return (
     <div className="relative rounded-3xl overflow-hidden bg-gray-100" style={{ aspectRatio: '16/9' }}>
@@ -46,9 +47,21 @@ export default function VesselPhotoGallery({ photos, vesselName, country, detail
       )}
 
       {credit && (
-        <span className="absolute bottom-3 right-3 max-w-[60%] truncate bg-black/45 text-white/90 text-[10px] px-2 py-1 rounded-md" title={credit}>
-          {credit}
-        </span>
+        detail?.source ? (
+          <a
+            href={detail.source}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute bottom-3 right-3 max-w-[60%] truncate bg-black/45 text-white/90 text-[10px] px-2 py-1 rounded-md underline decoration-white/40 underline-offset-2 hover:bg-black/60 hover:text-white"
+            title={credit}
+          >
+            {credit}
+          </a>
+        ) : (
+          <span className="absolute bottom-3 right-3 max-w-[60%] truncate bg-black/45 text-white/90 text-[10px] px-2 py-1 rounded-md" title={credit}>
+            {credit}
+          </span>
+        )
       )}
 
       {photos.length > 1 && (

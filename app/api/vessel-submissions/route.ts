@@ -56,13 +56,23 @@ export async function POST(request: Request) {
         .slice(0, 12)
     : null
 
-  // per-photo credits, keyed to accepted photo URLs only
+  // per-photo credits + provenance, keyed to accepted photo URLs only
   const photo_details = Array.isArray(body.photo_details) && photo_urls?.length
     ? body.photo_details
-        .filter((d: any): d is { url: string; credit: string } =>
-          d && typeof d.url === 'string' && typeof d.credit === 'string' &&
-          d.credit.trim() !== '' && photo_urls.includes(d.url))
-        .map((d: { url: string; credit: string }) => ({ url: d.url, credit: d.credit.trim().slice(0, 300) }))
+        .filter((d: any): d is { url: string; credit?: string; rights_asserted_at?: string } =>
+          d && typeof d.url === 'string' && photo_urls.includes(d.url))
+        .map((d: { url: string; credit?: string; rights_asserted_at?: string }) => {
+          const credit = typeof d.credit === 'string' ? d.credit.trim().slice(0, 300) : ''
+          return {
+            url: d.url,
+            ...(credit ? { credit } : {}),
+            // the submitter is the prospective operator; the form's checkbox is their assertion
+            origin: 'operator',
+            ...(typeof d.rights_asserted_at === 'string' && !isNaN(Date.parse(d.rights_asserted_at))
+              ? { rights_asserted_at: d.rights_asserted_at }
+              : {}),
+          }
+        })
         .slice(0, 12)
     : []
 
