@@ -8,10 +8,10 @@ async function checkAdmin() {
   if (!user) return null
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role')
+    .select('is_admin')
     .eq('id', user.id)
     .single()
-  return profile?.role === 'admin' ? user : null
+  return profile?.is_admin === true ? user : null
 }
 
 const WINDOW_HOURS: Record<string, number> = {
@@ -77,11 +77,11 @@ export async function GET(request: Request) {
   const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   const actorIds = [...new Set((changes ?? []).map((c) => c.source).filter((s) => s && uuidRe.test(s)))]
   const { data: actors } = actorIds.length
-    ? await supabaseAdmin.from('profiles').select('id, first_name, last_name, role').in('id', actorIds)
+    ? await supabaseAdmin.from('profiles').select('id, first_name, last_name, is_admin').in('id', actorIds)
     : { data: [] }
   const actorMap = new Map((actors ?? []).map((p) => [
     p.id,
-    [p.first_name, p.last_name].filter(Boolean).join(' ') || `${p.role} ${p.id.slice(0, 8)}`,
+    [p.first_name, p.last_name].filter(Boolean).join(' ') || `${p.is_admin ? 'admin' : 'user'} ${p.id.slice(0, 8)}`,
   ]))
 
   return NextResponse.json({

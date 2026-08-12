@@ -8,10 +8,10 @@ async function checkAdmin() {
   if (!user) return null
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role')
+    .select('is_admin')
     .eq('id', user.id)
     .single()
-  return profile?.role === 'admin' ? user : null
+  return profile?.is_admin === true ? user : null
 }
 
 export async function GET() {

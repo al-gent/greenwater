@@ -111,6 +111,197 @@ Deferred — **gazetteer-backed region picker** (pre-built, then pulled out befo
 - **One unmatched legacy credit**: vessel 1180 (Cosmo) — source file `IMG_1239-scaled.jpeg` has a
   credit but no matching URL in `photo_urls` (photo likely never uploaded or was replaced).
 
+## Discoverability in AI assistants (GEO / "SEO for LLMs")
+
+Researchers increasingly start with ChatGPT/Claude/Perplexity rather than a search box, so
+"which vessels can do coastal work off Peru" should surface VesselConnect. This is a separate
+track from the classic SEO plan and from Google Ads — see `GOOGLE_ADS_PLAN.md`.
+
+- **Paid placement is mostly not available to us.** Perplexity pulled ads entirely (Feb 2026).
+  ChatGPT runs ads on Free/Go tiers only, sold at ~$60 CPM — brand-advertising economics, not
+  nonprofit-grant economics, and heavily skewed to shopping queries. Google is the exception:
+  ads now appear in AI Overviews and AI Mode, and **Ad Grants search campaigns can surface
+  there without any extra setup**. So the near-term AI play is organic, not paid.
+- **Presence in the corpora models train on and cite** — this is the main lever, and it is not an
+  on-page problem. Models learn about a thing from where people discuss it: Reddit
+  (r/oceanography, r/marinebiology, r/AskScienceDiscussion), Wikipedia, university and society
+  pages, forum threads, published articles. VesselConnect is currently absent from all of them,
+  so no amount of markup will make an assistant recommend it.
+  - The legitimate version is genuine participation and earned citation: answering real
+    "how do I find ship time" questions where they're already asked, getting listed on
+    institutional and society resource pages, a Wikipedia mention if notability is ever met,
+    and writing something citable about ETP vessel availability that others link to.
+  - **Not** astroturfing: fake accounts and seeded praise violate Reddit's rules, get domains
+    shadow-banned, and are the kind of thing a nonprofit cannot afford to be caught doing.
+  - Slow lever. Training cutoffs mean anything published now shows up in models much later —
+    but retrieval-augmented answers (assistants that search live) pick it up immediately, which
+    makes it worth starting well before it pays off.
+- **Make the vessel data legible to models**: clean semantic HTML, real headings, specs as text
+  rather than only in images or map layers, one durable URL per vessel.
+- **Structured data**: JSON-LD per vessel (already queued in the SEO plan) is the highest-leverage
+  item — it's what both crawlers and answer engines read most reliably.
+- **Be citable**: assistants cite pages that state facts plainly and carry a clear publisher.
+  A short "about this data" page (sources, coverage, update cadence) is worth more here than
+  marketing copy.
+- **Don't block the crawlers** — check `robots.txt` against GPTBot, ClaudeBot, PerplexityBot,
+  Google-Extended and decide deliberately rather than by default.
+- **Measure it**: periodically ask the major assistants the questions a researcher would ask and
+  record whether VesselConnect appears. There's no analytics for this yet; manual spot-checks are
+  the state of the art.
+
+## Operator-reported vessel location (scoped 2026-08-12)
+
+Let operators keep their vessel's position fresh from the dashboard — "your current location
+says X, update it with Y." GFW can't cover everyone (skips Great Lakes, ~242 vessels have no
+coordinates at all), and the operator always knows best.
+
+**v1 SHIPPED 2026-08-12** (with the dashboard work, uncommitted): table + index applied,
+`POST /api/vessels/position` (canOperateVessel + Nominatim geocode), and the listing-card
+LocationRow ("Last known: X · ship tracking/operator reported · date — Update" with inline
+save). **Remaining: the public-map display below** — detail page + home map pins with the
+"operator reported" legend.
+
+**Data — never write into GFW-owned fields** (`vessel_last_port` / tracks are pipeline-owned
+and would be clobbered on next sync; enrich-don't-overwrite in reverse). Own table,
+insert-only, so we get a movement history for free:
+
+```sql
+create table vessel_position_reports (
+  id          uuid primary key default gen_random_uuid(),
+  vessel_id   integer not null references vessels(id) on delete cascade,
+  user_id     uuid not null references profiles(id),
+  port_text   text not null,          -- what the operator typed ("Dutch Harbor, AK")
+  lat         numeric, lon numeric,   -- geocoded server-side (Nominatim, as vessels/update)
+  reported_at timestamptz not null default now()
+);
+```
+
+**Write path:** `POST /api/vessels/position`, authorized via `canOperateVessel()`; geocode
+server-side; nullable lat/lon if geocode fails (port text still displays).
+
+**Dashboard card:** small Leaflet map (dynamic ssr:false, as HomeMap) pinning the freshest of
+(GFW last port, latest report), plus inline "Update location" text field on the listing card.
+
+**Public display:** vessel detail map + home map show the freshest source, with a distinct
+pin/legend — Adam wants a concise legend label, something like **"operator reported"** (vs the
+implicit ship-tracking source). Freshness rule: newest of report.reported_at vs
+vessel_last_port date wins.
+
+## Vessel edit form: one unified Location section with a live map (scoped 2026-08-12)
+
+The form's location data is scattered and miscategorized: "Home Port Location" and
+"Operating Area" are separate collapsible sections, `ice_breaking` sits inside Operating Area
+(`VesselEditForm.tsx:769` — it's a capability, not a location; move it to the physical/specs
+section along with endurance + DPos if they fit better there), and the new current-location
+reports aren't in the form at all.
+
+**Target: one "Location" section** containing home port (PlaceAutocomplete-backed, as now),
+operating area (text + the existing geojson map draw), and current location (the
+vessel_position_reports flow from the dashboard card) — **all rendered live on a single map**
+as the user edits, so they can see each layer (home-port pin, operating-area shape,
+current-position pin) and verify it's right before saving. Building blocks all exist:
+`PositionMap`, `PlaceAutocomplete`, the operating-area geojson editor already in the form,
+`UpdateLocationModal`'s pick-or-pin pattern.
+
+Queued behind: current dashboard/membership pile shipping, then this.
+
+## Simplify messaging: one list, one read mechanism (scoped 2026-08-12)
+
+**Window: the `messages` table has ZERO rows** (v0 shipped 8/3, never used; `vessel_inquiries`
+already dropped). Schema changes are free until the first real message lands — do this before
+promoting messaging anywhere.
+
+**Keep** (the justified core): threads = root message with `thread_id = id`; two *sides* per
+thread — the inquirer (a person) and the vessel (a position: any `vessel_operators` member).
+Author-precedence in the reply route stays (thread author always replies as inquirer).
+
+**Problems** (all four exist because "operator" used to be an identity):
+1. Two parallel UIs over one table — `InquiryThread` (dashboard, operator side) and
+   `InboxClient` (/inbox, inquirer side), ~190 lines of near-duplicate rendering. A user who
+   operates one vessel and inquires about another has conversations split across two pages.
+2. Two unread mechanisms — thread `status` (`new/read/responded`) for the operator side,
+   `scientist_read_at` for the inquirer side. `status` conflates unread-tracking with funnel
+   state; `responded` is derivable from who spoke last.
+3. `author_role` is stored but derivable (author == thread author → inquirer side, else
+   operator side).
+4. Vestigial columns: `start_date`, `end_date` (old charter-inquiry idea, unused).
+
+**Target:**
+- **One thread list** in the dashboard Messages tab: every conversation the user is part of
+  (threads they started ∪ threads on vessels they operate). Each row shows the counterpart —
+  vessel name if you're the inquirer, inquirer name if it's your vessel. Merge
+  InquiryThread + InboxClient into one component (ChatThread stays as the renderer).
+  *(Partially done 2026-08-12: sent threads now render inline in the tab via InboxClient;
+  /inbox and /profile/edit routes deleted, links updated in place. The two components still
+  exist separately — the render-merge remains.)*
+- **One thread per (user, vessel) pair** (Adam, 2026-08-12): ALREADY THE API BEHAVIOR —
+  POST /api/messages appends to the caller's existing thread for that vessel (`existingRoot`).
+  Parallel threads can only come from direct DB writes (test data did this on 8/12). Remaining
+  work is just belt-and-braces: a partial unique index on root messages (author_id, vessel_id)
+  so the invariant holds at the schema level too.
+- **Symmetric read state:** replace `status` + `scientist_read_at` with two timestamps on the
+  root (`inquirer_read_at`, `operator_read_at`) or a tiny `thread_reads(user_id, thread_id,
+  read_at)` table (more general, works if co-operators return). `message_unread_count` RPC
+  and the admin Messages tab funnel (status badges) both need matching updates — the admin
+  view derives new/responded from last-message side + read timestamps instead.
+- Keep `author_role` as a stored render label (harmless) OR derive it — decide at impl;
+  dropping it touches ChatThread/admin views.
+- Drop `start_date`/`end_date`.
+- Emails unchanged (reply notifications already fan out per side).
+
+**Sequencing:** UI merge first (no schema risk), then the read-state migration while the
+table is still empty. Blocks nicely after the vessel_operators work ships.
+
+## Notification preferences for all users
+
+`profiles.notification_prefs` (jsonb, opt-out: missing key = subscribed, default `{}`) already
+covers everyone — **no data backfill needed**. What's admin-shaped is the UI surface:
+`NotificationPrefsMenu` renders only for operators/verified users and exposes only the
+message pref, while admins get the full admin set. Work: define the user-facing pref keys
+(messages, claim/submission status updates, newsletter?), show the menu to every signed-in
+user, and make every outbound user email check its pref the way `wantsMessageEmails()` does.
+(Adam, 2026-08-12: "start broad" — begin with one master key plus messages, split later.)
+
+## Admin dashboard: "Scientists" tab → "Users" — DONE 2026-08-12
+
+Display label renamed to "Users" (internal key stays `scientists` so admin-email deep links
+`?tab=scientists` keep working); the operator chip now derives from vessel_operators
+membership (`is_operator` in the /api/admin/scientists payload), so newly approved operators
+badge correctly. Leftover cosmetics: the route name itself and internal state variable names
+still say "scientists" — rename someday or never.
+
+## Admin email stats footer — SHIPPED 2026-08-12
+
+Implemented as specced below (RPC `get_signup_stats()`, appended once per `notifyAdmins()`
+call, degrades to no-footer on error). Kept here for the one unbuilt extension: "of which N
+arrived via ads" needs acquisition source (`gclid`/UTM) persisted into `profiles` at signup.
+
+<details><summary>Original spec</summary>
+
+
+Every automated email to admins should end with a small stats block so the team sees momentum
+without opening the dashboard:
+
+> **This month:** 25 researcher signups (+19% vs. last month) · 4 operator signups (−20%) ·
+> 3 vessels listed (+50%)
+
+- **Where:** one place — `notifyAdmins()` in `lib/admin-notify.ts` wraps every admin email, so
+  append the footer there rather than editing each template in `lib/brevo.ts`. New notification
+  types inherit it for free.
+- **Data:** a single Postgres RPC (`get_signup_stats()` or similar) returning current-month and
+  prior-month counts for: researcher signups, operator signups, vessels listed (and total actives
+  for context). Aggregate in SQL, not JS (house rule). Month-over-month % computed from the two
+  numbers; handle the divide-by-zero month gracefully ("n/a" not "+Infinity%").
+- **Cost control:** these are cheap indexed counts, but don't run them once per recipient —
+  compute the footer once per `notifyAdmins()` call. If volume ever grows, cache for an hour.
+- **Failure mode:** footer generation must never break a notification — wrap it so a stats
+  error degrades to "no footer," matching `notifyAdmins()`'s existing never-throw contract.
+- Once Google Ads is live, a natural extension is adding "of which N arrived via ads" using the
+  conversion data — but that requires storing acquisition source at signup, which is its own
+  small feature (e.g. persist `gclid`/UTM into `profiles` at account creation).
+
+</details>
+
 ## General
 
 - **Email delivery monitoring**: Add webhook logging for Brevo delivery events.

@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-browser'
 import VesselEditForm from '@/components/VesselEditForm'
 import type { Vessel } from '@/lib/vessel-utils'
 
-export default function EditVesselPage() {
+function EditVesselPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedId = parseInt(searchParams.get('vessel') ?? '', 10)
   const [vessel, setVessel] = useState<Vessel | null>(null)
   const [vesselId, setVesselId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -18,23 +20,33 @@ export default function EditVesselPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/auth/signin?next=/dashboard/edit'); return }
 
-      const { data: profile } = await supabase
-        .from('profiles').select('role, vessel_id').eq('id', user.id).single()
+      // Operator context comes from the API (single source of truth); admins
+      // may edit any vessel — the update API enforces the same rule server-side.
+      const me = await fetch('/api/operators/me').then((r) => r.json()).catch(() => null)
+      const operated: number[] = Array.isArray(me?.vesselIds) ? me.vesselIds : []
+      const isAdmin: boolean = !!me?.isAdmin
 
-      if (!profile || profile.role !== 'operator' || !profile.vessel_id) {
+      let target: number | null = null
+      if (!isNaN(requestedId)) {
+        if (isAdmin || operated.includes(requestedId)) target = requestedId
+      } else if (operated.length === 1) {
+        // No param: unambiguous only when the user operates exactly one vessel
+        target = operated[0]
+      }
+
+      if (!target) {
         router.push('/dashboard')
         return
       }
 
-      setVesselId(profile.vessel_id)
-
+      setVesselId(target)
       const { data } = await supabase
-        .from('vessels').select('*').eq('id', profile.vessel_id).single()
+        .from('vessels').select('*').eq('id', target).single()
 
       setVessel(data as Vessel)
       setLoading(false)
     })
-  }, [router])
+  }, [router, requestedId])
 
   if (loading) {
     return (
@@ -69,5 +81,19 @@ export default function EditVesselPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function EditVesselPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="pt-[88px] min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-gray-400">Loading vessel data…</div>
+        </div>
+      }
+    >
+      <EditVesselPageInner />
+    </Suspense>
   )
 }

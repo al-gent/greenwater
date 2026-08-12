@@ -117,12 +117,14 @@ export async function POST(request: NextRequest) {
     supabaseUserId = authData.user.id
   }
 
-  // If user has ships, set them as operator linked to the first vessel
+  // One vessel_operators membership per ship — no role write, no ships dropped
   if (body.shipIds.length > 0) {
     await supabaseAdmin
-      .from('profiles')
-      .update({ role: 'operator', vessel_id: body.shipIds[0] })
-      .eq('id', supabaseUserId)
+      .from('vessel_operators')
+      .upsert(
+        body.shipIds.map((vesselId: number) => ({ user_id: supabaseUserId, vessel_id: vesselId })),
+        { onConflict: 'user_id,vessel_id', ignoreDuplicates: true },
+      )
   }
 
   // Generate password setup link

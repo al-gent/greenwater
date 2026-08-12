@@ -1,15 +1,12 @@
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getVesselOperators } from '@/lib/operators'
 
 /** Operator email recipients for a vessel, minus anyone who muted the
- *  'messages' notification pref (opt-out model: missing key = subscribed). */
+ *  'messages' notification pref (opt-out model: missing key = subscribed).
+ *  Operators come from vessel_operators membership, not profiles.role. */
 export async function operatorRecipients(vesselId: number): Promise<string[]> {
-  const { data } = await supabaseAdmin
-    .from('profiles')
-    .select('email, notification_prefs')
-    .eq('vessel_id', vesselId)
-    .eq('role', 'operator')
-  return (data ?? [])
-    .filter((p) => (p.notification_prefs as Record<string, unknown> | null)?.messages !== false)
+  const operators = await getVesselOperators(vesselId)
+  return operators
+    .filter((p) => wantsMessageEmails(p.notification_prefs))
     .map((p) => p.email)
     .filter(Boolean) as string[]
 }

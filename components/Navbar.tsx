@@ -6,9 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import type { User } from '@supabase/supabase-js'
-import NotificationPrefsMenu, { USER_PREF_OPTIONS } from './NotificationPrefsMenu'
-
-type Profile = { role: string; vessel_id: number | null; verified?: boolean; first_name?: string | null; last_name?: string | null }
+type Profile = { is_admin: boolean; verified?: boolean; first_name?: string | null; last_name?: string | null }
 
 export default function Navbar() {
   const router = useRouter()
@@ -22,7 +20,7 @@ export default function Navbar() {
   // the badge on the Admin link. AdminDashboard dispatches the event after
   // every approve/reject so the badge updates without a page reload.
   useEffect(() => {
-    if (profile?.role !== 'admin') { setPendingCount(0); return }
+    if (!profile?.is_admin) { setPendingCount(0); return }
     const refresh = () =>
       fetch('/api/admin/pending-count')
         .then((r) => r.json())
@@ -31,15 +29,13 @@ export default function Navbar() {
     refresh()
     window.addEventListener('gw:pending-count-changed', refresh)
     return () => window.removeEventListener('gw:pending-count-changed', refresh)
-  }, [profile?.role])
+  }, [profile?.is_admin])
 
   // Unread message threads for the badge on Messages (operator) / Inbox
   // (scientist). Thread components dispatch the event after opening a thread
   // or replying so the badge updates without a page reload.
   useEffect(() => {
-    const eligible =
-      profile?.role === 'operator' || (profile?.role === 'scientist' && profile?.verified)
-    if (!eligible) { setUnreadCount(0); return }
+    if (!user) { setUnreadCount(0); return }
     const refresh = () =>
       fetch('/api/messages/unread-count')
         .then((r) => r.json())
@@ -52,7 +48,7 @@ export default function Navbar() {
       window.removeEventListener('gw:unread-changed', refresh)
       window.removeEventListener('focus', refresh)
     }
-  }, [profile?.role, profile?.verified])
+  }, [user])
 
   useEffect(() => {
     const supabase = createClient()
@@ -62,7 +58,7 @@ export default function Navbar() {
       if (user) {
         supabase
           .from('profiles')
-          .select('role, vessel_id, verified, first_name, last_name')
+          .select('is_admin, verified, first_name, last_name')
           .eq('id', user.id)
           .single()
           .then(({ data }) => setProfile(data))
@@ -74,7 +70,7 @@ export default function Navbar() {
       if (session?.user) {
         supabase
           .from('profiles')
-          .select('role, vessel_id, verified, first_name, last_name')
+          .select('is_admin, verified, first_name, last_name')
           .eq('id', session.user.id)
           .single()
           .then(({ data }) => setProfile(data))
@@ -142,7 +138,7 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             {user ? (
               <>
-                {profile?.role === 'admin' && (
+                {profile?.is_admin && (
                   <Link
                     href="/admin"
                     className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
@@ -155,63 +151,17 @@ export default function Navbar() {
                     )}
                   </Link>
                 )}
-                {profile?.role === 'operator' && (
-                  <>
-                    <Link
-                      href="/dashboard"
-                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:block"
-                    >
-                      My Vessel
-                    </Link>
-                    <Link
-                      href="/dashboard#inquiries"
-                      className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
-                    >
-                      Messages
-                      {unreadCount > 0 && (
-                        <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                          {unreadCount}
-                        </span>
-                      )}
-                    </Link>
-                  </>
-                )}
-                {profile?.role === 'scientist' && profile?.verified && (
-                  <Link
-                    href="/inbox"
-                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
-                  >
-                    Inbox
-                    {unreadCount > 0 && (
-                      <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                )}
-                <div className="flex items-center gap-2">
-                  {(profile?.role === 'operator' ||
-                    (profile?.role === 'scientist' && profile?.verified)) && (
-                    <NotificationPrefsMenu options={USER_PREF_OPTIONS} />
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
+                >
+                  Dashboard
+                  {unreadCount > 0 && (
+                    <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                      {unreadCount}
+                    </span>
                   )}
-                  <Link
-                    href="/profile/edit"
-                    title={user.email ?? 'Your profile'}
-                    className="w-8 h-8 rounded-full bg-navy text-white hover:bg-navy/80 transition-colors hidden md:flex items-center justify-center text-xs font-semibold tracking-wide"
-                  >
-                    {(() => {
-                      const f = (user.user_metadata?.first_name as string)?.[0] ?? ''
-                      const l = (user.user_metadata?.last_name as string)?.[0] ?? ''
-                      return (f + l).toUpperCase() || user.email?.[0].toUpperCase() || '?'
-                    })()}
-                  </Link>
-                  <button
-                    onClick={handleSignOut}
-                    className="hidden md:block text-sm font-medium text-gray-500 hover:text-navy transition-colors border border-gray-200 px-3 py-1.5 rounded-full hover:border-gray-300"
-                  >
-                    Sign Out
-                  </button>
-                </div>
+                </Link>
               </>
             ) : (
               <Link
@@ -249,7 +199,7 @@ export default function Navbar() {
             <Link href="/list-your-vessel" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
               List Your Vessel
             </Link>
-            {profile?.role === 'admin' && (
+            {profile?.is_admin && (
               <Link href="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
                 Admin
                 {pendingCount > 0 && (
@@ -259,43 +209,15 @@ export default function Navbar() {
                 )}
               </Link>
             )}
-            {profile?.role === 'operator' && (
-              <>
-                <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-                  My Vessel
-                </Link>
-                <Link href="/dashboard#inquiries" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-                  Messages
-                  {unreadCount > 0 && (
-                    <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                      {unreadCount}
-                    </span>
-                  )}
-                </Link>
-              </>
-            )}
-            {profile?.role === 'scientist' && profile?.verified && (
-              <Link href="/inbox" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-                Inbox
+            {user && (
+              <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                Dashboard
                 {unreadCount > 0 && (
                   <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
                     {unreadCount}
                   </span>
                 )}
               </Link>
-            )}
-            {user && (
-              <>
-                <Link href="/profile/edit" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-                  Profile
-                </Link>
-                <button
-                  onClick={() => { setMenuOpen(false); handleSignOut() }}
-                  className="block w-full text-left py-2.5 text-sm font-medium text-gray-500 hover:text-navy transition-colors"
-                >
-                  Sign Out
-                </button>
-              </>
             )}
           </div>
         )}

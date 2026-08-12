@@ -884,3 +884,183 @@ as $function$
     return new;
   end;
   $function$;
+
+-- vessel_operators: many-to-many operator <-> vessel (VESSEL_OPERATORS_PLAN.md
+-- Phase 0). Operator-ness becomes a per-vessel fact, not a profiles.role value.
+-- Backfilled from profiles.vessel_id UNION approved vessel_claims (the old
+-- single-vessel model overwrote profile links on each new approval).
+create table if not exists vessel_operators (
+  user_id    uuid        not null references profiles(id) on delete cascade,
+  vessel_id  integer     not null references vessels(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, vessel_id)
+);
+create index if not exists idx_vessel_operators_vessel on vessel_operators (vessel_id);
+
+alter table vessel_operators enable row level security;
+create policy "own_memberships_select" on vessel_operators
+  for select using (auth.uid() = user_id);
+
+-- Membership-based read paths (vessel_operators redesign Phases 1-4).
+-- Supersede the role/vessel_id-based versions above.
+create or replace function public.message_unread_count(p_user_id uuid)
+returns integer language sql stable as $$
+  select
+    coalesce((
+      select count(*) from messages m
+      where m.thread_id = m.id and m.status = 'new' and m.author_id <> p_user_id
+        and m.vessel_id in (select vessel_id from vessel_operators where user_id = p_user_id)
+    ), 0)::int
+    +
+    coalesce((
+      select count(*) from messages root
+      where root.author_id = p_user_id and root.thread_id = root.id
+        and exists (
+          select 1 from messages m2
+          where m2.thread_id = root.id and m2.author_role = 'operator'
+            and m2.created_at > coalesce(root.scientist_read_at, '-infinity'::timestamptz)
+        )
+    ), 0)::int
+$$;
+
+create or replace function get_signup_stats()
+returns table (metric text, this_month bigint, last_month bigint)
+language sql stable security definer set search_path = public as $$
+  with bounds as (
+    select date_trunc('month', now())                     as cur_start,
+           date_trunc('month', now()) - interval '1 month' as prev_start
+  ),
+  first_membership as (
+    select user_id, min(created_at) as first_at from vessel_operators group by user_id
+  )
+  select 'researcher_signups'::text,
+         count(*) filter (where p.created_at >= b.cur_start),
+         count(*) filter (where p.created_at >= b.prev_start and p.created_at < b.cur_start)
+    from profiles p, bounds b where p.role = 'scientist'
+  union all
+  select 'operator_signups',
+         count(*) filter (where f.first_at >= b.cur_start),
+         count(*) filter (where f.first_at >= b.prev_start and f.first_at < b.cur_start)
+    from first_membership f, bounds b
+  union all
+  select 'vessels_listed',
+         count(*) filter (where v.created_at >= b.cur_start),
+         count(*) filter (where v.created_at >= b.prev_start and v.created_at < b.cur_start)
+    from vessels v, bounds b;
+$$;
+
+-- Operator-reported vessel positions (insert-only; GFW's vessel_last_port is
+-- never overwritten — readers pick the freshest source). See
+-- 20260812_vessel_position_reports.sql.
+create table if not exists vessel_position_reports (
+  id          uuid        primary key default gen_random_uuid(),
+  vessel_id   integer     not null references vessels(id) on delete cascade,
+  user_id     uuid        not null references profiles(id),
+  port_text   text        not null,
+  lat         numeric,
+  lon         numeric,
+  reported_at timestamptz not null default now()
+);
+create index if not exists idx_position_reports_vessel
+  on vessel_position_reports (vessel_id, reported_at desc);
+alter table vessel_position_reports enable row level security;
+revoke all on vessel_position_reports from public, anon, authenticated;
+
+-- Storage policies: claim-documents uploads (was missing entirely — every
+-- claim doc upload failed) + vessel doc/photo upload rights now follow
+-- vessel_operators membership instead of profiles.role. See
+-- 20260812_storage_policies.sql.
+create policy "Authenticated users can upload claim documents"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'claim-documents'
+  and (storage.foldername(name))[1] = 'claims'
+);
+
+drop policy if exists "Operators and admins can upload vessel docs" on storage.objects;
+create policy "Operators and admins can upload vessel docs"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'vessel-docs'
+  and (
+    exists (select 1 from vessel_operators where user_id = auth.uid())
+    or exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  )
+);
+
+drop policy if exists "Operators and admins can upload vessel photos" on storage.objects;
+create policy "Operators and admins can upload vessel photos"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'vessel-photos'
+  and (
+    exists (select 1 from vessel_operators where user_id = auth.uid())
+    or exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  )
+);
+
+-- Role → is_admin (see 20260812_is_admin_column.sql for the additive half and
+-- 20260812_drop_role_column.sql for the drop, which runs only after deploy).
+-- profiles.role/vessel_id are superseded: admin = is_admin, operator =
+-- vessel_operators membership. The role-based get_signup_stats and storage
+-- policies above are superseded by the versions below.
+alter table profiles
+  add column if not exists is_admin boolean not null default false;
+
+create or replace function get_signup_stats()
+returns table (metric text, this_month bigint, last_month bigint)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with bounds as (
+    select date_trunc('month', now())                     as cur_start,
+           date_trunc('month', now()) - interval '1 month' as prev_start
+  ),
+  first_membership as (
+    select user_id, min(created_at) as first_at from vessel_operators group by user_id
+  )
+  select 'researcher_signups'::text,
+         count(*) filter (where p.created_at >= b.cur_start),
+         count(*) filter (where p.created_at >= b.prev_start and p.created_at < b.cur_start)
+    from profiles p, bounds b where not p.is_admin
+  union all
+  select 'operator_signups',
+         count(*) filter (where f.first_at >= b.cur_start),
+         count(*) filter (where f.first_at >= b.prev_start and f.first_at < b.cur_start)
+    from first_membership f, bounds b
+  union all
+  select 'vessels_listed',
+         count(*) filter (where v.created_at >= b.cur_start),
+         count(*) filter (where v.created_at >= b.prev_start and v.created_at < b.cur_start)
+    from vessels v, bounds b;
+$$;
+
+-- Storage upload policies: the admin arm keyed on profiles.role.
+drop policy if exists "Operators and admins can upload vessel docs" on storage.objects;
+create policy "Operators and admins can upload vessel docs"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'vessel-docs'
+  and (
+    exists (select 1 from vessel_operators where user_id = auth.uid())
+    or exists (select 1 from profiles where id = auth.uid() and is_admin)
+  )
+);
+
+drop policy if exists "Operators and admins can upload vessel photos" on storage.objects;
+create policy "Operators and admins can upload vessel photos"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'vessel-photos'
+  and (
+    exists (select 1 from vessel_operators where user_id = auth.uid())
+    or exists (select 1 from profiles where id = auth.uid() and is_admin)
+  )
+);
+
+-- Audit trigger must write data_changes regardless of who caused the change
+-- (browser profile self-edits run as authenticated, which RLS blocks).
+-- See 20260812_audit_trigger_definer.sql.
+alter function log_data_changes() security definer set search_path = public;

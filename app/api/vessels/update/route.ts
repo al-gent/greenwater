@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { supabaseAdmin, supabaseAdminAs } from '@/lib/supabase-admin'
+import { canOperateVessel } from '@/lib/operators'
 
 export async function PATCH(request: Request) {
   const supabase = createServerSupabaseClient()
@@ -13,25 +14,21 @@ export async function PATCH(request: Request) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role, vessel_id')
+    .select('is_admin')
     .eq('id', user.id)
     .single()
+  const isAdmin = profile?.is_admin === true
 
   const body = await request.json()
   // `_geocode` is a client signal (not a column) — true only when the user edited
   // the home-port text by hand and wants the server to resolve coords.
   const { vessel_id, _geocode, ...updates } = body
 
-  // Admins can edit any vessel; operators can only edit their own
-  if (profile?.role === 'admin') {
-    if (!vessel_id) {
-      return NextResponse.json({ error: 'vessel_id required' }, { status: 400 })
-    }
-  } else if (profile?.role === 'operator' && profile.vessel_id) {
-    if (vessel_id !== profile.vessel_id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-  } else {
+  if (!vessel_id) {
+    return NextResponse.json({ error: 'vessel_id required' }, { status: 400 })
+  }
+  // Admins can edit any vessel; anyone else needs a vessel_operators membership
+  if (!isAdmin && !(await canOperateVessel(user.id, vessel_id))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -49,7 +46,7 @@ export async function PATCH(request: Request) {
   safeUpdates.last_updated = new Date().toISOString()
 
   // Only admins may change a vessel's status (active/inactive/retired)
-  if (profile?.role !== 'admin') delete safeUpdates.status
+  if (!isAdmin) delete safeUpdates.status
 
   // Only geocode when the client explicitly asked (user edited the home-port text by
   // hand) AND no verified coords were provided. Crucially we do NOT geocode just because

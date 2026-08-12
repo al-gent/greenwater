@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerUser } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { canOperateVessel } from '@/lib/operators'
 
 export async function PATCH(
   _request: Request,
@@ -30,13 +31,7 @@ export async function PATCH(
   }
 
   // Operator side: only transition new → read (no-op if read or responded)
-  const { data: operatorProfile } = await supabaseAdmin
-    .from('profiles')
-    .select('role, vessel_id')
-    .eq('id', user.id)
-    .single()
-
-  if (operatorProfile?.role !== 'operator' || root.vessel_id !== operatorProfile.vessel_id) {
+  if (!(await canOperateVessel(user.id, root.vessel_id))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

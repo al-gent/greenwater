@@ -71,7 +71,8 @@ interface Scientist {
   profile_url: string | null
   verified: boolean
   created_at: string
-  role?: 'scientist' | 'operator'
+  /** derived server-side from vessel_operators membership */
+  is_operator?: boolean
 }
 
 interface VesselRow {
@@ -470,7 +471,7 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-2xl font-bold text-navy">Admin Dashboard</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {pendingSubs} pending submission{pendingSubs !== 1 ? 's' : ''} · {pendingClaims} pending claim{pendingClaims !== 1 ? 's' : ''} · {pendingScientists} unverified scientist{pendingScientists !== 1 ? 's' : ''}
+              {pendingSubs} pending submission{pendingSubs !== 1 ? 's' : ''} · {pendingClaims} pending claim{pendingClaims !== 1 ? 's' : ''} · {pendingScientists} unverified user{pendingScientists !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -489,7 +490,7 @@ export default function AdminDashboard() {
                 tab === t ? 'bg-navy text-white shadow-sm' : 'text-gray-500 hover:text-navy'
               }`}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === 'scientists' ? 'Users' : t.charAt(0).toUpperCase() + t.slice(1)}
               {t === 'submissions' && pendingSubs > 0 && (
                 <span className="ml-2 bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {pendingSubs}
@@ -714,17 +715,10 @@ export default function AdminDashboard() {
 
                   {claim.message && (
                     <div className="mt-3">
-                      <button
-                        onClick={() => toggleDesc(claim.id)}
-                        className="text-xs text-teal font-medium hover:underline"
-                      >
-                        {expandedDesc.has(claim.id) ? 'Hide details' : 'Show details'}
-                      </button>
-                      {expandedDesc.has(claim.id) && (
-                        <div className="mt-2 space-y-2">
-                          <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-4 leading-relaxed">
-                            {claim.message}
-                          </p>
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-4 leading-relaxed">
+                          {claim.message}
+                        </p>
                           {(claim as Claim & { document_url?: string }).document_url && (
                             <a
                               href={(claim as Claim & { document_url?: string }).document_url}
@@ -738,8 +732,7 @@ export default function AdminDashboard() {
                               View supporting document
                             </a>
                           )}
-                        </div>
-                      )}
+                      </div>
                     </div>
                   )}
 
@@ -1117,7 +1110,7 @@ export default function AdminDashboard() {
                         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${scientist.verified ? 'bg-teal-50 text-teal border-teal/20' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
                           {scientist.verified ? 'verified' : 'pending'}
                         </span>
-                        {scientist.role === 'operator' && (
+                        {scientist.is_operator && (
                           <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-navy/5 text-navy border-navy/15">
                             operator
                           </span>

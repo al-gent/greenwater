@@ -7,8 +7,8 @@ async function checkAdmin() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const { data: profile } = await supabaseAdmin
-    .from('profiles').select('role').eq('id', user.id).single()
-  return profile?.role === 'admin' ? user : null
+    .from('profiles').select('is_admin').eq('id', user.id).single()
+  return profile?.is_admin === true ? user : null
 }
 
 // Total items awaiting admin review — drives the badge on the navbar Admin link.
@@ -19,7 +19,7 @@ export async function GET() {
   const [subs, claims, scientists] = await Promise.all([
     supabaseAdmin.from('vessel_submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabaseAdmin.from('vessel_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-    supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }).in('role', ['scientist', 'operator']).eq('verified', false),
+    supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }).eq('is_admin', false).eq('verified', false),
   ])
 
   const submissions = subs.count ?? 0

@@ -14,6 +14,21 @@ export async function sendEmail({ to, subject, html, tags }: EmailOptions) {
     console.warn('BREVO_API_KEY not set — skipping email to', to)
     return
   }
+  // Outside production NO email ever reaches a real recipient: everything is
+  // redirected to ADMIN_NOTIFY_DEV_EMAIL (or dropped if it's unset). This is
+  // the single chokepoint — user-facing mail included, not just notifyAdmins.
+  if (process.env.NODE_ENV !== 'production') {
+    const devInbox = process.env.ADMIN_NOTIFY_DEV_EMAIL
+    if (!devInbox) {
+      console.log(`sendEmail [${process.env.NODE_ENV}] suppressed "${subject}" to ${to} — set ADMIN_NOTIFY_DEV_EMAIL to receive it`)
+      return
+    }
+    if (to !== devInbox) {
+      console.log(`sendEmail [${process.env.NODE_ENV}] redirecting "${subject}": ${to} → ${devInbox}`)
+      subject = `[dev → ${to}] ${subject}`
+      to = devInbox
+    }
+  }
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {

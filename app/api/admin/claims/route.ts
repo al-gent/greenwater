@@ -10,11 +10,11 @@ async function checkAdmin() {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role')
+    .select('is_admin')
     .eq('id', user.id)
     .single()
 
-  return profile?.role === 'admin' ? user : null
+  return profile?.is_admin === true ? user : null
 }
 
 export async function GET() {
@@ -61,30 +61,20 @@ export async function PATCH(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // On approval: promote user to operator and link vessel.
-  // Never overwrite an admin's role — an admin claiming a vessel must not
-  // demote themselves; they only get the vessel link.
+  // On approval: grant a vessel_operators membership. Operator-ness is a
+  // per-vessel fact, not a role — profiles.role is never touched, so this
+  // works identically for scientists, existing operators, and admins, and a
+  // second approved claim on the same vessel just adds another operator.
   if (status === 'approved' && claim.user_id) {
-    const { data: claimantProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('role')
-      .eq('id', claim.user_id)
-      .single()
+    const { error: membershipError } = await db
+      .from('vessel_operators')
+      .upsert(
+        { user_id: claim.user_id, vessel_id: claim.vessel_id },
+        { onConflict: 'user_id,vessel_id', ignoreDuplicates: true },
+      )
 
-    // Approving a claim IS identity vetting — grant verified alongside the
-    // role so operators aren't stranded unverified (they used to vanish from
-    // the scientists-only verification tab).
-    const profileUpdate = claimantProfile?.role === 'admin'
-      ? { vessel_id: claim.vessel_id, verified: true }
-      : { role: 'operator', vessel_id: claim.vessel_id, verified: true }
-
-    const { error: profileError } = await db
-      .from('profiles')
-      .update(profileUpdate)
-      .eq('id', claim.user_id)
-
-    if (profileError) {
-      console.error('Failed to update profile on claim approval:', profileError)
+    if (membershipError) {
+      console.error('Failed to grant membership on claim approval:', membershipError)
       // Roll back claim status
       await db
         .from('vessel_claims')
@@ -92,6 +82,10 @@ export async function PATCH(request: Request) {
         .eq('id', id)
       return NextResponse.json({ error: 'Failed to grant operator access. Approval was not saved.' }, { status: 500 })
     }
+
+    // Approving a claim IS identity vetting — grant verified so operators
+    // can also send inquiries about other vessels.
+    await db.from('profiles').update({ verified: true }).eq('id', claim.user_id)
   }
 
   // Send Brevo email

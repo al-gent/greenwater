@@ -15,10 +15,10 @@ export async function GET(request: Request) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role')
+    .select('is_admin')
     .eq('id', user.id)
     .single()
-  if (profile?.role !== 'admin') {
+  if (profile?.is_admin !== true) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

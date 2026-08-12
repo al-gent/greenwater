@@ -10,11 +10,11 @@ async function checkAdmin() {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role')
+    .select('is_admin')
     .eq('id', user.id)
     .single()
 
-  return profile?.role === 'admin' ? user : null
+  return profile?.is_admin === true ? user : null
 }
 
 export async function GET() {
@@ -154,30 +154,21 @@ export async function PATCH(request: Request) {
         .eq('id', newVessel.id) // still supabaseAdmin: photo-move bookkeeping, not an admin edit
     }
 
-    // Link the submitter's profile to the new vessel and promote to operator.
-    // Never overwrite an admin's role — an admin submitter keeps admin and
-    // only gets the vessel link.
+    // Grant the submitter a vessel_operators membership for the new vessel.
+    // No role writes — works identically for scientists and admins.
     if (submission.user_id) {
-      const { data: submitterProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('role')
-        .eq('id', submission.user_id)
-        .single()
-
-      // Approval = vetting: grant verified with the vessel link (see claims route)
-      const profileUpdate = submitterProfile?.role === 'admin'
-        ? { vessel_id: newVessel.id, verified: true }
-        : { role: 'operator', vessel_id: newVessel.id, verified: true }
-
-      const { error: profileError } = await db
-        .from('profiles')
-        .update(profileUpdate)
-        .eq('id', submission.user_id)
-
-      if (profileError) {
-        console.error('Failed to link submitter profile on approval:', profileError)
+      const { error: membershipError } = await db
+        .from('vessel_operators')
+        .upsert(
+          { user_id: submission.user_id, vessel_id: newVessel.id },
+          { onConflict: 'user_id,vessel_id', ignoreDuplicates: true },
+        )
+      if (membershipError) {
+        console.error('Failed to grant membership on submission approval:', membershipError)
         // Vessel is already created; surface the error but don't roll back the vessel.
       }
+      // Approval = vetting (see claims route)
+      await db.from('profiles').update({ verified: true }).eq('id', submission.user_id)
     }
   }
 

@@ -12,7 +12,7 @@ export async function getAdminNotifyEmails(type: AdminNotificationType): Promise
   const { data, error } = await supabaseAdmin
     .from('profiles')
     .select('email, notification_prefs')
-    .eq('role', 'admin')
+    .eq('is_admin', true)
     .not('email', 'is', null)
 
   if (error) {

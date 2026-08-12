@@ -10,27 +10,32 @@ async function checkAdmin() {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role')
+    .select('is_admin')
     .eq('id', user.id)
     .single()
 
-  return profile?.role === 'admin' ? user : null
+  return profile?.is_admin === true ? user : null
 }
 
 export async function GET() {
   const admin = await checkAdmin()
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Operators are listed too: verification gates messaging for everyone, and
-  // an operator-only profile would otherwise never appear anywhere verifiable.
-  const { data, error } = await supabaseAdmin
-    .from('profiles')
-    .select('id, email, first_name, last_name, institution, title, profile_url, verified, created_at, role')
-    .in('role', ['scientist', 'operator'])
-    .order('created_at', { ascending: false })
+  // Every non-admin user is listed: verification gates messaging for
+  // everyone. is_operator is derived from vessel_operators membership so the
+  // UI can badge operator accounts.
+  const [{ data, error }, { data: memberships }] = await Promise.all([
+    supabaseAdmin
+      .from('profiles')
+      .select('id, email, first_name, last_name, institution, title, profile_url, verified, created_at')
+      .eq('is_admin', false)
+      .order('created_at', { ascending: false }),
+    supabaseAdmin.from('vessel_operators').select('user_id'),
+  ])
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  const operatorIds = new Set((memberships ?? []).map((m) => m.user_id as string))
+  return NextResponse.json((data ?? []).map((p) => ({ ...p, is_operator: operatorIds.has(p.id) })))
 }
 
 export async function PATCH(request: Request) {

@@ -1,72 +1,77 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { getServerUser } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { stripHtml, getPhotoUrl } from '@/lib/vessel-utils'
+import { getOperatedVesselIds } from '@/lib/operators'
 import type { Vessel } from '@/lib/vessel-utils'
-import InquiryThread from '@/components/InquiryThread'
+import DashboardTabs from '@/components/DashboardTabs'
 
 export const dynamic = 'force-dynamic'
 
+// Account home for every signed-in user: listings (operators), messages,
+// profile + notification prefs, sign out. Operator-ness comes from
+// vessel_operators membership — one user can run several vessels, and
+// admins can be operators too.
 export default async function DashboardPage() {
   const user = await getServerUser()
   if (!user) redirect('/auth/signin?next=/dashboard')
 
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('role, vessel_id')
-    .eq('id', user.id)
-    .single()
+  const [vesselIds, { data: profile }] = await Promise.all([
+    getOperatedVesselIds(user.id),
+    supabaseAdmin
+      .from('profiles')
+      .select('first_name, last_name, institution, title, verified, is_admin')
+      .eq('id', user.id)
+      .single(),
+  ])
 
-  if (!profile || profile.role !== 'operator' || !profile.vessel_id) {
-    return (
-      <div className="pt-[88px] min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md px-4">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-navy mb-2">No vessel linked</h2>
-          <p className="text-gray-500 text-sm mb-6">
-            Your account isn&apos;t linked to a vessel yet. Submit a claim on a vessel listing or apply to list a new vessel.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <Link href="/" className="bg-navy text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors">
-              Browse Vessels
-            </Link>
-            <Link href="/list-your-vessel" className="border border-gray-200 text-gray-600 px-5 py-2.5 rounded-full text-sm font-medium hover:border-gray-300 transition-colors">
-              List a Vessel
-            </Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const [{ data: vessels }, { data: allMessages }] = await Promise.all([
+    vesselIds.length
+      ? supabaseAdmin.from('vessels').select('*').in('id', vesselIds).order('name')
+      : Promise.resolve({ data: [] as Vessel[] }),
+    vesselIds.length
+      ? supabaseAdmin
+          .from('messages')
+          .select('*')
+          .in('vessel_id', vesselIds)
+          .order('created_at', { ascending: true })
+          .limit(400)
+      : Promise.resolve({ data: [] }),
+  ])
 
-  const { data: vessel } = await supabaseAdmin
-    .from('vessels')
-    .select('*')
-    .eq('id', profile.vessel_id)
-    .single()
-
-  if (!vessel) redirect('/')
-
-  // Fetch all messages for this vessel and split into roots + replies
-  const { data: allMessages } = await supabaseAdmin
-    .from('messages')
-    .select('*')
-    .eq('vessel_id', profile.vessel_id)
-    .order('created_at', { ascending: true })
-    .limit(200)
-
-  const roots = (allMessages ?? []).filter((m) => m.thread_id === m.id)
+  // Operator side: inquiries on operated vessels, excluding threads the user
+  // authored (those render on the inquirer side below — author precedence).
+  const roots = (allMessages ?? []).filter((m) => m.thread_id === m.id && m.author_id !== user.id)
   const replies = (allMessages ?? []).filter((m) => m.thread_id !== m.id)
-
-  // Sort roots newest first
   roots.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-  // Fetch scientist profiles for display
+  // Inquirer side: threads the user started, on any vessel.
+  const { data: sentAll } = await supabaseAdmin
+    .from('messages')
+    .select('*')
+    .eq('author_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(200)
+  const sentRootsRaw = (sentAll ?? []).filter((m) => m.thread_id === m.id)
+  sentRootsRaw.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const sentThreadIds = sentRootsRaw.map((r) => r.id)
+  const { data: sentThreadMsgs } = sentThreadIds.length
+    ? await supabaseAdmin
+        .from('messages')
+        .select('*')
+        .in('thread_id', sentThreadIds)
+        .order('created_at', { ascending: true })
+    : { data: [] }
+  const sentReplies = (sentThreadMsgs ?? []).filter((m) => m.thread_id !== m.id)
+  const sentVesselIds = [...new Set(sentRootsRaw.map((r) => r.vessel_id as number))]
+  const { data: sentVessels } = sentVesselIds.length
+    ? await supabaseAdmin.from('vessels').select('id, name').in('id', sentVesselIds)
+    : { data: [] }
+  const sentVesselNames = Object.fromEntries((sentVessels ?? []).map((v) => [v.id, v.name]))
+  const sentRoots = sentRootsRaw.map((r) => ({
+    ...r,
+    vessel_name: sentVesselNames[r.vessel_id] ?? `Vessel #${r.vessel_id}`,
+  }))
+
   const authorIds = [...new Set(roots.map((r) => r.author_id))]
   const { data: scientistProfiles } = authorIds.length
     ? await supabaseAdmin
@@ -75,93 +80,100 @@ export default async function DashboardPage() {
         .in('id', authorIds)
     : { data: [] }
 
-  const v = vessel as Vessel
-  const photoUrl = getPhotoUrl(v)
-  const activity = stripHtml(v.main_activity ?? '')
-  const newCount = roots.filter((m) => m.status === 'new').length
+  // Listing views per vessel — filtered head-counts, no rows fetched.
+  // `prev` is the 30-60-days-ago window, for the trend direction.
+  const monthAgo = new Date(Date.now() - 30 * 86400_000).toISOString()
+  const twoMonthsAgo = new Date(Date.now() - 60 * 86400_000).toISOString()
+  const viewStats: Record<number, { total: number; recent: number; prev: number }> = {}
+  await Promise.all(
+    vesselIds.map(async (id) => {
+      const base = () =>
+        supabaseAdmin
+          .from('page_views')
+          .select('*', { count: 'exact', head: true })
+          .eq('site', 'app')
+          .eq('path', `/vessels/${id}`)
+      const [total, recent, prev] = await Promise.all([
+        base(),
+        base().gt('created_at', monthAgo),
+        base().gt('created_at', twoMonthsAgo).lte('created_at', monthAgo),
+      ])
+      viewStats[id] = { total: total.count ?? 0, recent: recent.count ?? 0, prev: prev.count ?? 0 }
+    }),
+  )
+
+  // Last known location per vessel: freshest of GFW's last-port record and
+  // the newest operator report. The two sources never overwrite each other.
+  const positions: Record<
+    number,
+    { label: string; date: string; source: 'operator' | 'tracking'; lat: number | null; lon: number | null }
+  > = {}
+  if (vesselIds.length) {
+    const [{ data: ports }, { data: reports }] = await Promise.all([
+      supabaseAdmin
+        .from('vessel_last_port')
+        .select('vessel_id, port_city, port_state, port_name, lat, lon, arrived_at')
+        .in('vessel_id', vesselIds),
+      supabaseAdmin
+        .from('vessel_position_reports')
+        .select('vessel_id, port_text, lat, lon, reported_at')
+        .in('vessel_id', vesselIds)
+        .order('reported_at', { ascending: false }),
+    ])
+    for (const p of ports ?? []) {
+      const label = p.port_city
+        ? `${p.port_city}${p.port_state ? `, ${p.port_state}` : ''}`
+        : (p.port_name as string | null)
+      if (label && p.arrived_at) {
+        positions[p.vessel_id] = {
+          label,
+          date: p.arrived_at,
+          source: 'tracking',
+          lat: p.lat != null ? Number(p.lat) : null,
+          lon: p.lon != null ? Number(p.lon) : null,
+        }
+      }
+    }
+    const seenReports = new Set<number>()
+    for (const r of reports ?? []) {
+      // rows arrive newest-first; only the newest report per vessel competes
+      if (seenReports.has(r.vessel_id)) continue
+      seenReports.add(r.vessel_id)
+      const existing = positions[r.vessel_id]
+      if (!existing || new Date(r.reported_at) > new Date(existing.date)) {
+        positions[r.vessel_id] = {
+          label: r.port_text,
+          date: r.reported_at,
+          source: 'operator',
+          lat: r.lat != null ? Number(r.lat) : null,
+          lon: r.lon != null ? Number(r.lon) : null,
+        }
+      }
+    }
+  }
 
   return (
     <div className="pt-[88px] min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-navy">Operator Dashboard</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{user.email}</p>
-          </div>
-          <Link
-            href="/dashboard/edit"
-            className="flex items-center gap-2 bg-navy text-white px-4 py-2.5 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Edit vessel info
-          </Link>
-        </div>
-
-        {/* Vessel card */}
-        <div className="bg-white rounded-2xl shadow-card overflow-hidden mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3">
-            <div className="relative" style={{ minHeight: '180px' }}>
-              <img src={photoUrl} alt={v.name} loading="lazy" className="w-full h-full object-cover absolute inset-0" />
-            </div>
-            <div className="sm:col-span-2 p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-navy">{v.name}</h2>
-                  {v.port_city && <p className="text-gray-500 text-sm mt-0.5">{v.port_city}{v.port_state ? `, ${v.port_state}` : ''}</p>}
-                </div>
-                <Link
-                  href={`/vessels/${v.id}`}
-                  target="_blank"
-                  className="text-xs text-teal font-medium hover:underline flex items-center gap-1"
-                >
-                  View listing
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </Link>
-              </div>
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: 'Length', value: v.length ? `${v.length} m` : null },
-                  { label: 'Cruise Speed', value: v.speed_cruise ? `${v.speed_cruise} kn` : null },
-                  { label: 'Research Bunks', value: v.scientists },
-                  { label: 'Year Built', value: v.year_built },
-                ].filter(s => s.value !== null && s.value !== undefined).map((s) => (
-                  <div key={s.label} className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-0.5">{s.label}</p>
-                    <p className="text-sm font-semibold text-navy">{s.value}</p>
-                  </div>
-                ))}
-              </div>
-              {activity && (
-                <p className="text-sm text-gray-500 mt-3 line-clamp-2">{activity}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Inquiries */}
-        <div id="inquiries">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-navy">
-              Inquiries
-              {newCount > 0 && (
-                <span className="ml-2 bg-gold text-navy text-xs font-bold px-2 py-0.5 rounded-full">
-                  {newCount} new
-                </span>
-              )}
-            </h2>
-          </div>
-
-          <InquiryThread
-            roots={roots}
-            replies={replies}
-            profiles={scientistProfiles ?? []}
-          />
-        </div>
+        <DashboardTabs
+          email={user.email ?? ''}
+          profile={{
+            first_name: profile?.first_name ?? null,
+            last_name: profile?.last_name ?? null,
+            institution: profile?.institution ?? null,
+            title: profile?.title ?? null,
+            verified: !!profile?.verified,
+            isAdmin: profile?.is_admin === true,
+          }}
+          vessels={(vessels ?? []) as Vessel[]}
+          viewStats={viewStats}
+          positions={positions}
+          roots={roots}
+          replies={replies}
+          sentRoots={sentRoots}
+          sentReplies={sentReplies}
+          scientistProfiles={scientistProfiles ?? []}
+        />
       </div>
     </div>
   )

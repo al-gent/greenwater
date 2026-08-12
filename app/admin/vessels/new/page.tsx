@@ -16,9 +16,9 @@ export default function AdminNewVesselPage() {
       if (!user) { router.push('/auth/signin?next=/admin'); return }
 
       const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
+        .from('profiles').select('is_admin').eq('id', user.id).single()
 
-      if (profile?.role !== 'admin') { router.push('/'); return }
+      if (profile?.is_admin !== true) { router.push('/'); return }
 
       setReady(true)
     })

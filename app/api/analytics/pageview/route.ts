@@ -131,12 +131,17 @@ export async function POST(request: NextRequest) {
       (async () => {
         const user = await getServerUser()
         if (!user) return null
-        const { data: profile } = await supabaseAdmin
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-        return profile?.role ?? 'scientist'
+        // Segment labels: admin (excluded below), operator = has any
+        // vessel_operators membership, scientist = everyone else.
+        const [{ data: profile }, { count }] = await Promise.all([
+          supabaseAdmin.from('profiles').select('is_admin').eq('id', user.id).single(),
+          supabaseAdmin
+            .from('vessel_operators')
+            .select('vessel_id', { count: 'exact', head: true })
+            .eq('user_id', user.id),
+        ])
+        if (profile?.is_admin) return 'admin'
+        return (count ?? 0) > 0 ? 'operator' : 'scientist'
       })(),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
     ])

@@ -1,24 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { supabaseAdmin, supabaseAdminAs } from '@/lib/supabase-admin'
+import { canOperateVessel } from '@/lib/operators'
 import type { VesselDoc } from '@/lib/vessel-utils'
 
 const MAX_BYTES = 25 * 1024 * 1024 // 25 MB
 const FETCH_TIMEOUT_MS = 20_000
 
-// Admins may manage any vessel's docs; operators only their own.
+// Admins may manage any vessel's docs; operators only vessels they operate
+// (vessel_operators membership — canOperateVessel includes the admin override).
 async function authorize(vesselId: number) {
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('role, vessel_id')
-    .eq('id', user.id)
-    .single()
-  if (profile?.role === 'admin') return user
-  if (profile?.role === 'operator' && profile.vessel_id === vesselId) return user
-  return null
+  return (await canOperateVessel(user.id, vesselId)) ? user : null
 }
 
 function filenameFrom(url: URL, disposition: string | null): string {

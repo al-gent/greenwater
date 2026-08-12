@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { sendEmail, operatorReplyEmail, scientistReplyOperatorEmail, newMessageAdminEmail } from '@/lib/brevo'
 import { notifyAdmins } from '@/lib/admin-notify'
 import { operatorRecipients, wantsMessageEmails } from '@/lib/message-notify'
+import { canOperateVessel } from '@/lib/operators'
 
 export async function POST(
   request: Request,
@@ -14,7 +15,7 @@ export async function POST(
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role, vessel_id, first_name, last_name')
+    .select('first_name, last_name')
     .eq('id', user.id)
     .single()
 
@@ -35,8 +36,11 @@ export async function POST(
 
   if (!root) return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
 
-  const isOperator = profile?.role === 'operator' && root.vessel_id === profile?.vessel_id
+  // Author precedence: the thread author always replies as the inquirer side,
+  // even if they also operate the vessel (self-inquiry edge case). Otherwise
+  // any operator of the vessel replies on the operator side.
   const isScientist = root.author_id === user.id
+  const isOperator = !isScientist && (await canOperateVessel(user.id, root.vessel_id))
 
   if (!isOperator && !isScientist) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -72,9 +76,9 @@ export async function POST(
           .from('profiles').select('email, first_name, notification_prefs').eq('id', root.author_id).single()
         const { data: vessel } = await supabaseAdmin
           .from('vessels').select('name').eq('id', root.vessel_id).single()
-        const operatorName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'The operator'
+        const operatorName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'The operator'
         if (scientistProfile?.email && wantsMessageEmails(scientistProfile.notification_prefs)) {
-          const inboxUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/inbox`
+          const inboxUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/dashboard?tab=messages`
           await sendEmail({
             to: scientistProfile.email,
             subject: `New reply about ${vessel?.name ?? 'your inquiry'} — Greenwater Foundation`,

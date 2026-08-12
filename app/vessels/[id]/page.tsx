@@ -58,8 +58,8 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   if (!vessel) notFound()
   if (vessel.status === 'deleted') notFound()
 
-  const [{ data: claimant }, { data: lastPort }, yearWindow, user] = await Promise.all([
-    supabaseAdmin.from('profiles').select('id').eq('vessel_id', id).maybeSingle(),
+  const [{ data: operators }, { data: lastPort }, yearWindow, user] = await Promise.all([
+    supabaseAdmin.from('vessel_operators').select('user_id').eq('vessel_id', id),
     supabaseAdmin.from('vessel_last_port').select('port_city, port_state, port_country, lat, lon, arrived_at').eq('vessel_id', id).maybeSingle(),
     getTrackWindow(supabaseAdmin, id, 365),
     getServerUser(),
@@ -76,11 +76,11 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
       initialWindow = allTime
     }
   }
-  const isClaimed = !!claimant
+  const isClaimed = (operators ?? []).length > 0
 
   const isAdmin = user
-    ? await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single()
-        .then(({ data }) => data?.role === 'admin')
+    ? await supabaseAdmin.from('profiles').select('is_admin').eq('id', user.id).single()
+        .then(({ data }) => data?.is_admin === true)
     : false
 
   const activity = stripHtml(vessel.main_activity)
@@ -242,7 +242,8 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
               </div>
             )}
 
-            {/* Claim */}
+            {/* Claim — only unclaimed vessels (co-operator claims deferred,
+                see VESSEL_OPERATORS_PLAN.md §7) */}
             {!isClaimed && (
               <div className="border-t border-gray-100 pt-6 flex flex-col items-center gap-3">
                 <p className="text-sm text-gray-400">Are you the operator of this vessel?</p>

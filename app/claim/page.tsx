@@ -12,12 +12,12 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function ClaimPage() {
-  const [vessels, { data: claimedProfiles }] = await Promise.all([
+  const [vessels, { data: memberships }] = await Promise.all([
     getAllVessels(),
-    supabaseAdmin.from('profiles').select('vessel_id').not('vessel_id', 'is', null),
+    supabaseAdmin.from('vessel_operators').select('vessel_id'),
   ])
 
-  const claimedIds = new Set((claimedProfiles ?? []).map((p) => p.vessel_id as number))
+  const claimedIds = new Set((memberships ?? []).map((m) => m.vessel_id as number))
 
   const options = vessels.map((v) => ({
     id: v.id,

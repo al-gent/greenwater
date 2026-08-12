@@ -11,11 +11,11 @@ export default async function AdminPage() {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role')
+    .select('is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'admin') redirect('/')
+  if (profile?.is_admin !== true) redirect('/')
 
   return <AdminDashboard />
 }

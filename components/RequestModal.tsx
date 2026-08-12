@@ -96,7 +96,7 @@ export default function RequestModal({ vesselId, vesselName, user: _user, profil
             <h3 className="text-xl font-semibold text-navy mb-2">Message Sent!</h3>
             <p className="text-gray-500 mb-6 max-w-sm">
               Your message has been sent.{' '}
-              <Link href="/inbox" className="text-teal font-medium hover:underline" onClick={onClose}>
+              <Link href="/dashboard?tab=messages" className="text-teal font-medium hover:underline" onClick={onClose}>
                 View your messages →
               </Link>
             </p>
