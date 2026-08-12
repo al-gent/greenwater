@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase-browser'
+import { trackConversion } from '@/lib/gtag'
 
 type AccountType = 'researcher' | 'vessel' | null
 
@@ -105,6 +106,7 @@ function SignUpForm() {
       setError('An account with this email already exists. Sign in below, or reset your password if you’ve forgotten it.')
       return
     }
+    trackConversion('signup')
     setDone(true)
   }
 

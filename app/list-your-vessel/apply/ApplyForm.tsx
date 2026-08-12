@@ -8,6 +8,7 @@ import CollapsibleSection from '@/components/CollapsibleSection'
 import { RATE_CURRENCIES } from '@/lib/vessel-utils'
 import { makeThumbnail } from '@/lib/image-thumb'
 import { createClient } from '@/lib/supabase-browser'
+import { trackConversion } from '@/lib/gtag'
 
 // Leaflet must not SSR
 const VesselMap = dynamic(() => import('@/components/VesselMap'), {
@@ -215,6 +216,7 @@ export default function ApplyForm({ userEmail }: Props) {
 
     setLoading(false)
     if (res.ok) {
+      trackConversion('listing')
       setSubmitted(true)
     } else {
       const data = await res.json().catch(() => ({}))

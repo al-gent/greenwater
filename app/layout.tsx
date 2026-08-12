@@ -5,6 +5,7 @@ import AuthHashHandler from '@/components/AuthHashHandler'
 import NewsletterForm from '@/components/NewsletterForm'
 import { Analytics } from '@vercel/analytics/react'
 import PageViewTracker from '@/components/PageViewTracker'
+import GoogleAdsTag from '@/components/GoogleAdsTag'
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vesselconnect.org').replace(/\/$/, '')
 
@@ -105,6 +106,7 @@ export default function RootLayout({
           </div>
         </footer>
         <Analytics />
+        <GoogleAdsTag />
         {/* Kill-switch: unregister any lingering service worker from the old site */}
         <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister();})});if('caches'in window){caches.keys().then(function(k){Promise.all(k.map(function(c){return caches.delete(c)}))})}}` }} />
       </body>

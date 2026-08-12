@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
+import { trackConversion } from '@/lib/gtag'
 
 interface Profile {
   first_name: string | null
@@ -51,6 +52,7 @@ export default function RequestModal({ vesselId, vesselName, user: _user, profil
 
     setLoading(false)
     if (res.ok) {
+      trackConversion('inquiry')
       setSubmitted(true)
     } else {
       const data = await res.json().catch(() => ({}))

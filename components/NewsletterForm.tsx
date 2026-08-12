@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { trackConversion } from '@/lib/gtag'
 
 export default function NewsletterForm() {
   const [fname, setFname] = useState('')
@@ -23,6 +24,7 @@ export default function NewsletterForm() {
     const data = await res.json()
 
     if (res.ok) {
+      trackConversion('newsletter')
       setStatus('success')
       setEmail('')
     } else {

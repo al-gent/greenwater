@@ -37,6 +37,13 @@ export default function PrivacyPolicyPage() {
                 information about how the site is used (pages visited, general location by country). No
                 personal identifiers are collected through analytics.
               </li>
+              <li>
+                <strong>Advertising measurement</strong> — Greenwater Foundation advertises on Google Search
+                through the Google Ad Grants program for nonprofits. If you arrive from one of those ads, Google
+                Ads records that a signup, message, listing submission, or newsletter subscription took place so
+                we can tell which ads are useful. We receive aggregate counts only, never a record of which
+                individual took which action.
+              </li>
             </ul>
           </section>
 
@@ -69,6 +76,7 @@ export default function PrivacyPolicyPage() {
               <li><strong>Supabase</strong> — database, file storage, and authentication.</li>
               <li><strong>Vercel</strong> — hosting and anonymised analytics.</li>
               <li><strong>Brevo</strong> — transactional email delivery.</li>
+              <li><strong>Google Ads</strong> — measurement of our Google Ad Grants search advertising.</li>
             </ul>
             <p className="mt-2">
               Each of these providers has their own privacy policy. We do not share your data with any other
@@ -96,8 +104,9 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-lg font-semibold text-navy mb-2">Cookies</h2>
             <p>
-              We use a single session cookie to keep you logged in. We do not use advertising cookies or
-              third-party tracking cookies.
+              We use a single session cookie to keep you logged in. Google Ads sets a cookie to measure whether
+              our search ads led to a signup or message — it is used for that measurement only. We do not use
+              cookies to build advertising profiles, and we do not sell or share your data with advertisers.
             </p>
           </section>
 
