@@ -101,7 +101,7 @@ NEXT_PUBLIC_GADS_LABEL_LISTING=Crm4CIqY0-AcEKmGkL1E
 NEXT_PUBLIC_GADS_LABEL_NEWSLETTER=XTlpCISY0-AcEKmGkL1E
 ```
 
-Remaining: set the env vars, **redeploy** (`NEXT_PUBLIC_*` is inlined at build), then verify with a real signup — conversions can take ~3 h to appear in Ads. Actions show "Inactive" until the first hit; that also clears the "Misconfigured" goal status.
+**Deployed + verified 2026-08-12:** env vars set in Vercel (all environments, via CLI), code pushed (`1396832`), production redeployed. Live test: gtag.js loads on vesselconnect.org and a fired signup event produced a `200` from `googleadservices.com/pagead/conversion/18381800233/?label=XzuaCMDXwuAcEKmGkL1E` — the full pipeline works. Two caveats from testing: (a) ad blockers (uBlock) silently replace gtag.js with a 3.7KB stub that returns a fake 200 and drops all pings — the code no-ops cleanly, but those users are invisible to Ads, and any tag debugging must happen with the blocker off; (b) unattributed test events verify the tag but only ad-click (gclid) conversions appear in the Conversions column. Actions may show "Inactive" for a few hours until Google processes the first ping.
 
 Two caveats worth knowing:
 
@@ -191,7 +191,9 @@ See specs, home ports, and recent port calls before you reach out to an operator
 
 Pin nothing at first; let Google test combinations, then pin headline 1 if a weak combination emerges.
 
-**Sitelinks** (≥2 required account-wide — all must stay on the approved domain, so do **not** link the greenwaterfoundation.org "About" page unless both domains are approved):
+**Copy rule (Adam, 2026-08-12): no perpetual promises.** "Free" as a statement of current fact is fine; "no fees, ever" / "free forever" is a commitment we may not keep — never use it. The line "No fees, ever." shipped in all three second-round RSAs and was replaced 8/12 with "…connecting scientists with research vessels around the world."
+
+**Sitelinks** (≥2 required account-wide — all must stay on the approved domain, so do **not** link the greenwaterfoundation.org "About" page unless both domains are approved). **Note 2026-08-12:** only "List Your Vessel" survived the wizard (the other three were silently lost, probably to the identity-wall save failures) — rebuilt the missing three at **account level** (serve for all future campaigns), pending review:
 
 | Sitelink | URL | Description |
 |---|---|---|
