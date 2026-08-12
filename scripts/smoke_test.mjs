@@ -142,7 +142,8 @@ async function main() {
   console.log('\n5. app_config webhook wiring')
   const { data: cfg } = await admin.from('app_config').select('key, value')
   const cfgMap = Object.fromEntries((cfg ?? []).map((r) => [r.key, r.value]))
-  check('webhook URL configured', (cfgMap.new_profile_webhook_url ?? '').startsWith('https://'))
+  // The suite itself suppresses the live URL for the run — judge the SAVED value
+  check('webhook URL configured', (cleanup.webhookUrl ?? '').startsWith('https://'))
   check('webhook secret configured (64 chars)', (cfgMap.webhook_secret ?? '').length === 64)
   check('secret matches .env.local', cfgMap.webhook_secret === process.env.SUPABASE_WEBHOOK_SECRET)
 
