@@ -39,8 +39,7 @@ session, with deviations from the file-by-file table:
   destructive half (`20260812_drop_role_column.sql`: drop role AND vessel_id) is written and
   runs ONLY after this code deploys. Bonuses beyond rename: admin "Users" tab derives its
   operator chip from membership, analytics stamps operator from membership.
-- Remaining: Phase 5 (2-user ship_ids recovery via user_migrations.ship_ids) — the only
-  outstanding phase after the drop runs.
+- **Phase 5 DONE 2026-08-13** (20260813_recover_multiship_memberships.sql): 4 dropped memberships restored — Mark regains Western Flyer, Dohrn, Odon de Buen; Larissa regains Mojave (ROV). Every phase of this plan is now shipped except the deliberately deferred co-operator claims.
 
 Checked against the live DB and codebase after the /claim + admin-email work shipped (13e5d0c).
 `lib/operators.ts` does not exist; Phases 1-6 have not started. Changes since scoping:
