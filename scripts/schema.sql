@@ -800,3 +800,87 @@ drop trigger if exists profiles_new_user_webhook on public.profiles;
 create trigger profiles_new_user_webhook
   after insert on public.profiles
   for each row execute function public.notify_new_profile_webhook();
+
+-- ── Ad-click attribution on profiles (20260812) ──────────────────────────────
+-- Which Google Ads click (if any) brought the signup: landing page stores
+-- ?gclid=/?wbraid=/?gbraid= (lib/ad-attribution.ts), signup metadata carries
+-- it, handle_new_user copies it here. Source of truth for offline conversion
+-- uploads to Google Ads and "signups via ads" stats. At most one id is set.
+alter table public.profiles
+  add column if not exists gclid          text,
+  add column if not exists wbraid         text,
+  add column if not exists gbraid         text,
+  add column if not exists ad_landing_at  timestamptz;
+
+-- Redefined to copy the ad-click fields (supersedes the definition above;
+-- claim logic unchanged). See supabase/migrations/20260812_gclid_attribution.sql
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+  declare
+    claim      jsonb := new.raw_user_meta_data -> 'pending_claim';
+    full_name  text;
+    landing_at timestamptz;
+  begin
+    -- Signup metadata is client-controlled; a malformed timestamp must never
+    -- block account creation.
+    begin
+      landing_at := (new.raw_user_meta_data->>'ad_landing_at')::timestamptz;
+    exception when others then
+      landing_at := null;
+    end;
+
+    insert into public.profiles
+      (id, email, first_name, last_name, institution, title, profile_url,
+       gclid, wbraid, gbraid, ad_landing_at)
+    values (
+      new.id,
+      new.email,
+      new.raw_user_meta_data->>'first_name',
+      new.raw_user_meta_data->>'last_name',
+      new.raw_user_meta_data->>'institution',
+      new.raw_user_meta_data->>'title',
+      new.raw_user_meta_data->>'profile_url',
+      new.raw_user_meta_data->>'gclid',
+      new.raw_user_meta_data->>'wbraid',
+      new.raw_user_meta_data->>'gbraid',
+      landing_at
+    );
+
+    -- Stashed by app/claim/ClaimSignupForm.tsx at signup. Same three-field
+    -- guard the old TypeScript path used.
+    if claim is not null
+       and coalesce(claim->>'vessel_id', '')   <> ''
+       and coalesce(claim->>'vessel_name', '') <> ''
+       and coalesce(claim->>'message', '')     <> ''
+    then
+      begin
+        full_name := nullif(trim(concat_ws(' ',
+          new.raw_user_meta_data->>'first_name',
+          new.raw_user_meta_data->>'last_name')), '');
+
+        -- role/organization/claimant_name are NOT NULL; metadata may not have them.
+        insert into public.vessel_claims
+          (vessel_id, vessel_name, user_id, claimant_name, email, role, organization, message)
+        values (
+          (claim->>'vessel_id')::int,
+          claim->>'vessel_name',
+          new.id,
+          coalesce(full_name, 'Unknown'),
+          coalesce(new.email, ''),
+          coalesce(new.raw_user_meta_data->>'title', ''),
+          coalesce(new.raw_user_meta_data->>'institution', ''),
+          claim->>'message'
+        );
+      exception when others then
+        -- A malformed claim must never block account creation.
+        raise warning 'handle_new_user: claim insert failed for user %: %', new.id, sqlerrm;
+      end;
+    end if;
+
+    return new;
+  end;
+  $function$;
