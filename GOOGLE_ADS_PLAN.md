@@ -191,6 +191,8 @@ See specs, home ports, and recent port calls before you reach out to an operator
 
 Pin nothing at first; let Google test combinations, then pin headline 1 if a weak combination emerges.
 
+**Silent-loss incident, third instance (2026-08-17):** the keywords for ad groups 2–3 (Oceanographic ship hire, Survey & fieldwork) were GONE — account had only the 4 Research-vessel-charter keywords. Same suspected root cause as the vanished sitelinks and the stale review screen: the 8/11 identity-wall save failures. Restored all 6 from §4 lists on 8/17 (statuses: under review; several flagged low-search-volume, which is normal for these phrases). **Lesson: after any "Changes failed to save" event, re-verify EVERY entity type — ads, keywords, sitelinks, negatives — not just the one being edited.** Negative list attachment re-confirmed intact.
+
 **Copy rule (Adam, 2026-08-12): no perpetual promises.** "Free" as a statement of current fact is fine; "no fees, ever" / "free forever" is a commitment we may not keep — never use it. The line "No fees, ever." shipped in all three second-round RSAs and was replaced 8/12 with "…connecting scientists with research vessels around the world."
 
 **Sitelinks** (≥2 required account-wide — all must stay on the approved domain, so do **not** link the greenwaterfoundation.org "About" page unless both domains are approved). **Note 2026-08-12:** only "List Your Vessel" survived the wizard (the other three were silently lost, probably to the identity-wall save failures) — rebuilt the missing three at **account level** (serve for all future campaigns), pending review:
