@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON, Rectangle, Circle, useMap } from 'react-leaflet'
 import type { Vessel } from '@/lib/vessel-utils'
-import { stripHtml, getFallbackPhotoUrl, countryNameToFlag } from '@/lib/vessel-utils'
+import { stripHtml, getFallbackPhotoUrl, countryNameToFlag, CARTO_TILE_URL, CARTO_ATTRIBUTION } from '@/lib/vessel-utils'
 import Link from 'next/link'
 import L from 'leaflet'
 
@@ -176,8 +176,8 @@ export default function HomeMap({ vessels, onVesselClick, view, operatingAreas, 
     >
       <FixLeafletIcons />
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        attribution={CARTO_ATTRIBUTION}
+        url={CARTO_TILE_URL}
         maxZoom={19}
       />
       <FlyToPlace place={searchPlace} />

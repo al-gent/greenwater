@@ -405,3 +405,10 @@ export function filterVessels(vessels: Vessel[], filters: FilterState): Vessel[]
     return true
   })
 }
+
+// CARTO raster basemap (Voyager). Keyless requests still work but are
+// watermarked "API KEY REQUIRED"; free key from carto.com/basemaps/apikey.
+const cartoKey = process.env.NEXT_PUBLIC_CARTO_BASEMAPS_KEY
+export const CARTO_TILE_URL = `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png${cartoKey ? `?key=${cartoKey}` : ''}`
+export const CARTO_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'

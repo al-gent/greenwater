@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, GeoJSON, Polyline, CircleMarker, useMap } from 'react-leaflet'
 import L from 'leaflet'
+import { CARTO_TILE_URL, CARTO_ATTRIBUTION } from '@/lib/vessel-utils'
 import '@geoman-io/leaflet-geoman-free'
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
 
@@ -338,8 +339,8 @@ export default function VesselMap({
         worldCopyJump
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          attribution={CARTO_ATTRIBUTION}
+          url={CARTO_TILE_URL}
           maxZoom={19}
         />
 

@@ -8,6 +8,7 @@ import { useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { CARTO_TILE_URL } from '@/lib/vessel-utils'
 
 function pinIcon() {
   return L.divIcon({
@@ -61,7 +62,7 @@ export default function PositionMap({ lat, lon, onPick, clickToPick, className }
       keyboard={interactive}
       attributionControl={false}
     >
-      <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+      <TileLayer url={CARTO_TILE_URL} />
       {hasPin && (
         <Marker
           position={[lat, lon]}
