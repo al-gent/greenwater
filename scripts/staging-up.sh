@@ -25,8 +25,10 @@ cd "$(dirname "$0")/.."
 
 PROD_REF=jmpxcsihkmyotidxjuyv
 BRANCH=staging
-# Stable alias of the staging git branch's Vercel deployment.
-STAGING_SITE="${STAGING_SITE:-https://greenwater-git-staging-adamgent.vercel.app}"
+# Stable domain of the staging git branch's Vercel deployment
+# (stage CNAME → cname.vercel-dns.com in Cloudflare, DNS-only;
+# fallback alias: greenwater-git-staging-adamgent.vercel.app).
+STAGING_SITE="${STAGING_SITE:-https://stage.vesselconnect.org}"
 DEV_INBOX="${ADMIN_NOTIFY_DEV_EMAIL:-94gent@gmail.com}"
 
 # Supabase personal access token, as stored by `supabase login` (macOS keychain).
