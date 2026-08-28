@@ -12,6 +12,8 @@ PROD_REF=jmpxcsihkmyotidxjuyv
 BRANCH=staging
 
 if supabase branches get "$BRANCH" --project-ref "$PROD_REF" >/dev/null 2>&1; then
+  # Persistent branches refuse deletion (422) — demote first.
+  supabase branches update "$BRANCH" --project-ref "$PROD_REF" --persistent=false >/dev/null 2>&1 || true
   supabase branches delete "$BRANCH" --project-ref "$PROD_REF" --yes 2>/dev/null \
     || supabase branches delete "$BRANCH" --project-ref "$PROD_REF" <<< 'y'
   echo "Deleted branch '$BRANCH' — billing stopped."
