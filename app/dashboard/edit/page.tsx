@@ -11,6 +11,8 @@ function EditVesselPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const requestedId = parseInt(searchParams.get('vessel') ?? '', 10)
+  // Set by the claim flow: the user just claimed this vessel and landed here.
+  const justClaimed = searchParams.get('welcome') === '1'
   const [vessel, setVessel] = useState<Vessel | null>(null)
   const [vesselId, setVesselId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -66,8 +68,8 @@ function EditVesselPageInner() {
 
   return (
     <div className="pt-[88px] min-h-screen bg-gray-50">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="flex items-center gap-3 mb-4 sm:mb-6">
           <Link href="/dashboard" className="text-gray-400 hover:text-navy transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -76,7 +78,19 @@ function EditVesselPageInner() {
           <h1 className="text-xl font-bold text-navy">Edit Vessel Info</h1>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-card p-6 sm:p-8">
+        {justClaimed && (
+          <div className="mb-4 bg-teal-50 border border-teal/30 rounded-2xl px-4 py-3.5 sm:px-5">
+            <p className="text-sm font-semibold text-navy">
+              {vessel.name} is yours to manage 🎉
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              Your changes go live immediately. Our team will confirm your claim behind the
+              scenes and reach out if we have any questions.
+            </p>
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl shadow-card p-4 sm:p-8">
           <VesselEditForm vessel={vessel} vesselId={vesselId} backHref="/dashboard" />
         </div>
       </div>

@@ -63,30 +63,39 @@ export async function POST(request: Request) {
     ),
   )
 
-  // The claim itself is filed in SQL by handle_new_user, in the same
-  // transaction as the profile (see 20260812_claim_insert_in_trigger.sql).
-  // Read back what actually landed rather than trusting signup metadata, so
-  // the email always describes a claim that really exists.
-  const { data: claim } = await supabaseAdmin
-    .from('vessel_claims')
-    .select('vessel_name, message')
+  // The claim itself is the vessel_operators row written in SQL by
+  // handle_new_user, in the same transaction as the profile. Read back what
+  // actually landed rather than trusting signup metadata, so the email always
+  // describes a membership that really exists.
+  const { data: membership } = await supabaseAdmin
+    .from('vessel_operators')
+    .select('vessel_id, status, claim_message')
     .eq('user_id', record.id)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
-  if (claim) {
+  if (membership) {
+    const { data: vessel } = await supabaseAdmin
+      .from('vessels')
+      .select('name')
+      .eq('id', membership.vessel_id)
+      .single()
+    const vesselName = vessel?.name ?? `Vessel #${membership.vessel_id}`
+    const suffix = membership.status === 'active'
+      ? ' (access granted — please confirm)'
+      : ' (awaiting activation)'
     await notifyAdmins(
       'new_claim',
-      `${name} claimed ${claim.vessel_name}`,
+      `${name} claimed ${vesselName}${suffix}`,
       newClaimAdminEmail(
-        claim.vessel_name,
+        vesselName,
         name,
         email,
         record.title ?? '',
         record.institution ?? '',
-        claim.message ?? '',
-        `${siteUrl}/admin`,
+        membership.claim_message ?? '',
+        `${siteUrl}/admin?tab=claims`,
       ),
     )
   }

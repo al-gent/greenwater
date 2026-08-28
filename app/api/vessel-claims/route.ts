@@ -4,6 +4,13 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { notifyAdmins } from '@/lib/admin-notify'
 import { newClaimAdminEmail } from '@/lib/brevo'
 
+// Claiming IS becoming an operator: this inserts the vessel_operators row
+// directly (vessel_claims is legacy, read-only). First claimant of an
+// unclaimed vessel is 'active' immediately — admin review confirms or
+// suspends afterwards instead of gating access. A vessel that already has
+// any membership row gets a 'pending' one, so an actively managed listing
+// can't be hijacked by a second claimant. Signup-path claims follow the
+// same rule in handle_new_user.
 export async function POST(request: Request) {
   const serverClient = createServerSupabaseClient()
   const { data: { user } } = await serverClient.auth.getUser()
@@ -32,30 +39,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'vessel_id, vessel_name, and message are required.' }, { status: 400 })
   }
 
+  const vesselIdNum = parseInt(String(vessel_id), 10)
   const claimantName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Unknown'
   const email = profile?.email ?? user.email ?? ''
 
-  const { error } = await supabaseAdmin.from('vessel_claims').insert({
-    vessel_id: parseInt(String(vessel_id), 10),
-    vessel_name: vessel_name.trim(),
-    user_id: user.id,
-    claimant_name: claimantName,
-    email,
-    role: profile?.title ?? '',
-    organization: profile?.institution ?? '',
-    message: message.trim(),
-    document_url: document_url ?? null,
-  })
+  const { count: existingRows } = await supabaseAdmin
+    .from('vessel_operators')
+    .select('*', { count: 'exact', head: true })
+    .eq('vessel_id', vesselIdNum)
+
+  const status = (existingRows ?? 0) === 0 ? 'active' : 'pending'
+
+  const { error } = await supabaseAdmin.from('vessel_operators').upsert(
+    {
+      user_id: user.id,
+      vessel_id: vesselIdNum,
+      status,
+      claim_message: message.trim(),
+      claim_document_url: document_url ?? null,
+    },
+    { onConflict: 'user_id,vessel_id', ignoreDuplicates: true },
+  )
 
   if (error) {
-    console.error('vessel_claims insert error:', error)
+    console.error('vessel_operators claim insert error:', error)
     return NextResponse.json({ error: 'Failed to submit claim. Please try again.' }, { status: 500 })
   }
 
-  const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin`
+  // The upsert ignores duplicates, so a re-claim keeps whatever standing the
+  // user already has — report their actual row status, not the computed one.
+  const { data: row } = await supabaseAdmin
+    .from('vessel_operators')
+    .select('status')
+    .eq('user_id', user.id)
+    .eq('vessel_id', vesselIdNum)
+    .single()
+  const instant = row?.status === 'active'
+
+  const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/admin?tab=claims`
   await notifyAdmins(
     'new_claim',
-    `${claimantName} claimed ${vessel_name.trim()}`,
+    `${claimantName} claimed ${vessel_name.trim()}${instant ? ' (access granted — please confirm)' : ' (awaiting activation)'}`,
     newClaimAdminEmail(
       vessel_name.trim(),
       claimantName,
@@ -67,5 +91,5 @@ export async function POST(request: Request) {
     ),
   )
 
-  return NextResponse.json({ success: true }, { status: 201 })
+  return NextResponse.json({ success: true, instant }, { status: 201 })
 }

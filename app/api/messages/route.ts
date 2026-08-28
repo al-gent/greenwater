@@ -18,14 +18,17 @@ export async function POST(request: Request) {
   const user = await getServerUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Any signed-in account can message (the verified gate was dropped 8/28 —
+  // friction removal; every conversation still lands in the admin feed, so
+  // abuse is visible and the gate can come back if spam appears).
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('verified, first_name, last_name, institution, title')
+    .select('first_name, last_name, institution, title')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.verified) {
-    return NextResponse.json({ error: 'Account not yet verified' }, { status: 403 })
+  if (!profile) {
+    return NextResponse.json({ error: 'Profile not found' }, { status: 403 })
   }
 
   const body = await request.json()

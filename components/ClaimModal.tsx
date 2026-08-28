@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 
 interface Profile {
@@ -22,6 +23,7 @@ const ACCEPTED = '.pdf,.jpg,.jpeg,.png,.webp'
 const MAX_MB = 10
 
 export default function ClaimModal({ vesselId, vesselName, profile, onClose }: ClaimModalProps) {
+  const router = useRouter()
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -90,10 +92,17 @@ export default function ClaimModal({ vesselId, vesselName, profile, onClose }: C
       }),
     })
 
-    setLoading(false)
     if (res.ok) {
+      const data = await res.json().catch(() => ({}))
+      if (data.instant) {
+        // Access granted immediately — straight to the listing editor.
+        router.push(`/dashboard/edit?vessel=${vesselId}&welcome=1`)
+        return
+      }
+      setLoading(false)
       setSubmitted(true)
     } else {
+      setLoading(false)
       const data = await res.json().catch(() => ({}))
       setError(data.error ?? 'Submission failed. Please try again.')
     }
@@ -134,8 +143,8 @@ export default function ClaimModal({ vesselId, vesselName, profile, onClose }: C
             </div>
             <h3 className="text-xl font-semibold text-navy mb-2">Claim Submitted</h3>
             <p className="text-gray-500 mb-2 max-w-sm">
-              We&apos;ll review your claim for <strong>{vesselName}</strong> and follow up at{' '}
-              <strong>{profile?.email}</strong>.
+              <strong>{vesselName}</strong> already has an operator, so our team will review your
+              claim and follow up at <strong>{profile?.email}</strong>.
             </p>
             <p className="text-sm text-gray-400 mb-6">Most reviews take 3–5 business days.</p>
             <button
@@ -175,7 +184,7 @@ export default function ClaimModal({ vesselId, vesselName, profile, onClose }: C
                   value={relationship}
                   onChange={(e) => setRelationship(e.target.value)}
                   placeholder="e.g. I am the Chief Scientist and have operated this vessel since 2019 under the University of Washington's research fleet…"
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition resize-none"
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition resize-none"
                 />
               </div>
 
@@ -227,7 +236,7 @@ export default function ClaimModal({ vesselId, vesselName, profile, onClose }: C
                       value={docUrl}
                       onChange={(e) => setDocUrl(e.target.value)}
                       placeholder="https://drive.google.com/…"
-                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
+                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
                     />
                   </div>
                 )}

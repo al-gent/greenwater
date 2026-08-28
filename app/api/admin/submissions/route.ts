@@ -160,7 +160,8 @@ export async function PATCH(request: Request) {
       const { error: membershipError } = await db
         .from('vessel_operators')
         .upsert(
-          { user_id: submission.user_id, vessel_id: newVessel.id },
+          // Admin approval creates this membership, so it's born confirmed.
+          { user_id: submission.user_id, vessel_id: newVessel.id, status: 'active', confirmed_at: new Date().toISOString() },
           { onConflict: 'user_id,vessel_id', ignoreDuplicates: true },
         )
       if (membershipError) {

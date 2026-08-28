@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase-browser'
@@ -75,7 +75,7 @@ function VesselPicker({
         onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
         onFocus={() => setOpen(true)}
         placeholder="Search by vessel name…"
-        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
+        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
       />
       {open && (
         <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-card max-h-64 overflow-y-auto">
@@ -107,6 +107,7 @@ function VesselPicker({
 }
 
 function ClaimForm({ vessels }: { vessels: VesselOption[] }) {
+  const router = useRouter()
   const searchParams = useSearchParams()
 
   const [vessel, setVessel] = useState<VesselOption | null>(() => {
@@ -173,10 +174,17 @@ function ClaimForm({ vessels }: { vessels: VesselOption[] }) {
           message: relationship.trim(),
         }),
       })
-      setLoading(false)
       if (res.ok) {
+        const data = await res.json().catch(() => ({}))
+        if (data.instant) {
+          // Access granted immediately — drop them straight into their listing.
+          router.push(`/dashboard/edit?vessel=${vessel.id}&welcome=1`)
+          return
+        }
+        setLoading(false)
         setDone('submitted')
       } else {
+        setLoading(false)
         const data = await res.json().catch(() => ({}))
         setError(data.error ?? 'Submission failed. Please try again.')
       }
@@ -209,7 +217,9 @@ function ClaimForm({ vessels }: { vessels: VesselOption[] }) {
             message: relationship.trim(),
           },
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/claim/submitted?vessel=${encodeURIComponent(vessel.name)}`)}`,
+        // Confirming the email lands them directly in their listing's editor —
+        // the membership is granted at signup by handle_new_user.
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/dashboard/edit?vessel=${vessel.id}&welcome=1`)}`,
       },
     })
     setLoading(false)
@@ -227,7 +237,9 @@ function ClaimForm({ vessels }: { vessels: VesselOption[] }) {
     setDone('confirm_email')
   }
 
-  const inputClass = 'w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition'
+  // text-base on mobile: iOS Safari auto-zooms the page when focusing an
+  // input whose font-size is under 16px
+  const inputClass = 'w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition'
 
   if (done) {
     return (
@@ -244,21 +256,21 @@ function ClaimForm({ vessels }: { vessels: VesselOption[] }) {
           </div>
           {done === 'confirm_email' ? (
             <>
-              <h2 className="text-2xl font-bold text-navy mb-2">Claim submitted — check your email</h2>
+              <h2 className="text-2xl font-bold text-navy mb-2">Almost there — check your email</h2>
               <p className="text-gray-500 mb-3">
-                Your claim for <strong>{vessel?.name}</strong> is with our team. We also sent a
-                confirmation link to <strong>{email}</strong> — click it to activate your account.
+                We sent a confirmation link to <strong>{email}</strong>. Click it and you&apos;ll land
+                right in the editor for <strong>{vessel?.name}</strong> — no waiting for approval.
               </p>
               <p className="text-sm text-gray-400 max-w-xs mx-auto">
-                Nothing else to fill out. We&apos;ll email you when your claim is approved.
+                Our team will confirm your claim behind the scenes and reach out if we have questions.
               </p>
             </>
           ) : (
             <>
               <h2 className="text-2xl font-bold text-navy mb-2">Claim submitted</h2>
               <p className="text-gray-500 mb-3">
-                We&apos;ll review your claim for <strong>{vessel?.name}</strong> and follow up at{' '}
-                <strong>{user?.email}</strong>.
+                <strong>{vessel?.name}</strong> already has an operator, so our team will review
+                your claim and follow up at <strong>{user?.email}</strong>.
               </p>
               <p className="text-sm text-gray-400">Most reviews take 3–5 business days.</p>
             </>

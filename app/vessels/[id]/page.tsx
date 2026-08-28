@@ -59,7 +59,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   if (vessel.status === 'deleted') notFound()
 
   const [{ data: operators }, { data: lastPort }, yearWindow, user] = await Promise.all([
-    supabaseAdmin.from('vessel_operators').select('user_id').eq('vessel_id', id),
+    supabaseAdmin.from('vessel_operators').select('user_id').eq('vessel_id', id).eq('status', 'active'),
     supabaseAdmin.from('vessel_last_port').select('port_city, port_state, port_country, lat, lon, arrived_at').eq('vessel_id', id).maybeSingle(),
     getTrackWindow(supabaseAdmin, id, 365),
     getServerUser(),

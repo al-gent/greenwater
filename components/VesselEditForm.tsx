@@ -10,8 +10,10 @@ import { createClient } from '@/lib/supabase-browser'
 import PlaceAutocomplete from '@/components/PlaceAutocomplete'
 import CollapsibleSection from '@/components/CollapsibleSection'
 
+// text-base on mobile: iOS Safari auto-zooms the page when focusing an input
+// whose font-size is under 16px — operators edit these on their phones
 const editInputClass =
-  'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition'
+  'w-full border border-gray-200 rounded-lg px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition'
 
 // Leaflet must not SSR
 const VesselMap = dynamic(() => import('@/components/VesselMap'), {
@@ -440,9 +442,10 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
       <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <input
         type={type}
+        inputMode={NUM_FIELDS.has(key) ? 'decimal' : undefined}
         value={form[key] ?? ''}
         onChange={(e) => set(key, e.target.value)}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
+        className={editInputClass}
       />
       {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
     </div>
@@ -455,7 +458,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
         rows={rows}
         value={form[key] ?? ''}
         onChange={(e) => set(key, e.target.value)}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition resize-none"
+        className={`${editInputClass} resize-none`}
       />
     </div>
   )
@@ -487,7 +490,7 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
           <select
             value={form.status || 'active'}
             onChange={(e) => set('status', e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal"
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal"
           >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -931,11 +934,12 @@ export default function VesselEditForm({ vessel, vesselId, backHref, createMode,
         {ta('Amenities', 'amenities', 2)}
       </CollapsibleSection>
 
-      <div className="pt-4">
+      {/* Sticky on mobile so Save is always in reach on the long form */}
+      <div className="pt-4 sticky bottom-0 sm:static pb-3 sm:pb-0 bg-gradient-to-t from-white via-white/95 to-transparent sm:bg-none">
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-navy text-white py-3.5 rounded-2xl font-semibold hover:bg-navy-600 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+          className="w-full bg-navy text-white py-3.5 rounded-2xl font-semibold hover:bg-navy-600 transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg sm:shadow-none"
         >
           {saving ? (
             <>

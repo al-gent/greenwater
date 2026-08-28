@@ -1064,3 +1064,144 @@ with check (
 -- (browser profile self-edits run as authenticated, which RLS blocks).
 -- See 20260812_audit_trigger_definer.sql.
 alter function log_data_changes() security definer set search_path = public;
+
+-- ── vessel_operators absorbs vessel_claims (claim-friction redesign) ─────────
+-- Claiming IS becoming an operator: one membership row per user+vessel with a
+-- status lever ('active' grants editing/uploads/badges; 'pending' awaits admin
+-- activation — used when the vessel already has an operator; 'suspended' is a
+-- reversible freeze). Claim context (relationship message, supporting doc)
+-- lives on the row. Admin review is non-blocking: confirmed_at/confirmed_by
+-- record it. vessel_claims stops receiving writes and remains as read-only
+-- history until dropped by a later migration.
+-- See supabase/migrations/20260828_operators_absorb_claims.sql.
+alter table vessel_operators
+  add column if not exists id                 uuid not null default gen_random_uuid(),
+  add column if not exists status             text not null default 'active',
+  add column if not exists claim_message      text,
+  add column if not exists claim_document_url text,
+  add column if not exists confirmed_at       timestamptz,
+  add column if not exists confirmed_by       uuid references profiles(id),
+  add column if not exists admin_notes        text;
+alter table vessel_operators
+  drop constraint if exists vessel_operators_status_check;
+alter table vessel_operators
+  add constraint vessel_operators_status_check
+  check (status in ('active', 'pending', 'suspended'));
+create unique index if not exists idx_vessel_operators_row_id on vessel_operators (id);
+
+-- Moderation actions get the same audit trail as data edits.
+drop trigger if exists vessel_operators_audit on vessel_operators;
+create trigger vessel_operators_audit after update on vessel_operators
+  for each row execute function log_data_changes();
+
+-- Only ACTIVE memberships grant ability (supersedes the membership checks
+-- above): unread-badge counting and storage upload rights.
+create or replace function public.message_unread_count(p_user_id uuid)
+returns integer language sql stable as $$
+  select
+    coalesce((
+      select count(*) from messages m
+      where m.thread_id = m.id and m.status = 'new' and m.author_id <> p_user_id
+        and m.vessel_id in (select vessel_id from vessel_operators
+                             where user_id = p_user_id and status = 'active')
+    ), 0)::int
+    +
+    coalesce((
+      select count(*) from messages root
+      where root.author_id = p_user_id and root.thread_id = root.id
+        and exists (
+          select 1 from messages m2
+          where m2.thread_id = root.id and m2.author_role = 'operator'
+            and m2.created_at > coalesce(root.scientist_read_at, '-infinity'::timestamptz)
+        )
+    ), 0)::int
+$$;
+
+drop policy if exists "Operators and admins can upload vessel docs" on storage.objects;
+create policy "Operators and admins can upload vessel docs"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'vessel-docs'
+  and (
+    exists (select 1 from vessel_operators where user_id = auth.uid() and status = 'active')
+    or exists (select 1 from profiles where id = auth.uid() and is_admin)
+  )
+);
+
+drop policy if exists "Operators and admins can upload vessel photos" on storage.objects;
+create policy "Operators and admins can upload vessel photos"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'vessel-photos'
+  and (
+    exists (select 1 from vessel_operators where user_id = auth.uid() and status = 'active')
+    or exists (select 1 from profiles where id = auth.uid() and is_admin)
+  )
+);
+
+-- Signup-path claims write vessel_operators directly (supersedes the
+-- handle_new_user above; profile insert unchanged — the pending_claim branch
+-- creates the membership itself instead of a vessel_claims row).
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+  declare
+    claim      jsonb := new.raw_user_meta_data -> 'pending_claim';
+    landing_at timestamptz;
+    v_id       int;
+  begin
+    -- Signup metadata is client-controlled; a malformed timestamp must never
+    -- block account creation.
+    begin
+      landing_at := (new.raw_user_meta_data->>'ad_landing_at')::timestamptz;
+    exception when others then
+      landing_at := null;
+    end;
+
+    insert into public.profiles
+      (id, email, first_name, last_name, institution, title, profile_url,
+       gclid, wbraid, gbraid, ad_landing_at)
+    values (
+      new.id,
+      new.email,
+      new.raw_user_meta_data->>'first_name',
+      new.raw_user_meta_data->>'last_name',
+      new.raw_user_meta_data->>'institution',
+      new.raw_user_meta_data->>'title',
+      new.raw_user_meta_data->>'profile_url',
+      new.raw_user_meta_data->>'gclid',
+      new.raw_user_meta_data->>'wbraid',
+      new.raw_user_meta_data->>'gbraid',
+      landing_at
+    );
+
+    -- Stashed by app/claim/ClaimSignupForm.tsx at signup. First claimant of an
+    -- unclaimed vessel becomes an active operator immediately; a vessel that
+    -- already has any membership row gets a pending one instead.
+    if claim is not null
+       and coalesce(claim->>'vessel_id', '')   <> ''
+       and coalesce(claim->>'message', '')     <> ''
+    then
+      begin
+        v_id := (claim->>'vessel_id')::int;
+        insert into public.vessel_operators (user_id, vessel_id, status, claim_message)
+        values (
+          new.id,
+          v_id,
+          case when exists (select 1 from public.vessel_operators where vessel_id = v_id)
+               then 'pending' else 'active' end,
+          claim->>'message'
+        )
+        on conflict (user_id, vessel_id) do nothing;
+      exception when others then
+        -- A malformed claim must never block account creation.
+        raise warning 'handle_new_user: membership insert failed for user %: %', new.id, sqlerrm;
+      end;
+    end if;
+
+    return new;
+  end;
+  $function$;

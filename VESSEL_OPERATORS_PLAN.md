@@ -284,3 +284,29 @@ Phases 0-2 are low risk and mechanical (~half a day). Phase 3 is the design-sens
 
 - Renaming `scientist` → `user`; per-vessel operator titles/permissions (owner vs crew);
   operator invitations (operator adds a colleague without a claim flow); transfer of ownership.
+
+## 10. Phase 6 — vessel_operators absorbs vessel_claims (built 2026-08-28)
+
+Mark's friction-removal request: claiming should grant access immediately, with admin
+review as a non-blocking confirmation. That collapsed the two-table model — a claim IS
+a membership now.
+
+- New columns on `vessel_operators`: `id` (uuid, stable row identity), `status`
+  ('active' | 'pending' | 'suspended'), `claim_message`, `claim_document_url`,
+  `confirmed_at`, `confirmed_by`, `admin_notes`.
+- Claim an unclaimed vessel → `active` row, instant editing (both the signed-in API
+  path and the signup-trigger path). Claim an operated vessel → `pending` row.
+- Only `status='active'` grants anything: `lib/operators.ts` helpers, storage upload
+  policies, `message_unread_count`, message fan-out, vessel-page operator checks.
+- Admin review actions (`/api/admin/claims`, Operators tab): confirm / activate /
+  suspend / reinstate / remove. Suspend is the reversible freeze; the audit trigger
+  now covers `vessel_operators`, so moderation has the same paper trail as edits.
+- The verified gate on `/api/messages` was dropped (friction removal); `verified`
+  remains as admin bookkeeping, set on confirm/activate.
+- Doc detach no longer deletes the storage object — `data_changes` + surviving files
+  = a true undo history for vandalism recovery.
+- `vessel_claims` is legacy: no more writes, kept read-only. Drop in a later
+  migration after the new flow has run clean in production.
+- Migration: `supabase/migrations/20260828_operators_absorb_claims.sql` (mirrored in
+  scripts/schema.sql). Backfill: existing memberships confirmed at their created_at;
+  pending claims became pending/active rows carrying message + document.

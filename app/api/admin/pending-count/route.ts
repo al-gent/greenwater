@@ -16,14 +16,17 @@ export async function GET() {
   const admin = await checkAdmin()
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const [subs, claims, scientists] = await Promise.all([
+  // Memberships needing review: pending activation, or instant-granted but
+  // not yet confirmed by an admin (confirmed_at is null).
+  const [subs, pendingOps, unconfirmedOps, scientists] = await Promise.all([
     supabaseAdmin.from('vessel_submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-    supabaseAdmin.from('vessel_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabaseAdmin.from('vessel_operators').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabaseAdmin.from('vessel_operators').select('id', { count: 'exact', head: true }).eq('status', 'active').is('confirmed_at', null),
     supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }).eq('is_admin', false).eq('verified', false),
   ])
 
   const submissions = subs.count ?? 0
-  const pendingClaims = claims.count ?? 0
+  const pendingClaims = (pendingOps.count ?? 0) + (unconfirmedOps.count ?? 0)
   const unverified = scientists.count ?? 0
 
   return NextResponse.json({

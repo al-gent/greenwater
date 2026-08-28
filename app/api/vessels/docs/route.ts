@@ -137,8 +137,12 @@ export async function POST(request: Request) {
   return NextResponse.json({ doc, docs })
 }
 
-// DELETE { vessel_id, url } — detach a document; also removes the stored file
-// when it lives in our vessel-docs bucket (external legacy URLs are left alone).
+// DELETE { vessel_id, url } — detach a document from the listing. The stored
+// file is deliberately KEPT: doc_details changes are logged in data_changes
+// with their old value, and keeping the object makes that log a true undo
+// history (restore the old doc_details and the URL still resolves). Orphaned
+// files are cheap at our scale; sweep ones unreferenced for 30+ days if it
+// ever matters.
 export async function DELETE(request: Request) {
   const body = await request.json().catch(() => null)
   const vesselId = parseInt(body?.vessel_id, 10)
@@ -160,9 +164,5 @@ export async function DELETE(request: Request) {
     .eq('id', vesselId)
   if (dbErr) return NextResponse.json({ error: 'Failed to update.' }, { status: 500 })
 
-  const prefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vessel-docs/`
-  if (body.url.startsWith(prefix)) {
-    await supabaseAdmin.storage.from('vessel-docs').remove([body.url.slice(prefix.length)])
-  }
   return NextResponse.json({ docs: remaining })
 }

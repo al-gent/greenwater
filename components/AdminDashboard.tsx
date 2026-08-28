@@ -8,7 +8,10 @@ import ChatThread from './ChatThread'
 import { fmtDailyRate } from '@/lib/vessel-utils'
 
 type SubmissionStatus = 'pending' | 'approved' | 'rejected'
-type ClaimStatus = 'pending' | 'approved' | 'rejected'
+// Operator membership status (vessel_operators absorbed vessel_claims):
+// active = editing rights now; pending = awaiting activation (vessel already
+// had an operator); suspended = reversible freeze.
+type ClaimStatus = 'active' | 'pending' | 'suspended'
 
 interface Submission {
   id: string
@@ -48,6 +51,7 @@ interface Submission {
 
 interface Claim {
   id: string
+  user_id: string
   vessel_id: number
   vessel_name: string
   claimant_name: string
@@ -55,11 +59,16 @@ interface Claim {
   role: string
   organization: string
   message: string | null
+  document_url: string | null
   status: ClaimStatus
+  confirmed_at: string | null
   admin_notes: string | null
   created_at: string
-  reviewed_at: string | null
 }
+
+/** Needs admin attention: awaiting activation, or holding instant-granted
+ *  access that no admin has confirmed yet. */
+const needsReview = (c: Claim) => c.status === 'pending' || (c.status === 'active' && !c.confirmed_at)
 
 interface Scientist {
   id: string
@@ -167,6 +176,8 @@ function StatusBadge({ status }: { status: string }) {
     pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
     approved: 'bg-teal-50 text-teal border-teal/20',
     rejected: 'bg-red-50 text-red-600 border-red-100',
+    active: 'bg-teal-50 text-teal border-teal/20',
+    suspended: 'bg-red-50 text-red-600 border-red-100',
   }
   return (
     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${styles[status] ?? ''}`}>
@@ -252,6 +263,89 @@ function Spinner() {
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
+  )
+}
+
+type OperatorAction = 'confirm' | 'activate' | 'suspend' | 'reinstate' | 'remove'
+
+// Review controls for an operator membership. Which buttons show depends on
+// standing: pending -> Activate/Remove; active unconfirmed -> Confirm/Suspend;
+// active confirmed -> Suspend; suspended -> Reinstate/Remove.
+function OperatorActions({ claim, onDone }: {
+  claim: Claim
+  onDone: (id: string, action: OperatorAction, notes: string) => void
+}) {
+  const [notes, setNotes] = useState('')
+  const [loading, setLoading] = useState<OperatorAction | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const act = async (action: OperatorAction) => {
+    if (action === 'remove' && !window.confirm(`Remove ${claim.claimant_name} as an operator of ${claim.vessel_name}? This deletes the membership.`)) return
+    setLoading(action)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/claims', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: claim.id, action, admin_notes: notes }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      onDone(claim.id, action, notes)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Action failed')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const primary = 'flex items-center gap-1.5 bg-teal text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-teal-600 transition-colors disabled:opacity-50'
+  const danger = 'flex items-center gap-1.5 border border-red-200 text-red-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50'
+  const btn = (action: OperatorAction, label: string, cls: string) => (
+    <button disabled={!!loading} onClick={() => act(action)} className={cls}>
+      {loading === action ? <Spinner /> : null}
+      {label}
+    </button>
+  )
+
+  const showNotes = claim.status !== 'active' || !claim.confirmed_at
+
+  return (
+    <div className="mt-4 space-y-3">
+      {showNotes && (
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Admin notes (optional — included in email)</label>
+          <textarea
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Optional notes for the operator…"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent resize-none"
+          />
+        </div>
+      )}
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <div className="flex gap-2 flex-wrap">
+        {claim.status === 'pending' && (
+          <>
+            {btn('activate', 'Activate', primary)}
+            {btn('remove', 'Remove', danger)}
+          </>
+        )}
+        {claim.status === 'active' && !claim.confirmed_at && (
+          <>
+            {btn('confirm', 'Confirm', primary)}
+            {btn('suspend', 'Suspend', danger)}
+          </>
+        )}
+        {claim.status === 'active' && claim.confirmed_at && btn('suspend', 'Suspend', danger)}
+        {claim.status === 'suspended' && (
+          <>
+            {btn('reinstate', 'Reinstate', primary)}
+            {btn('remove', 'Remove', danger)}
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -439,10 +533,22 @@ export default function AdminDashboard() {
     notifyPendingChanged()
   }
 
-  const updateClaim = (id: string, status: 'approved' | 'rejected', notes: string) => {
-    setClaims((prev) =>
-      prev.map((c) => c.id === id ? { ...c, status, admin_notes: notes, reviewed_at: new Date().toISOString() } : c)
-    )
+  const updateOperator = (id: string, action: OperatorAction, notes: string) => {
+    setClaims((prev) => {
+      if (action === 'remove') return prev.filter((c) => c.id !== id)
+      return prev.map((c) => {
+        if (c.id !== id) return c
+        switch (action) {
+          case 'confirm':
+          case 'activate':
+            return { ...c, status: 'active' as ClaimStatus, confirmed_at: new Date().toISOString(), admin_notes: notes }
+          case 'suspend':
+            return { ...c, status: 'suspended' as ClaimStatus, admin_notes: notes }
+          case 'reinstate':
+            return { ...c, status: 'active' as ClaimStatus, admin_notes: notes }
+        }
+      })
+    })
     notifyPendingChanged()
   }
 
@@ -454,11 +560,17 @@ export default function AdminDashboard() {
   }
 
   const pendingSubs = submissions.filter((s) => s.status === 'pending').length
-  const pendingClaims = claims.filter((c) => c.status === 'pending').length
+  const pendingClaims = claims.filter(needsReview).length
   const pendingScientists = scientists.filter((s) => !s.verified).length
 
   const filteredSubs = filter === 'all' ? submissions : submissions.filter((s) => s.status === filter)
-  const filteredClaims = filter === 'all' ? claims : claims.filter((c) => c.status === filter)
+  // Operator pills reuse the shared Filter values with mapped meanings:
+  // pending = needs review, approved = active, rejected = suspended.
+  const filteredClaims =
+    filter === 'all' ? claims
+    : filter === 'pending' ? claims.filter(needsReview)
+    : filter === 'approved' ? claims.filter((c) => c.status === 'active' && !!c.confirmed_at)
+    : claims.filter((c) => c.status === 'suspended')
   const filteredScientists = tab === 'scientists'
     ? (filter === 'all' ? scientists : filter === 'pending' ? scientists.filter(s => !s.verified) : filter === 'approved' ? scientists.filter(s => s.verified) : [])
     : []
@@ -471,7 +583,7 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-2xl font-bold text-navy">Admin Dashboard</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {pendingSubs} pending submission{pendingSubs !== 1 ? 's' : ''} · {pendingClaims} pending claim{pendingClaims !== 1 ? 's' : ''} · {pendingScientists} unverified user{pendingScientists !== 1 ? 's' : ''}
+              {pendingSubs} pending submission{pendingSubs !== 1 ? 's' : ''} · {pendingClaims} operator claim{pendingClaims !== 1 ? 's' : ''} to review · {pendingScientists} unverified user{pendingScientists !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -490,7 +602,7 @@ export default function AdminDashboard() {
                 tab === t ? 'bg-navy text-white shadow-sm' : 'text-gray-500 hover:text-navy'
               }`}
             >
-              {t === 'scientists' ? 'Users' : t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === 'scientists' ? 'Users' : t === 'claims' ? 'Operators' : t.charAt(0).toUpperCase() + t.slice(1)}
               {t === 'submissions' && pendingSubs > 0 && (
                 <span className="ml-2 bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {pendingSubs}
@@ -523,7 +635,9 @@ export default function AdminDashboard() {
                     : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
                 }`}
               >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
+                {tab === 'claims'
+                  ? { all: 'All', pending: 'Needs review', approved: 'Active', rejected: 'Suspended' }[f]
+                  : f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
           </div>
@@ -703,13 +817,21 @@ export default function AdminDashboard() {
                           </a>
                         </h3>
                         <StatusBadge status={claim.status} />
+                        {claim.status === 'active' && !claim.confirmed_at && (
+                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-yellow-50 text-yellow-700 border-yellow-200">
+                            unconfirmed
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
                         <span>{claim.claimant_name}</span>
                         <span className="text-gray-400">{claim.role} · {claim.organization}</span>
                         <a href={`mailto:${claim.email}`} className="text-teal hover:underline">{claim.email}</a>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">Submitted {fmt(claim.created_at)}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Claimed {fmt(claim.created_at)}
+                        {claim.confirmed_at ? ` · confirmed ${fmt(claim.confirmed_at)}` : ''}
+                      </p>
                     </div>
                   </div>
 
@@ -719,9 +841,9 @@ export default function AdminDashboard() {
                         <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-4 leading-relaxed">
                           {claim.message}
                         </p>
-                          {(claim as Claim & { document_url?: string }).document_url && (
+                          {claim.document_url && (
                             <a
-                              href={(claim as Claim & { document_url?: string }).document_url}
+                              href={claim.document_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1.5 text-xs text-teal font-medium hover:underline"
@@ -736,13 +858,13 @@ export default function AdminDashboard() {
                     </div>
                   )}
 
-                  {claim.admin_notes && claim.status !== 'pending' && (
+                  {claim.admin_notes && (
                     <p className="mt-3 text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2">
                       <span className="font-medium">Notes:</span> {claim.admin_notes}
                     </p>
                   )}
 
-                  <RowActions id={claim.id} status={claim.status} apiPath="claims" onUpdate={updateClaim} />
+                  <OperatorActions claim={claim} onDone={updateOperator} />
                 </div>
               ))
             )}
