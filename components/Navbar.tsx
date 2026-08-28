@@ -162,6 +162,12 @@ export default function Navbar() {
                     </span>
                   )}
                 </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="text-sm font-medium text-gray-400 hover:text-navy transition-colors hidden md:block"
+                >
+                  Sign Out
+                </button>
               </>
             ) : (
               <Link
@@ -210,14 +216,22 @@ export default function Navbar() {
               </Link>
             )}
             {user && (
-              <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-                Dashboard
-                {unreadCount > 0 && (
-                  <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
+              <>
+                <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                  Dashboard
+                  {unreadCount > 0 && (
+                    <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
+                <button
+                  onClick={() => { setMenuOpen(false); handleSignOut() }}
+                  className="block w-full text-left py-2.5 text-sm font-medium text-gray-500 hover:text-navy transition-colors"
+                >
+                  Sign Out
+                </button>
+              </>
             )}
           </div>
         )}

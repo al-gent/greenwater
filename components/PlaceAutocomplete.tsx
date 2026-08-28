@@ -26,6 +26,11 @@ export interface PlaceResult {
   kind?: string
 }
 
+export interface VesselOption {
+  id: number
+  name: string
+}
+
 interface Props {
   value: string
   onChange: (v: string) => void
@@ -33,6 +38,10 @@ interface Props {
   preferPorts?: boolean
   placeholder?: string
   className?: string
+  /** When provided, the dropdown mixes name-matching vessels (client-side)
+   *  above the Photon place results — one box searches both. */
+  vessels?: VesselOption[]
+  onSelectVessel?: (v: VesselOption) => void
 }
 
 // Photon `type` values that are administrative areas — only these get a bbox, so
@@ -59,11 +68,22 @@ export default function PlaceAutocomplete({
   preferPorts = false,
   placeholder,
   className,
+  vessels,
+  onSelectVessel,
 }: Props) {
   const [results, setResults] = useState<any[]>([])
+  const [placesLoading, setPlacesLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const boxRef = useRef<HTMLDivElement>(null)
   const skipNext = useRef(false) // don't re-query right after a selection sets the value
+
+  // Vessel matches are instant (the list is already client-side); Photon
+  // results join them ~250ms later.
+  const q = value.trim().toLowerCase()
+  const vesselMatches =
+    vessels && q.length >= 2
+      ? vessels.filter((v) => v.name.toLowerCase().includes(q)).slice(0, 5)
+      : []
 
   useEffect(() => {
     if (skipNext.current) {
@@ -73,9 +93,14 @@ export default function PlaceAutocomplete({
     const q = value.trim()
     if (q.length < 2) {
       setResults([])
+      setPlacesLoading(false)
       setOpen(false)
       return
     }
+    // Vessel matches render instantly (client-side); the dropdown opens right
+    // away with a "searching places…" row until Photon answers.
+    setPlacesLoading(true)
+    if (vessels) setOpen(true)
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`https://photon.komoot.io/api?q=${encodeURIComponent(q)}&limit=6`)
@@ -91,6 +116,8 @@ export default function PlaceAutocomplete({
         setOpen(true)
       } catch {
         setResults([])
+      } finally {
+        setPlacesLoading(false)
       }
     }, 250)
     return () => clearTimeout(t)
@@ -138,13 +165,47 @@ export default function PlaceAutocomplete({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onFocus={() => results.length > 0 && setOpen(true)}
+        onFocus={() => (results.length > 0 || vesselMatches.length > 0) && setOpen(true)}
         placeholder={placeholder}
         className={className}
         autoComplete="off"
       />
-      {open && results.length > 0 && (
+      {open && (results.length > 0 || vesselMatches.length > 0 || (vessels && placesLoading)) && (
         <ul className="absolute z-[1000] mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-auto">
+          {vesselMatches.length > 0 && (
+            <li className="px-3.5 pt-2 pb-1 text-[10px] uppercase tracking-wide text-gray-400">Vessels</li>
+          )}
+          {vesselMatches.map((v) => (
+            <li key={`vessel-${v.id}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  skipNext.current = true
+                  onChange(v.name)
+                  onSelectVessel?.(v)
+                  setOpen(false)
+                }}
+                className="w-full text-left px-3.5 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+              >
+                <span className="flex-1 min-w-0 text-navy">{v.name}</span>
+                <span className="shrink-0 text-[10px] uppercase tracking-wide text-navy bg-gold/20 rounded px-1.5 py-0.5">
+                  vessel
+                </span>
+              </button>
+            </li>
+          ))}
+          {vesselMatches.length > 0 && (results.length > 0 || placesLoading) && (
+            <li className="px-3.5 pt-2 pb-1 text-[10px] uppercase tracking-wide text-gray-400 border-t border-gray-50">Places</li>
+          )}
+          {placesLoading && results.length === 0 && (
+            <li className="px-3.5 py-2.5 text-sm text-gray-400 flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 animate-spin text-teal" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Searching places…
+            </li>
+          )}
           {results.map((f, i) => {
             const p = f.properties ?? {}
             const sub = [p.city, p.state, p.country].filter(Boolean).join(', ')

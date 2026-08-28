@@ -73,12 +73,36 @@ interface SearchPlace {
   radiusNm?: number
 }
 
+export interface MapViewport {
+  lat: number
+  lon: number
+  zoom: number
+}
+
 interface HomeMapProps {
   vessels: VesselWithPhoto[]
   onVesselClick?: (id: number) => void
   view?: MapView
   operatingAreas?: OperatingAreaVessel[]
   searchPlace?: SearchPlace
+  /** Restore the map to this viewport on mount (URL-persisted, à la Google Maps). */
+  initialView?: MapViewport
+  /** Fires after every pan/zoom settles — the parent mirrors it into the URL. */
+  onViewChange?: (v: MapViewport) => void
+}
+
+// Mirror the settled viewport up to the parent (which writes it to the URL).
+function ReportViewport({ onViewChange }: { onViewChange: (v: MapViewport) => void }) {
+  const map = useMap()
+  useEffect(() => {
+    const report = () => {
+      const c = map.getCenter()
+      onViewChange({ lat: c.lat, lon: c.lng, zoom: map.getZoom() })
+    }
+    map.on('moveend', report)
+    return () => { map.off('moveend', report) }
+  }, [map, onViewChange])
+  return null
 }
 
 // A 📍 pin that sits with its point on the exact coordinate.
@@ -92,9 +116,15 @@ function pinIcon() {
 }
 
 // Imperatively pan/zoom the map to the searched place whenever it changes.
-function FlyToPlace({ place }: { place?: SearchPlace }) {
+// `skipFirst`: when a URL-restored viewport exists, it wins on load — don't
+// immediately fly away from it to the (also-restored) search place.
+function FlyToPlace({ place, skipFirst }: { place?: SearchPlace; skipFirst?: boolean }) {
   const map = useMap()
+  const first = useRef(true)
   useEffect(() => {
+    const isFirst = first.current
+    first.current = false
+    if (isFirst && skipFirst) return
     if (!place) return
     if (place.bbox) {
       // area pick: frame the box, buffered by the radius if set
@@ -138,7 +168,7 @@ function resolveCoords(v: VesselWithPhoto, view?: MapView): { lat: number; lng: 
   return pick
 }
 
-export default function HomeMap({ vessels, onVesselClick, view, operatingAreas, searchPlace }: HomeMapProps) {
+export default function HomeMap({ vessels, onVesselClick, view, operatingAreas, searchPlace, initialView, onViewChange }: HomeMapProps) {
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({})
 
   const validVessels = vessels
@@ -167,8 +197,8 @@ export default function HomeMap({ vessels, onVesselClick, view, operatingAreas, 
         </div>
       )}
     <MapContainer
-      center={[20, 0]}
-      zoom={2}
+      center={initialView ? [initialView.lat, initialView.lon] : [20, 0]}
+      zoom={initialView?.zoom ?? 2}
       minZoom={2}
       style={{ width: '100%', height: '100%' }}
       className="z-0"
@@ -180,7 +210,8 @@ export default function HomeMap({ vessels, onVesselClick, view, operatingAreas, 
         url={CARTO_TILE_URL}
         maxZoom={19}
       />
-      <FlyToPlace place={searchPlace} />
+      <FlyToPlace place={searchPlace} skipFirst={!!initialView} />
+      {onViewChange && <ReportViewport onViewChange={onViewChange} />}
       {searchPlace?.bbox ? (
         <>
           {/* search reach: the extent buffered outward by the radius */}

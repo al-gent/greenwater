@@ -10,7 +10,6 @@ const PositionMap = dynamic(() => import('@/components/PositionMap'), {
   ssr: false,
   loading: () => <div className="w-full h-full bg-gray-100" />,
 })
-import { createClient } from '@/lib/supabase-browser'
 import { stripHtml, getPhotoUrl } from '@/lib/vessel-utils'
 import type { Vessel } from '@/lib/vessel-utils'
 import InquiryThread from '@/components/InquiryThread'
@@ -144,13 +143,6 @@ export default function DashboardTabs({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
-  }
-
   const newTotal = roots.filter((m) => m.status === 'new').length
   const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
   const initials =
@@ -182,12 +174,6 @@ export default function DashboardTabs({
         </button>
         <button onClick={() => setTab('profile')} className={tabClass('profile')}>
           Profile
-        </button>
-        <button
-          onClick={handleSignOut}
-          className="ml-auto text-sm font-medium text-gray-500 hover:text-navy transition-colors border border-gray-200 px-4 py-2 rounded-full hover:border-gray-300"
-        >
-          Sign Out
         </button>
       </div>
 

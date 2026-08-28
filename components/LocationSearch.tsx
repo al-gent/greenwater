@@ -11,7 +11,7 @@
  *   last_port      → vessels last seen within `radius` nm (live GFW data)
  */
 
-import PlaceAutocomplete from './PlaceAutocomplete'
+import PlaceAutocomplete, { type VesselOption } from './PlaceAutocomplete'
 
 export type SearchMode = 'operating_area' | 'home_port' | 'last_port'
 
@@ -40,12 +40,15 @@ interface Props {
   hasPlace: boolean
   onClear: () => void
   loading?: boolean
+  /** One box, two searches: vessel-name matches mix into the dropdown. */
+  vessels?: VesselOption[]
+  onSelectVessel?: (v: VesselOption) => void
 }
 
 export default function LocationSearch({
   query, onQueryChange, onSelectPlace,
   mode, onModeChange, radius, onRadiusChange, showRadius,
-  hasPlace, onClear, loading,
+  hasPlace, onClear, loading, vessels, onSelectVessel,
 }: Props) {
   return (
     <div className="max-w-3xl mx-auto">
@@ -55,7 +58,9 @@ export default function LocationSearch({
             value={query}
             onChange={onQueryChange}
             onSelect={(r) => onSelectPlace({ label: r.label, lat: r.lat, lon: r.lon, bbox: r.bbox, kind: r.kind, country: r.country })}
-            placeholder="Search a place — city, sea, or country"
+            vessels={vessels}
+            onSelectVessel={onSelectVessel}
+            placeholder={vessels ? 'Search a vessel or a place' : 'Search a place — city, sea, or country'}
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
           />
           {loading && (

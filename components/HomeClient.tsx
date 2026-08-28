@@ -139,9 +139,30 @@ function parseLocationFromParams(p: URLSearchParams): LocationState {
   }
 }
 
-function buildQueryString(advanced: AdvancedFilters, loc: LocationState, view: ViewMode, sort: { key: SortKey; dir: SortDir }): string {
+interface MapUrlState {
+  show: boolean
+  viewport: { lat: number; lon: number; zoom: number } | null
+}
+
+function parseMapFromParams(p: URLSearchParams): MapUrlState {
+  const lat = parseFloat(p.get('mlat') ?? '')
+  const lon = parseFloat(p.get('mlon') ?? '')
+  const zoom = parseFloat(p.get('mz') ?? '')
+  const viewport = !isNaN(lat) && !isNaN(lon) && !isNaN(zoom) ? { lat, lon, zoom } : null
+  return { show: p.get('map') === '1' || viewport !== null, viewport }
+}
+
+function buildQueryString(advanced: AdvancedFilters, loc: LocationState, view: ViewMode, sort: { key: SortKey; dir: SortDir }, map: MapUrlState): string {
   const p = new URLSearchParams()
   if (view !== 'featured') p.set('view', view) // featured is the default
+  if (map.show) {
+    p.set('map', '1')
+    if (map.viewport) {
+      p.set('mlat', map.viewport.lat.toFixed(5))
+      p.set('mlon', map.viewport.lon.toFixed(5))
+      p.set('mz', String(Math.round(map.viewport.zoom * 100) / 100))
+    }
+  }
   if (sort.key !== 'name' || sort.dir !== 'asc') p.set('sort', `${sort.key}:${sort.dir}`)
   if (advanced.name) p.set('name', advanced.name)
   if (advanced.activity) p.set('activity', advanced.activity)
@@ -203,7 +224,13 @@ export default function HomeClient({ vessels }: HomeClientProps) {
 
   const [advanced, setAdvanced] = useState<AdvancedFilters>(() => parseAdvancedFromParams(searchParams))
   const [showAdvanced, setShowAdvanced] = useState(() => advancedActive(parseAdvancedFromParams(searchParams)))
-  const [showMap, setShowMap] = useState(false)
+  // Map visibility + viewport live in the URL (?map=1&mlat&mlon&mz) so a
+  // pan/zoom survives refresh and can be shared, à la Google Maps.
+  const [showMap, setShowMap] = useState(() => parseMapFromParams(searchParams).show)
+  // Doubles as the mount viewport: MapContainer only reads center/zoom at
+  // mount, so live updates flow map → state → URL without a feedback loop,
+  // and a toggled-off map reopens where it was left.
+  const [mapViewport, setMapViewport] = useState(() => parseMapFromParams(searchParams).viewport)
   const [view, setView] = useState<ViewMode>(() => parseViewFromParams(searchParams))
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [listSort, setListSort] = useState<{ key: SortKey; dir: SortDir }>(() => parseSortFromParams(searchParams))
@@ -213,11 +240,17 @@ export default function HomeClient({ vessels }: HomeClientProps) {
 
   // Keep the URL in sync so the search survives back/refresh.
   useEffect(() => {
-    const qs = buildQueryString(advanced, { query: loc.query, place: loc.place, mode: loc.mode, radius: loc.radius }, view, listSort)
+    const qs = buildQueryString(
+      advanced,
+      { query: loc.query, place: loc.place, mode: loc.mode, radius: loc.radius },
+      view,
+      listSort,
+      { show: showMap, viewport: mapViewport },
+    )
     const next = qs ? `${pathname}?${qs}` : pathname
     const current = window.location.pathname + window.location.search
     if (next !== current) router.replace(next, { scroll: false })
-  }, [advanced, loc.place, loc.mode, loc.radius, loc.query, view, listSort, pathname, router])
+  }, [advanced, loc.place, loc.mode, loc.radius, loc.query, view, listSort, showMap, mapViewport, pathname, router])
 
   const isAdvancedActive = advancedActive(advanced)
   const hasFilters = !!(isAdvancedActive || loc.place)
@@ -240,6 +273,9 @@ export default function HomeClient({ vessels }: HomeClientProps) {
   )
 
   const filtered = useMemo(() => applySearch(vessels, advanced, loc.match?.ids ?? null), [vessels, advanced, loc.match])
+
+  // Name matches for the search dropdown — jump straight to a listing.
+  const vesselOptions = useMemo(() => vessels.map((v) => ({ id: v.id, name: v.name })), [vessels])
   // photos-first so the grid looks good above the fold
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -284,6 +320,8 @@ export default function HomeClient({ vessels }: HomeClientProps) {
         <div style={{ height: '420px' }} className="w-full border-b border-gray-100">
           <HomeMap
             vessels={mapVessels}
+            initialView={mapViewport ?? undefined}
+            onViewChange={setMapViewport}
             searchPlace={loc.place ? {
               lat: loc.place.lat,
               lon: loc.place.lon,
@@ -306,6 +344,8 @@ export default function HomeClient({ vessels }: HomeClientProps) {
           showMap={showMap}
           onToggleMap={() => setShowMap((v) => !v)}
           countries={flags}
+          vesselOptions={vesselOptions}
+          onSelectVessel={(v) => router.push(`/vessels/${v.id}`)}
         />
       </div>
 

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-browser'
 import VesselEditForm from '@/components/VesselEditForm'
+import UpdateLocationModal from '@/components/UpdateLocationModal'
 import type { Vessel } from '@/lib/vessel-utils'
 
 function EditVesselPageInner() {
@@ -16,6 +17,7 @@ function EditVesselPageInner() {
   const [vessel, setVessel] = useState<Vessel | null>(null)
   const [vesselId, setVesselId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [locationOpen, setLocationOpen] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -76,7 +78,26 @@ function EditVesselPageInner() {
             </svg>
           </Link>
           <h1 className="text-xl font-bold text-navy">Edit Vessel Info</h1>
+          <button
+            type="button"
+            onClick={() => setLocationOpen(true)}
+            className="ml-auto flex items-center gap-1.5 border border-teal text-teal px-3 py-1.5 rounded-full text-sm font-medium hover:bg-teal-50 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Update Location
+          </button>
         </div>
+
+        {locationOpen && (
+          <UpdateLocationModal
+            vesselId={vesselId}
+            vesselName={vessel.name}
+            onClose={() => setLocationOpen(false)}
+          />
+        )}
 
         {justClaimed && (
           <div className="mb-4 bg-teal-50 border border-teal/30 rounded-2xl px-4 py-3.5 sm:px-5">

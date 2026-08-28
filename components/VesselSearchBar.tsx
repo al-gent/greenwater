@@ -9,6 +9,7 @@ import AdvancedSearch, {
   advancedCount,
 } from './AdvancedSearch'
 import type { VesselLocationSearch } from './useVesselLocationSearch'
+import type { VesselOption } from './PlaceAutocomplete'
 
 interface Props {
   loc: VesselLocationSearch
@@ -21,6 +22,9 @@ interface Props {
   countries?: string[]
   /** Optional extra control to the right of the toggles (e.g. a Clear filters button). */
   trailing?: ReactNode
+  /** Vessel names mixed into the search dropdown (jump straight to a listing). */
+  vesselOptions?: VesselOption[]
+  onSelectVessel?: (v: VesselOption) => void
 }
 
 const TOGGLE_BASE = 'relative group p-2.5 rounded-xl border transition-colors'
@@ -30,6 +34,7 @@ const TOOLTIP = 'pointer-events-none absolute top-full left-1/2 -translate-x-1/2
 
 export default function VesselSearchBar({
   loc, advanced, onAdvancedChange, showAdvanced, onToggleAdvanced, showMap, onToggleMap, countries, trailing,
+  vesselOptions, onSelectVessel,
 }: Props) {
   const isAdvActive = advancedActive(advanced)
 
@@ -50,6 +55,8 @@ export default function VesselSearchBar({
               hasPlace={!!loc.place}
               onClear={loc.clear}
               loading={loc.loading}
+              vessels={vesselOptions}
+              onSelectVessel={onSelectVessel}
             />
           </div>
           <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
