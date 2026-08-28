@@ -132,6 +132,12 @@ function ClaimForm({ vessels }: { vessels: VesselOption[] }) {
   const [existingEmail, setExistingEmail] = useState(false)
   const [done, setDone] = useState<'confirm_email' | 'submitted' | null>(null)
 
+  // The form is tall; when it collapses into the short confirmation card the
+  // viewport would otherwise stay scrolled at where the submit button was.
+  useEffect(() => {
+    if (done) window.scrollTo(0, 0)
+  }, [done])
+
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(async ({ data: { user: u } }) => {

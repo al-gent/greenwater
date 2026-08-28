@@ -82,12 +82,9 @@ export async function POST(request: Request) {
       .eq('id', membership.vessel_id)
       .single()
     const vesselName = vessel?.name ?? `Vessel #${membership.vessel_id}`
-    const suffix = membership.status === 'active'
-      ? ' (access granted — please confirm)'
-      : ' (awaiting activation)'
     await notifyAdmins(
       'new_claim',
-      `${name} claimed ${vesselName}${suffix}`,
+      `Another vessel claimed! 🎉`,
       newClaimAdminEmail(
         vesselName,
         name,
