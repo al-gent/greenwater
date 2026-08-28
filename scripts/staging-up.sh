@@ -105,6 +105,12 @@ awk -F= '
 } >> .env.local
 echo "Wrote .env.local → $B_URL"
 
+# ── 3b. Auth redirects: fresh branches come up with site_url=localhost and an
+#        empty allowlist, so confirmation-email links would bounce to localhost
+#        (or silently fall back) instead of landing in the staging editor. ────
+api PATCH "/projects/$BREF/config/auth" "{\"site_url\":\"$STAGING_SITE\",\"uri_allow_list\":\"$STAGING_SITE/**,https://greenwater-git-staging-adamgent.vercel.app/**,http://localhost:3000/**,http://localhost:3001/**\"}" >/dev/null
+echo "auth redirects → $STAGING_SITE (+ alias, localhost)"
+
 # ── 4. Repoint the cloned webhook at the staging site ────────────────────────
 sql_staging "update app_config set value = '$STAGING_SITE/api/hooks/new-profile' where key = 'new_profile_webhook_url';" >/dev/null
 echo "app_config webhook → $STAGING_SITE/api/hooks/new-profile"
