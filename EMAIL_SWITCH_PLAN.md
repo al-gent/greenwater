@@ -22,7 +22,7 @@ Written 2026-08-11. All coordination with Meg and Mark is remote — phone or vi
 
 ## Before scheduling the switch
 
-- [ ] Free-plan approval email received (goes to 94gent@gmail.com)
+- [x] Free-plan approval email received (approved ~2026-08-27)
 - [ ] Mark's answers in: how he reads info@, and whether **Word/Excel/OneDrive are
       licensed through the GoDaddy subscription** (if yes: sort replacements BEFORE cancel)
 - [ ] Create accounts in admin.google.com: `info@` (+ `mark@`, `lisa@`, others as agreed)

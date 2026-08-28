@@ -305,3 +305,17 @@ without opening the dashboard:
 ## General
 
 - **Email delivery monitoring**: Add webhook logging for Brevo delivery events.
+- **Public user profile pages** (Adam, 8/28): a page per user showing what they've
+  provided — name, institution, title, ORCID/profile link. No email shown (contact goes
+  through in-app messaging). Pairs with the operators redesign: could show which vessels
+  they operate.
+- **Drop `vessel_claims`** (8/28): superseded by vessel_operators status columns
+  (operators-absorb-claims migration). Write a drop migration after the initial one has
+  shipped and run clean in production — hardly any rows in it.
+- **Admin tab naming** (8/28): with claims gone, the review tabs read as Submissions /
+  Operators / Users. Consider task-oriented labels ("Listing requests" for submissions)
+  or a single unified review inbox.
+- **Split `endurance` into days vs range** (Adam, 8/28): the field currently mixes units —
+  some vessels record days at sea, others nautical miles. Needs two columns (e.g.
+  `endurance_days`, `range_nm` — note `range` already exists as a listing column; reconcile),
+  a data pass to classify existing values, and separate edit-form fields.

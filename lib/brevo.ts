@@ -17,7 +17,9 @@ export async function sendEmail({ to, subject, html, tags }: EmailOptions) {
   // Outside production NO email ever reaches a real recipient: everything is
   // redirected to ADMIN_NOTIFY_DEV_EMAIL (or dropped if it's unset). This is
   // the single chokepoint — user-facing mail included, not just notifyAdmins.
-  if (process.env.NODE_ENV !== 'production') {
+  // Vercel preview deployments (the staging site) build with
+  // NODE_ENV=production, so they're caught via VERCEL_ENV instead.
+  if (process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'preview') {
     const devInbox = process.env.ADMIN_NOTIFY_DEV_EMAIL
     if (!devInbox) {
       console.log(`sendEmail [${process.env.NODE_ENV}] suppressed "${subject}" to ${to} — set ADMIN_NOTIFY_DEV_EMAIL to receive it`)

@@ -37,3 +37,5 @@ skills-lock.json
 # outreach working directory (has its own .gitignore for PII; keep whole dir untracked)
 outreach/
 .vercel
+.staging-db-password
+.env.prod
