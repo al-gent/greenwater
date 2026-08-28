@@ -116,6 +116,11 @@ sql_staging "update app_config set value = '$STAGING_SITE/api/hooks/new-profile'
 echo "app_config webhook → $STAGING_SITE/api/hooks/new-profile"
 
 # ── 5. Vercel Preview env → branch ───────────────────────────────────────────
+# CAUTION: `vercel env rm NAME preview` deletes the ENTIRE record when the
+# variable is one record spanning several environments — that's how the 8/28
+# prod build broke (Production lost its Supabase vars). All shared vars have
+# since been split into per-environment records, which rm targets safely.
+# If a new shared var ever appears here, split it per-env first.
 setpreview() {
   vercel env rm "$1" preview --yes >/dev/null 2>&1 || true
   printf '%s' "$2" | vercel env add "$1" preview >/dev/null
