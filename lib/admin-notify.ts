@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { sendEmail } from '@/lib/brevo'
+import { sendEmail, isRealProd } from '@/lib/brevo'
 
 export type AdminNotificationType = 'new_claim' | 'new_submission' | 'new_signup' | 'messages'
 
@@ -9,6 +9,14 @@ export type AdminNotificationType = 'new_claim' | 'new_submission' | 'new_signup
  * {"new_claim": false} mutes that type).
  */
 export async function getAdminNotifyEmails(type: AdminNotificationType): Promise<string[]> {
+  // Staging/dev: exactly ONE admin copy, to the dev inbox — without this,
+  // sendEmail's redirect turns "one email per admin" into N identical copies
+  // in the same inbox.
+  if (!isRealProd()) {
+    const dev = process.env.ADMIN_NOTIFY_DEV_EMAIL
+    return dev ? [dev] : []
+  }
+
   const { data, error } = await supabaseAdmin
     .from('profiles')
     .select('email, notification_prefs')
