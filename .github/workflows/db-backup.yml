@@ -1,0 +1,75 @@
+# Weekly encrypted backup of the Supabase database.
+#
+# Why: the Supabase project is on the Free plan, which has no automatic
+# backups. This repo is public, so the dump is encrypted before it is
+# uploaded as a workflow artifact (anyone logged into GitHub can download
+# artifacts from a public repo).
+#
+# Secrets required (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_DB_URL     session-mode pooler URL, port 5432 (same as .env.prod)
+#   BACKUP_PASSPHRASE   passphrase used to encrypt the dump. Keep a copy in a
+#                       password manager; without it the backups are useless.
+#
+# What is backed up: the public, auth and storage schemas (data + DDL).
+# Storage *files* (photos, PDFs) are NOT included, only their metadata rows.
+#
+# Restore (example, into a fresh project):
+#   1. Download the artifact from the Actions run and unzip it.
+#   2. openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+#        -pass pass:"$BACKUP_PASSPHRASE" -in backup.dump.enc -out backup.dump
+#   3. pg_restore -l backup.dump                 # list contents
+#      pg_restore --data-only -t users -t identities -n auth -d "$NEW_DB_URL" backup.dump
+#      pg_restore --no-owner --no-privileges -n public -d "$NEW_DB_URL" backup.dump
+#   Restore auth users before public because profiles reference auth.users.
+
+name: Database backup
+
+on:
+  schedule:
+    - cron: '0 5 * * 1' # Mondays 05:00 UTC, before the GFW sync rewrites rows
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install PostgreSQL 17 client (server is 17.x; runner ships 16)
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+          pg_dump --version
+
+      - name: Dump database
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$DB_URL" || { echo "SUPABASE_DB_URL secret is not set"; exit 1; }
+          pg_dump "$DB_URL" \
+            --format=custom --compress=6 \
+            --no-owner --no-privileges \
+            --schema=public --schema=auth --schema=storage \
+            --file=backup.dump
+          ls -lh backup.dump
+          pg_restore -l backup.dump | grep -c 'TABLE DATA' | xargs echo "tables with data:"
+
+      - name: Encrypt
+        env:
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$PASSPHRASE" || { echo "BACKUP_PASSPHRASE secret is not set"; exit 1; }
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -pass env:PASSPHRASE -in backup.dump -out backup.dump.enc
+          rm backup.dump
+          ls -lh backup.dump.enc
+
+      - name: Upload encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: greenwater-db-run-${{ github.run_number }}
+          path: backup.dump.enc
+          retention-days: 90
+          if-no-files-found: error
