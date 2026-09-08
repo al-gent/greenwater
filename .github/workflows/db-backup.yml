@@ -39,7 +39,9 @@ jobs:
           sudo apt-get install -y postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-17
-          pg_dump --version
+          # Debian's pg_wrapper keeps resolving to 16, so use the 17 binaries directly.
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+          /usr/lib/postgresql/17/bin/pg_dump --version
 
       - name: Dump database
         env:
@@ -47,6 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$DB_URL" || { echo "SUPABASE_DB_URL secret is not set"; exit 1; }
+          pg_dump --version
           pg_dump "$DB_URL" \
             --format=custom --compress=6 \
             --no-owner --no-privileges \
