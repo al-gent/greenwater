@@ -257,6 +257,12 @@ Phases 0-2 are low risk and mechanical (~half a day). Phase 3 is the design-sens
   agreed flow is co-operator consent: existing operator(s) get asked before a new person is
   added (email + accept/decline surface), on top of admin review. Only the one-user-many-vessels
   direction shipped.
+  - **Adam, 2026-09-22: claim surfaces REOPENED (guard rail lowered).** The vessel page shows the
+    Claim button on operated vessels too (hidden only for existing operators of that vessel), and
+    the /claim picker no longer disables claimed vessels. The backend path was already there: a
+    claim on an operated vessel creates a `pending` membership and admins Activate/Remove it.
+    Trigger: Björn Lindell (SLU) could not claim Svea alongside Lasse Thorell and had to email
+    Mark; Adam inserted his membership directly. Consent flow still deferred — FUTURE.md.
 - `canOperateVessel` includes the admin override for API auth; "My Vessels" lists memberships only.
 - Inquiry rights stay behind `verified` (now reachable by operators). No self-inquiry guard —
   if you inquire about your own vessel, author-side precedence in the reply route handles it.

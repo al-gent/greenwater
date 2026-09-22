@@ -77,6 +77,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
     }
   }
   const isClaimed = (operators ?? []).length > 0
+  const isOperator = !!user && (operators ?? []).some((o) => o.user_id === user.id)
 
   const isAdmin = user
     ? await supabaseAdmin.from('profiles').select('is_admin').eq('id', user.id).single()
@@ -242,11 +243,15 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
               </div>
             )}
 
-            {/* Claim — only unclaimed vessels (co-operator claims deferred,
-                see VESSEL_OPERATORS_PLAN.md §7) */}
-            {!isClaimed && (
+            {/* Claim — shown on operated vessels too (guard rail lowered
+                2026-09-22 to cut claim friction; see VESSEL_OPERATORS_PLAN.md §7).
+                A claim on an operated vessel lands as a pending membership for
+                admin review. Hidden only for users who already operate it. */}
+            {!isOperator && (
               <div className="border-t border-gray-100 pt-6 flex flex-col items-center gap-3">
-                <p className="text-sm text-gray-400">Are you the operator of this vessel?</p>
+                <p className="text-sm text-gray-400">
+                  {isClaimed ? 'Do you also operate this vessel?' : 'Are you the operator of this vessel?'}
+                </p>
                 <div className="w-full max-w-xs">
                   <ClaimButton vesselId={vessel.id} vesselName={vessel.name} />
                 </div>

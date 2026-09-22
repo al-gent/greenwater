@@ -86,13 +86,12 @@ function VesselPicker({
               <button
                 key={v.id}
                 type="button"
-                disabled={v.claimed}
                 onClick={() => { onSelect(v); setOpen(false) }}
-                className="w-full text-left px-3.5 py-2.5 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed border-b border-gray-50 last:border-b-0"
+                className="w-full text-left px-3.5 py-2.5 hover:bg-gray-50 border-b border-gray-50 last:border-b-0"
               >
                 <span className="text-sm text-navy font-medium">{v.name}</span>
                 {v.claimed && (
-                  <span className="ml-2 text-[10px] uppercase tracking-wide bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">Already claimed</span>
+                  <span className="ml-2 text-[10px] uppercase tracking-wide bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">Has operator</span>
                 )}
                 <span className="block text-xs text-gray-400">
                   {[v.port_city, v.country].filter(Boolean).join(', ')}
@@ -112,7 +111,7 @@ function ClaimForm({ vessels }: { vessels: VesselOption[] }) {
 
   const [vessel, setVessel] = useState<VesselOption | null>(() => {
     const id = parseInt(searchParams.get('vessel') ?? '', 10)
-    return vessels.find((v) => v.id === id && !v.claimed) ?? null
+    return vessels.find((v) => v.id === id) ?? null
   })
   const [relationship, setRelationship] = useState('')
 
@@ -330,6 +329,12 @@ function ClaimForm({ vessels }: { vessels: VesselOption[] }) {
                 Your vessel <span className="text-red-400">*</span>
               </label>
               <VesselPicker vessels={vessels} selected={vessel} onSelect={setVessel} />
+              {vessel?.claimed && (
+                <p className="text-xs text-gray-500 mt-1.5">
+                  <strong>{vessel.name}</strong> already has an operator. You can still claim it —
+                  our team will review before granting access.
+                </p>
+              )}
               <p className="text-xs text-gray-400 mt-1.5">
                 Don&apos;t see your vessel?{' '}
                 <Link href="/list-your-vessel" className="text-teal hover:underline">

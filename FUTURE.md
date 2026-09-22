@@ -14,6 +14,8 @@
 
 ## Vessel Claims
 
+- **Put the co-operator guard rails back** (lowered 2026-09-22): the vessel page now shows "Claim This Vessel" on operated vessels and the /claim picker no longer disables them — a second claimant lands as a `pending` membership for admin Activate/Remove. This was done to cut claim friction (Björn Lindell couldn't claim Svea because Lasse Thorell already operated it and had to email Mark). Eventually replace the admin-only gate with the agreed co-operator consent flow: email the existing operator(s) an accept/decline link before a new person is added, on top of admin review (see VESSEL_OPERATORS_PLAN.md §7).
+
 - **Private claim-documents bucket**: The `claim-documents` Supabase Storage bucket is currently public for simplicity. Documents may contain confidential information (registration certificates, employment letters, crew manifests). Switch to a private bucket and generate short-lived signed URLs server-side in the admin API when the admin clicks "View supporting document". Never expose the raw storage path client-side.
 
 ## Vessel Data
