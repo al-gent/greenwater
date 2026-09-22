@@ -130,6 +130,20 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
               Edit vessel
             </Link>
           )}
+          {/* Operators edit from the listing itself — most look their vessel
+              up here rather than going through the dashboard. Same editor the
+              dashboard "Edit" links to; the update API enforces membership. */}
+          {isOperator && !isAdmin && (
+            <Link
+              href={`/dashboard/edit?vessel=${id}`}
+              className="inline-flex items-center gap-1.5 bg-navy text-white text-xs font-medium px-3.5 py-2 rounded-xl hover:bg-navy/90 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit your vessel
+            </Link>
+          )}
         </nav>
       </div>
 
