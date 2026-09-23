@@ -1,0 +1,47 @@
+{
+  "Ship": "99XX",
+  "Name": "R/V Example Vessel",
+  "Event_id": 1234,
+  "AlternateId": "XX2501 Example",
+  "EventName": "CR: Example Research Project",
+  "EventType": "At Sea for Science",
+  "EventStartDate": "2025-12-20T12:00:00.000Z",
+  "EventEndDate": "2026-01-25T20:00:00.000Z",
+  "PortOfDeparture": {
+    "Name": "Example Port",
+    "CountryCode": "EX",
+    "PortCode": "EX123"
+  },
+  "PI": {
+    "Name": "John",
+    "Surname": "Doe",
+    "Organisation": { "Name": "Example University" },
+    "Email": "John.doe@example.org"
+  },
+  "CoPIs": [
+    {
+      "Name": "Bob",
+      "Surname": "Smith",
+      "Organisation": { "Name": "Example Institute" },
+      "Email": "bob.smith@example.org",
+      "OnVoyage": true
+    }
+  ],
+  "ChiefScientists": [
+    {
+      "Name": "John",
+      "Surname": "Doe",
+      "Organisation": { "Name": "Example University" },
+      "Email": "John.doe@example.org"
+    }
+  ],
+  "ChangesHistory": [
+    {
+      "ObjectType": "voyageevent",
+      "Field": "Event Type",
+      "OldValue": null,
+      "NewValue": "At Sea for Science",
+      "ChangeDate": "2025-05-16"
+    }
+  ]
+}

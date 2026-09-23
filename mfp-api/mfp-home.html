@@ -1,0 +1,703 @@
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html class="lang_en-US  ">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+
+    <meta name="keywords" content="marine, facilities, planning, software, webportal, nioz, nerc, noc, csiro, aad, geomar, NMFSS, science, scientist, portal, ofeg, programme" />
+    <meta name="robots" content="index, follow" />
+    <meta name="revisit-after" content="1 days" />
+
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon.png">
+    
+    <link rel="icon" href="/Images/favicon.ico?v=3" />
+
+    <link rel="manifest" href="/manifest.json">
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+    <meta name="theme-color" content="#ffffff">
+
+    <title>Marine Facilities Planning</title>
+
+
+    <link href="/Content/kendo/2021.2.511/kendo.css?cs=d9aa3cc9bceac337580de6f76686b4e2" rel="stylesheet"/>
+    <link href="/Content/Roboto/css/Roboto.css?t=134339362226392144" rel="stylesheet"/>
+
+
+    
+    <link href="/Content/plugins/mapbox.css?t=134339362226392144" rel="stylesheet"/>
+
+    <link href="/Content/Login.css?t=134339362226392144" rel="stylesheet"/>
+
+
+    
+    <script src="/Scripts/plugins/jquery-3.5.0.js?t=134339362226392144" type="text/javascript"></script>
+
+    <script src="/mainscripts.js?cs=00fe94101672551d3d58dae15a2eb832" type="text/javascript"></script>
+    <script src="/scripts/messages.i18n.js?lang=en-US&amp;t=134339362226392144" type="text/javascript"></script>
+    <script src="/mainscripts2.js?cs=29a6fddb1236174cffcacb8173226753" type="text/javascript"></script>
+
+
+
+
+<script type="text/javascript">
+    if (!window.mse) {
+        window.mse = {};
+    }
+    mse.defaultMapboxStyle = 'mapbox://styles/beikomaas/cm8n5x13k001d01qz8k7g4alk';
+    mse.localMapIntersectionsLayers = ["SeaDepth", "EEZ", "MPA", "WorldSeas", "ICESRectangles", "JMTEezBound", "JMTMilitaryZones", "Study Areas", "FlightInformationRegion"];
+
+    
+    mse.voyage = {
+        startTime: '8:00',
+        endTime: '16:00',
+    };
+    mse.transport = {
+        startTime: '8:00',
+        endTime: '16:00',
+    };
+
+    mse.externalLayersApiKeys = {};
+    mse.externalLayersApiKeys["seacables"] = ''
+    mse.externalLayersApiKeys["shiptraffic"] = ''
+    mse.externalLayersApiKeys["usarmy"] = ''
+    mse.defaultCoordinatesFormat = ""
+    mse.researchPlannerMapOptionsStartPosition = ""
+    mse.currencySymbol = "$";
+
+    
+    mse.eezConfiguration = {
+        url: "mapbox://beikomaas.697cxz85",
+        sourceLayer: "EEZ_v12_002-7jiajp"
+    }
+
+    mse.mfphubAuthHeaders = {
+        'X-Access-Key': 'IP7@rS*H$YF!syT7dDS&jmu^@f8rm76j',
+        'X-Access-Org': 'test'
+    };
+
+        setTimeout(function () {
+        $(document).ready(function () {
+            mse.GPSCoordinate.Activate('dms');
+        });
+    }, 100);
+
+    mse.PersonnelPlanningShowPersonNameForAllScheduleEvents = false;
+
+    mse.cruiseDetailsRenderMode = 'jsplumb';
+    mse.cruiseDetailsConfig = '';
+    mse.startMapProjection = '';
+    if (!mse.startMapProjection) {
+        mse.startMapProjection = 'default';
+    }
+    mse.startMapProjectionProgramme = '';
+    if (!mse.startMapProjectionProgramme) {
+        mse.startMapProjectionProgramme = 'globe';
+    }
+    mse.startMapProjectionCruiseLocation = 'default';
+    mse.startMapProjectionCruiseLocationAnalysis = 'default';
+    mse.mapCenterPoint = [37,-100];
+    mse.requiredFieldsWithAsterisk = false;
+
+    mse.cruiseLocationPlanning = {};
+    mse.cruiseLocationPlanning.Intersections = {};
+    mse.cruiseLocationPlanning.Intersections.SeaDepthFormat = "~{0:N0}m";
+
+    if ("ReportingPeriodManager" in mse) {
+        mse.ReportingPeriodManager.StartDate = "1-1";
+        mse.ReportingPeriodManager.EndDate = "31-12";
+        mse.ReportingPeriodManager.Name = "{0:yyyy}";
+    }
+
+    mse.shipSpeedDefaultValues = {
+        "Transect": 5,
+        "ResearchArea": 5
+    };
+    mse.timeAtStationDefaultValues = {
+        "Station": 0.75,
+        "Mooring": 5.0
+    };
+    mse.stationTypes = [{"Order":1,"StationType_id":1,"Deleted":false,"Name":"Sampling Station","Key":"Sampling Station","GroupOrder":1,"FeatureType":"point","Icon":"\u003csvg xmlns=\u0022http://www.w3.org/2000/svg\u0022 xmlns:xlink=\u0022http://www.w3.org/1999/xlink\u0022 width=\u002213\u0022 height=\u002218\u0022 viewBox=\u00220 0 13 18\u0022\u003e\r\n                    \u003cpath fill=\u0022#AB218E\u0022 id=\u0022prefix__a\u0022 d=\u0022M6.3.75C3.116.75.525 3.34.525 6.525.525 10.856 6.3 17.25 6.3 17.25s5.775-6.394 5.775-10.725C12.075 3.34 9.485.75 6.3.75zm3.3 6.6H7.125v2.475h-1.65V7.35H3V5.7h2.475V3.225h1.65V5.7H9.6v1.65z\u0022 /\u003e\r\n                \u003c/svg\u003e","Color":"#AB218E","HiddenInCruiseLocationPlanning":false},{"Order":2,"StationType_id":2,"Deleted":false,"Name":"AUV Station","Key":"AUV","GroupOrder":1,"FeatureType":"point","Icon":"\u003csvg xmlns=\u0022http://www.w3.org/2000/svg\u0022 xmlns:xlink=\u0022http://www.w3.org/1999/xlink\u0022 width=\u002213\u0022 height=\u002218\u0022 viewBox=\u00220 0 13 18\u0022\u003e\r\n                    \u003cpath fill=\u0022#F27020\u0022 id=\u0022prefix__a\u0022 d=\u0022M6.3.75C3.116.75.525 3.34.525 6.525.525 10.856 6.3 17.25 6.3 17.25s5.775-6.394 5.775-10.725C12.075 3.34 9.485.75 6.3.75zm3.3 6.6H7.125v2.475h-1.65V7.35H3V5.7h2.475V3.225h1.65V5.7H9.6v1.65z\u0022 /\u003e\r\n                \u003c/svg\u003e","Color":"#F27020","HiddenInCruiseLocationPlanning":false},{"Order":3,"StationType_id":3,"Deleted":false,"Name":"ROV","Key":"ROV","GroupOrder":1,"FeatureType":"point","Icon":"\u003csvg xmlns=\u0022http://www.w3.org/2000/svg\u0022 xmlns:xlink=\u0022http://www.w3.org/1999/xlink\u0022 width=\u002213\u0022 height=\u002218\u0022 viewBox=\u00220 0 13 18\u0022\u003e\r\n                    \u003cpath fill=\u0022#8eab21\u0022 id=\u0022prefix__a\u0022 d=\u0022M6.3.75C3.116.75.525 3.34.525 6.525.525 10.856 6.3 17.25 6.3 17.25s5.775-6.394 5.775-10.725C12.075 3.34 9.485.75 6.3.75zm3.3 6.6H7.125v2.475h-1.65V7.35H3V5.7h2.475V3.225h1.65V5.7H9.6v1.65z\u0022 /\u003e\r\n                \u003c/svg\u003e","Color":"#8eab21","HiddenInCruiseLocationPlanning":false},{"Order":4,"StationType_id":4,"Deleted":false,"Name":"Glider Station","Key":"Glider Station","GroupOrder":1,"FeatureType":"point","Icon":"\u003csvg xmlns=\u0022http://www.w3.org/2000/svg\u0022 xmlns:xlink=\u0022http://www.w3.org/1999/xlink\u0022 width=\u002213\u0022 height=\u002218\u0022 viewBox=\u00220 0 13 18\u0022\u003e\r\n                    \u003cpath fill=\u0022#F0AB00\u0022 id=\u0022prefix__a\u0022 d=\u0022M6.3.75C3.116.75.525 3.34.525 6.525.525 10.856 6.3 17.25 6.3 17.25s5.775-6.394 5.775-10.725C12.075 3.34 9.485.75 6.3.75zm3.3 6.6H7.125v2.475h-1.65V7.35H3V5.7h2.475V3.225h1.65V5.7H9.6v1.65z\u0022 /\u003e\r\n                \u003c/svg\u003e","Color":"#F0AB00","HiddenInCruiseLocationPlanning":false},{"Order":5,"StationType_id":5,"Deleted":false,"Name":"Mooring","Key":"Mooring","GroupOrder":1,"FeatureType":"point","Icon":"\u003csvg xmlns=\u0022http://www.w3.org/2000/svg\u0022 xmlns:xlink=\u0022http://www.w3.org/1999/xlink\u0022 width=\u002213\u0022 height=\u002218\u0022 viewBox=\u00220 0 13 18\u0022\u003e\r\n                    \u003cpath fill=\u0022#007CC0\u0022 id=\u0022prefix__a\u0022 d=\u0022M6.3.75C3.116.75.525 3.34.525 6.525.525 10.856 6.3 17.25 6.3 17.25s5.775-6.394 5.775-10.725C12.075 3.34 9.485.75 6.3.75zm3.3 6.6H7.125v2.475h-1.65V7.35H3V5.7h2.475V3.225h1.65V5.7H9.6v1.65z\u0022 /\u003e\r\n                \u003c/svg\u003e","Color":"#007CC0","HiddenInCruiseLocationPlanning":false},{"Order":6,"StationType_id":6,"Deleted":false,"Name":"Lander","Key":"Lander","GroupOrder":1,"FeatureType":"point","Icon":"\u003csvg xmlns=\u0022http://www.w3.org/2000/svg\u0022 xmlns:xlink=\u0022http://www.w3.org/1999/xlink\u0022 width=\u002213\u0022 height=\u002218\u0022 viewBox=\u00220 0 13 18\u0022\u003e\r\n                    \u003cpath fill=\u0022#3E464A\u0022 id=\u0022prefix__a\u0022 d=\u0022M6.3.75C3.116.75.525 3.34.525 6.525.525 10.856 6.3 17.25 6.3 17.25s5.775-6.394 5.775-10.725C12.075 3.34 9.485.75 6.3.75zm3.3 6.6H7.125v2.475h-1.65V7.35H3V5.7h2.475V3.225h1.65V5.7H9.6v1.65z\u0022 /\u003e\r\n                \u003c/svg\u003e","Color":"#3E464A","HiddenInCruiseLocationPlanning":false},{"Order":7,"StationType_id":7,"Deleted":false,"Name":"Waypoint","Key":"Waypoint","GroupOrder":2,"FeatureType":"waypoint","Icon":"\u003csvg xmlns=\u0022http://www.w3.org/2000/svg\u0022 xmlns:xlink=\u0022http://www.w3.org/1999/xlink\u0022 width=\u002213\u0022 height=\u002218\u0022 viewBox=\u00220 0 13 18\u0022\u003e\r\n                    \u003cpath fill=\u0022#808080\u0022 id=\u0022prefix__a\u0022 d=\u0022M6.3.75C3.116.75.525 3.34.525 6.525.525 10.856 6.3 17.25 6.3 17.25s5.775-6.394 5.775-10.725C12.075 3.34 9.485.75 6.3.75zm3.3 6.6H7.125v2.475h-1.65V7.35H3V5.7h2.475V3.225h1.65V5.7H9.6v1.65z\u0022 /\u003e\r\n                \u003c/svg\u003e","Color":"#808080","HiddenInCruiseLocationPlanning":false},{"Order":8,"StationType_id":8,"Deleted":false,"Name":"Research Area","Key":"Research Area","GroupOrder":3,"FeatureType":"polygon","Icon":"\u003cimg class=\u0022draw-element-icon\u0022 src=\u0022/Images/research-area-icon.svg\u0022 /\u003e","Color":"#FF0060","HiddenInCruiseLocationPlanning":false},{"Order":9,"StationType_id":9,"Deleted":false,"Name":"Transect","Key":"Transect","GroupOrder":3,"FeatureType":"linestring","Icon":"\u003cimg class=\u0022draw-element-icon\u0022 src=\u0022/Images/transect-icon.svg\u0022 /\u003e","Color":"#FF6600","HiddenInCruiseLocationPlanning":false}];
+    mse.defaultCruisingShipSpeed = 10
+
+    mse.useInlineViewer = true;
+    mse.IncludeMobDemobDaysInCruise = false;
+    mse._countLatinCharacterWeight = 1.0;
+
+    mse.directToBlob = {
+        enabled: false,
+        minBytes: 8388608
+    };
+
+    mse.ianaFormatOrganisationTimeZoneId = "America/Denver";
+    mse.colorPalette = ["#2d99ff","#826af9","#00748D","#ffe700","#2cd9c5","#1C8FCE","#BC198C","#93C73E","#999999","#1C8FCE"];
+    mse.hiddenBaseMapLayers = [];
+</script>
+        <script>mse.startMapProjectionProgramme = "default";</script>
+
+
+
+
+
+
+    <script src="/Framework/Scripts/jquery.placeholder.min.js"></script>
+
+
+    <link rel="icon" href="/Images/favicon.ico?v=3" />
+
+
+</head>
+<body>
+
+
+
+
+
+    <div class="login-body   has-suggestions   ">
+
+        <div class="login-header">
+
+            <div class="header-title">
+
+                <a href="#">
+                    <img src="/Images/mfp_logo_white2.svg" alt="mfp-logo" class="header-logo" />
+                </a>
+
+                <h1>
+                    Marine Facilities <span class="secondary">Planning</span>
+                </h1>
+
+            </div>
+
+            <div class="header-btns">
+                    <h2 class="button-spacing">
+                        <a href="/programme">Schedules</a>
+                    </h2>
+                                    <h2>
+                        <a href="/framework/public/equipmentinventory">U.S. ARF Equipment Inventory</a>
+                    </h2>
+                <h2>
+                    <a href="/about">About</a>
+                </h2>
+
+                    <h2 class="suggestions-btn">
+                        <a href="/framework/public/suggestions">Suggestions</a>
+                    </h2>
+
+
+                    <h2 class="request-account-btn">
+                        <a href="/framework/account/application">Request an account</a>
+                    </h2>
+
+
+            </div>
+
+        </div>
+
+            <button class="navigation-slider-btn slide-left" onclick="plusDivs(-1)"></button>
+            <button class="navigation-slider-btn slide-right" onclick="plusDivs(+1)"></button>
+
+        <div class="image-Slider">
+                    <div class="mySlides" style="background-image: url('../../Images/Ships/unols/America.jpg');"></div>
+        </div>
+
+
+        <div class="body-content login-content">
+
+            <div class="welcome-holder">
+                <h3>Welcome to <br /> <span class="secondary"> Marine Facilities</span> Planning</h3>
+
+                <div class="welcome-text">
+                    
+                    <p>This website allows scientists to request ship time on the vessels of the U.S. Academic Research Fleet.</p>
+                </div>
+            </div>
+
+            <div class="login-holder float-right  ">
+                <div class="log-input-header">
+                    <h5>Enter the system</h5>
+                </div>
+                <div class="line-connect"></div>
+
+                <div id="loginForm" class="login-box">
+<form action="/login" method="post"><input id="BrowserDetails" name="BrowserDetails" type="hidden" value="" />                        <table class="table-properties-display">
+                            <tr>
+                                <td class="details-value-large">
+                                    <input data-val="true" data-val-required="The Email field is required." id="UserName" name="UserName" placeholder="Email" type="text" value="" /><br />
+                                    <span class="field-validation-valid" data-valmsg-for="UserName" data-valmsg-replace="true"></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="details-value-large">
+                                    <input data-val="true" data-val-required="The Password field is required." id="Password" name="Password" placeholder="Password" type="password" /><br />
+                                    <span class="field-validation-valid" data-valmsg-for="Password" data-valmsg-replace="true"></span>
+                                </td>
+                            </tr>
+                        </table>
+                        <div class="button-action-wrapper">
+                            <div class="loading-button-container">
+                                <input type="submit" class="button-login verification-button" value="Login">
+                                <div class="spinner"></div>
+                            </div>
+                        </div>
+<a class="account-forgot-password" href="/framework/account/resetpassword">Forgot Password</a>                        <script type="text/javascript">
+                            $(document).ready(function () {
+                                try {
+                                    $("form input").placeholder();
+                                }
+                                catch (ex) {
+                                    //meh
+                                }
+                                try {
+                                    // and fix hash-part if needed:
+                                    var hash = location.hash;
+                                    if (hash) {
+                                        if (hash[0] == '#') {
+                                            hash = hash.substring(1);
+                                        }
+                                        hash = '%23' + hash;
+
+                                        var action = $("form").attr("action");
+                                        if (action.indexOf('%23') == -1) { // no hash part in the url, add it.
+                                            $("form").attr("action", action + hash);
+                                        }
+                                    }
+                                }
+                                catch (ex) {
+                                    // meh
+                                }
+
+                                
+                                $("#BrowserDetails").val(mse.collectBrowserInfo());
+
+                                var handler = new mse.blockDoubleClick($("#loginForm"));
+                            });
+                        </script>
+</form>
+
+                </div>
+
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+    
+
+<link href="/content/UnolsStyles.css?lang=en-US&amp;t=134339362226392144" rel="stylesheet"/>
+
+<div class="company-container company-multirow-container">
+
+    <div class="company-views unols-views">
+
+        <div class="primary-company-container">
+            <div class="nsf company-item">
+                <a href="">
+                    <img src="/Images/nsf-logo.png" alt="nsf" class="image" />
+                </a>
+            </div>
+
+            <div class="orn company-item">
+                <a href="">
+                    <img src="/Images/onr-logo.png" alt="orn" class="image" />
+                </a>
+            </div>
+
+            <div class="usgs company-item">
+                <a href="">
+                    <img src="/Images/usgs-logo.png" alt="usgs" class="image" />
+                </a>
+            </div>
+
+            <div class="nora company-item">
+                <a href="">
+                    <img src="/Images/nora-logo.png" alt="nora" class="image" />
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="company-login-text">
+        <div class="apply-account">
+            In order to apply to use these marine facilities you must be a registered user of the Marine Facilities Planning Website.
+        </div>
+    </div>
+    
+
+    <div class="company-login-text secundary">
+        Please request an account or login above
+    </div>
+</div>
+
+        <div class="map-container">
+            <div id="map-placeholder">
+
+            </div>
+            <div class="programme-overlay">
+                <div class="programme-text">
+                    The published UNOLS research schedule can be viewed without an account on the schedule
+                </div>
+                <a href="/programme">
+                    <input type="submit" class="button-programme" value="Schedules" />
+                </a>
+            </div>
+        </div>
+
+    <div class="about-container">
+        <div class="about-placeholder">
+            <div class="about-text">
+                The Marine Facilities Planning Website is a joint NIOZ, NERC and MAAS Software Engineering project that could also be made available to other users.
+
+                <a href="/about">
+                    <input type="submit" class="button-about" value="About MFP" />
+                </a>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="image-large about-svg-image" xmlns:xlink="http://www.w3.org/1999/xlink" width="781" height="519" viewBox="0 0 781 519">
+                <defs>
+                    <filter id="a" width="110.2%" height="110.5%" x="-2.6%" y="-3.8%" filterUnits="objectBoundingBox">
+                        <feOffset dx="33" dy="10" in="SourceAlpha" result="shadowOffsetOuter1" />
+                        <feGaussianBlur in="shadowOffsetOuter1" result="shadowBlurOuter1" stdDeviation="2.5" />
+                        <feColorMatrix in="shadowBlurOuter1" result="shadowMatrixOuter1" values="0 0 0 0 0.329411765 0 0 0 0 0.525490196 0 0 0 0 0.57254902 0 0 0 0.0708786232 0" />
+                        <feMerge>
+                            <feMergeNode in="shadowMatrixOuter1" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                    <linearGradient id="c" x1="50.286%" x2="50%" y1="50.286%" y2="50%">
+                        <stop offset="0%" stop-opacity=".5" />
+                        <stop offset="100%" stop-color="#FFF" stop-opacity=".5" />
+                    </linearGradient>
+                    <path class="link-pointer" id="b" d="M41.949 42.915h202.546V245.3H41.949z" />
+                    <path class="link-pointer" id="d" d="M27.372 28.003h130.969v130.864H27.372z" />
+                    <path class="link-pointer" id="e" d="M30.585 30.561h147.677V178.12H30.585z" />
+                    <path class="link-pointer" id="f" d="M19.435 19.42h93.842v93.768H19.435z" />
+                    <path class="link-pointer" id="g" d="M30.191 29.808h143.603v143.489H30.191z" />
+                    <path id="h" d="M679.852 288.872h52.467v52.425h-52.467z" />
+                    <path id="i" d="M115.852 440.872h52.467v52.425h-52.467z" />
+                    <path id="j" d="M123.524 63.542h46.046v46.01h-46.046z" />
+                    <path id="k" d="M306.295 420.58h22.116v22.098h-22.116z" />
+                    <path id="l" d="M6.018 417.03h29.098v29.075H6.018z" />
+                    <path id="m" d="M566.114 6.891h29.098v29.075h-29.098z" />
+                    <path id="n" d="M566.114 422.025h29.098V451.1h-29.098z" />
+                    <path id="o" d="M23.012 22.993h108.417v108.331H23.012z" />
+                    <path class="link-pointer" id="p" d="M15.804 15.876h73.21v73.152h-73.21z" />
+                    <path class="link-pointer" id="q" d="M20.744 20.727h100.159v100.08H20.744z" />
+                    <path class="link-pointer" id="r" d="M16.365 16.596h78.283v78.22H16.365z" />
+                    <path class="link-pointer" id="s" d="M21.877 21.86h105.634v105.55H21.877z" />
+                    <path class="link-pointer" id="t" d="M20.744 21.727h100.159v100.08H20.744z" />
+                </defs>
+                <g class="modules" fill="none" fill-rule="evenodd" filter="url(#a)">
+                    <g transform="rotate(45 134.377 483.837)" id="inventory-management-linker">
+                        <use fill="#548692" xlink:href="#b" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#b" />
+                    </g>
+                    <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="25.92" font-weight="300" transform="translate(237.634 105.759)">
+                        <tspan x="90.538" y="137.509">Inventory</tspan> <tspan x="67.434" y="167.509">Management</tspan>
+                    </text>
+                    <g transform="rotate(45 7.743 738.596)" id="customs-warehouse-linker">
+                        <use fill="#CFD8DC" xlink:href="#d" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#d" />
+                    </g>
+                    <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="21.06" font-weight="300" transform="translate(431.269 249.148)">
+                        <tspan x="51.78" y="88.078">Customs</tspan> <tspan x="41.549" y="113.078">Warehouse</tspan>
+                    </text>
+                    <g transform="rotate(45 -136.166 404.86)" id="maintenance-certification-linker">
+                        <use fill="#90A4AE" xlink:href="#e" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#e" />
+                    </g>
+                    <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="20.25" font-weight="300" transform="translate(142.032 258.143)">
+                        <tspan x="47.022" y="99.941">Maintenance</tspan> <tspan x="30.885" y="123.941">&amp; Configurations</tspan>
+                    </text>
+                    <g transform="rotate(45 158.874 833.815)" id="mooring-configuration-linker">
+                        <use fill="#548692" fill-opacity=".576" xlink:href="#f" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#f" />
+                    </g>
+                    <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="16.2" font-weight="300" transform="translate(569.81 159.379)">
+                        <tspan x="36.871" y="61.133">Mooring</tspan> <tspan x="22.206" y="80.133">Configurator</tspan>
+                    </text>
+                    <g transform="scale(1 -1) rotate(45 633.843 493.45)" id="project-management-linker">
+                        <use fill="#009DAC" xlink:href="#g" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#g" />
+                    </g>
+                    <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="21.87" font-weight="300" transform="translate(432.889 58.187)">
+                        <tspan x="68.365" y="96.891">Project</tspan> <tspan x="38.326" y="121.891">Management</tspan>
+                    </text>
+                    <g transform="rotate(135 706.085 315.085)" class="floating-block-1">
+                        <use fill="#24ADBB" xlink:href="#h" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#h" />
+                    </g>
+                    <g transform="rotate(-135 142.085 467.085)" class="floating-block-2">
+                        <use fill="#24ADBB" xlink:href="#i" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#i" />
+                    </g>
+                    <g transform="rotate(-135 146.547 86.547)" class="floating-block-3">
+                        <use fill="#009DAC" xlink:href="#j" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#j" />
+                    </g>
+                    <g fill-opacity=".2" transform="rotate(135 317.353 431.629)" class="floating-block-4">
+                        <use fill="#000" xlink:href="#k" />
+                        <use fill="url(#c)" xlink:href="#k" />
+                    </g>
+                    <g transform="rotate(135 20.567 431.567)" class="floating-block-5">
+                        <use fill="#548692" xlink:href="#l" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#l" />
+                    </g>
+                    <g transform="rotate(-135 580.663 21.429)" class="floating-block-6">
+                        <use fill="#B0BEC5" xlink:href="#m" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#m" />
+                    </g>
+                    <g transform="rotate(135 580.663 436.562)" class="floating-block-7">
+                        <use fill="#548692" xlink:href="#n" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#n" />
+                    </g>
+                    <g transform="rotate(45 134.001 357.623)" id="cruise-planning-linker">
+                        <use fill="#D3DBDF" xlink:href="#o" />
+                        <use fill="url(#c)" fill-opacity=".2" xlink:href="#o" />
+                        <use fill="#000" fill-opacity="0" xlink:href="#o" />
+                    </g>
+                    <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="20.25" font-weight="300" transform="translate(214.95 41.996)">
+                        <tspan x="48.798" y="72.416">Cruise</tspan> <tspan x="38.47" y="96.416">Planning</tspan>
+                    </text>
+                    <g id="transport-linker">
+                        <g transform="rotate(-135 263.023 -19.197)">
+                            <use fill="#00B2C1" xlink:href="#p" />
+                            <use fill="url(#c)" fill-opacity=".2" xlink:href="#p" />
+                        </g>
+                        <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="16.2" font-weight="300" transform="translate(410.204 26.614)">
+                            <tspan x="17.243" y="57.9">Transport</tspan>
+                        </text>
+                    </g>
+                    <g id="personnel-planning-linker">
+                        <g transform="rotate(45 -103.384 291.085)">
+                            <use fill="#3FA5B5" xlink:href="#q" />
+                            <use fill="url(#c)" fill-opacity=".2" xlink:href="#q" />
+                        </g>
+                        <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="14.58" font-weight="300" transform="translate(104.764 187.713)">
+                            <tspan x="37" y="67.18">Personnel</tspan> <tspan x="25" y="85">Planning Tool</tspan>
+                        </text>
+                    </g>
+                    <g id="barcode-scanners-linker">
+                        <g transform="scale(1 -1) rotate(45 552.699 -58.222)">
+                            <use fill="#78909C" xlink:href="#r" />
+                            <use fill="url(#c)" fill-opacity=".2" xlink:href="#r" />
+                        </g>
+                        <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="14.58" font-weight="300" transform="translate(65.065 273.524)">
+                            <tspan x="29.086" y="51.23">Barcode</tspan> <tspan x="25.601" y="69.23">Scanners</tspan>
+                        </text>
+                    </g>
+                    <g id="scientist-portal-linker">
+                        <g transform="scale(1 -1) rotate(45 846.48 259.445)">
+                            <use fill="#548692" fill-opacity=".576" xlink:href="#s" />
+                            <use fill="url(#c)" fill-opacity=".2" xlink:href="#s" />
+                        </g>
+                        <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="17.82" font-weight="300" transform="translate(356.731 342.335)">
+                            <tspan x="40.537" y="70.418">Scientist</tspan> <tspan x="50.865" y="91.418">Portal</tspan>
+                        </text>
+                    </g>
+                    <g id="voyage-planning-linker">
+                        <g transform="rotate(45 307.383 824.3)">
+                            <use fill="#3FA5B5" xlink:href="#t" />
+                            <use fill="url(#c)" fill-opacity=".2" xlink:href="#t" />
+                        </g>
+                        <text class="no-pointer-event" fill="#FFF" font-family="Roboto-Light, Roboto" font-size="14.58" font-weight="300" transform="translate(601.407 53.139)">
+                            <tspan x="47.405" y="66.801">Voyage </tspan> <tspan x="27.742" y="84.801">Planning Tool</tspan>
+                        </text>
+                    </g>
+                </g>
+            </svg>
+        </div>
+    </div>
+
+    <div class="maas-credentials">
+
+    </div>
+
+
+    <script>
+        var toggleTextTimeout = null;
+        $(document).ready(function () {
+            if (!$(".login-body").hasClass("kaust")) {
+                $(".company-views:not(.unols-views) .company-item").hover(function () {
+                    var orgClass = this.className.replace(" company-item", "");
+                    if (toggleTextTimeout) {
+                        clearTimeout(toggleTextTimeout);
+                        toggleTextTimeout = null;
+                    }
+                    $(".company-login-text").hide();
+                    $(".organisation-text > div").hide(); // hide explicit all organisation texts (to avoid showing multiple organisation texts flashing)
+                    $(".organisation-text ." + orgClass).show(); // and show only the current organisation text only
+
+                });
+                $(".company-views .company-item").mouseleave(function () {
+                    var orgClass = this.className.replace(" company-item", "");
+                    toggleTextTimeout = setTimeout(function () {
+                        $(".company-login-text").show();
+                        $(".organisation-text ." + orgClass).hide();
+                        toggleTextTimeout = null;
+                    }, 200);
+                });
+            }
+
+            $(".language-select-button").on('click', function () {
+                $(this).closest(".language-select-container").find(".language-select-list").slideToggle(200);
+            })
+
+            $(document.body).on("click", ".action.action-select-language", function (e) {
+                var lang = $(this).attr("data-lang");
+                var langCookie = getCookie("system-language")
+
+                console.log('lang', lang);
+
+                if (lang && lang != langCookie) {
+                    setCookie("system-language", lang, 60)
+                    location.reload();
+                }
+            });
+        });
+
+    </script>
+
+    <script>
+            
+            var CarouselTimeOut = null;
+            var myIndex = 0;
+
+            var slideImages = [{"domain":"unols","priority":190,"src":"../../Images/Ships/unols/America.jpg"},{"domain":"unols","priority":180,"src":"../../Images/Ships/unols/RV MARCUS LANGSETH.jpg"},{"domain":"unols","priority":170,"src":"../../Images/Ships/unols/ROGER_REVELLE.jpg"},{"domain":"unols","priority":120,"src":"../../Images/Ships/unols/BlueHeronsm.JPG"},{"domain":"unols","priority":100,"src":"../../Images/Ships/unols/RVHughRSharpsm.jpg"},{"domain":"unols","priority":90,"src":"../../Images/Ships/unols/KMsm.jpg"},{"domain":"unols","priority":40,"src":"../../Images/Ships/unols/SalyRide.jpg"},{"domain":"unols","priority":30,"src":"../../Images/Ships/unols/SKQsm.JPG"},{"domain":"unols","priority":10,"src":"../../Images/Ships/unols/Healy.jpg"}];
+
+            function initCarousel() {
+                var hr = $("<div id='hidden-resources'></div>");
+                hr.css("overflow", "hidden");
+                hr.css("position", "relative");
+                hr.css("height", "1px");
+                // hr.hide();
+                hr.appendTo($(document.body));
+                // shuffle elements to assure the ships are displayed in random order on every visit.
+                // $(".mySlides").shuffle();
+
+                // load and show first image immediately and already load the second one. (first one now fixed in code, thus not shown again here).
+                //showDivs(0, true);
+                carouselLoadImage(myIndex + 1);
+                // and initialize timeout to call carousel every 4 seconds. (timeout, not interval as interval will intervere when using buttons to navigate).
+                CarouselTimeOut = setTimeout(carousel, 4000);
+            }
+            initCarousel();
+
+            function carousel() {
+                myIndex = (++myIndex) % slideImages.length;
+
+                carouselLoadImage(myIndex).done(function () {
+                    // reference explicit to $(".mySlides") as elements will be replaced by the loader.
+                    showCurrentCarouselItem();
+                });
+                // and load the following up image already (if not yet loaded):
+                carouselLoadImage((myIndex + 1) % slideImages.length);
+
+                CarouselTimeOut = setTimeout(carousel, 4000);
+            }
+
+            function showCurrentCarouselItem() {
+                var slide = slideImages[myIndex];
+                $(".mySlides").css("background-image", "url('" + slide.src + "')");
+                //$(".mySlides").hide(); //.css("visibility", "hidden");
+                //$($(".mySlides")[myIndex]).show();//.css("visibility", "visible");
+            }
+
+            function carouselLoadImage(idx) {
+                var slide = slideImages[idx];
+
+                if (slide && !slide.loader) {
+                    var loader = $.Deferred();
+
+                    var img = $("<img />");
+                    img.appendTo($("#hidden-resources"));
+                    img.one("load", function () {
+                        loader.resolve();
+                    });
+                    img.one("error", function () {
+                        loader.reject();
+                    });
+                    img.attr("src", slide.src);
+                    img.css("position", "absolute");
+                    img.css("left", "0px");
+                    img.css("top", "0px");
+
+                    slide.loader = loader;
+                }
+                // once solved, it will be handled correctly after
+                if (slide && slide.loader) {
+                    return slide.loader;
+                }
+                return null;
+            }
+
+            function plusDivs(n, explicit) {
+                if (CarouselTimeOut != null) {
+                    clearTimeout(CarouselTimeOut);
+                    CarouselTImeOut = null;
+                }
+                showDivs(myIndex += n, explicit);
+                CarouselTimeOut = setTimeout(carousel, 4000)
+            }
+
+            function showDivs(n, explicit) {
+                myIndex = (myIndex + slideImages.length) % slideImages.length;
+                var res = carouselLoadImage(myIndex);
+                var showAct = function () {
+                    // reference explicit to $(".mySlides") as elements will be replaced by the loader.
+                    showCurrentCarouselItem();
+                };
+
+                if (explicit) {
+                    showAct();
+                }
+                else {
+                    res.done(showAct);
+                }
+            }
+            
+
+        
+            var inlineMapInitialized = false;
+            function loadInlineProgrammeMap() {
+                if (inlineMapInitialized) {
+                    return;
+                }
+                inlineMapInitialized = true;
+                $.when(
+                    $.get('/Programme/_inlinemap')
+                )
+                    .done(function (data) {
+                        $("#map-placeholder").html(data);
+                    });
+            }
+            $(document).ready(function () {
+                if ($(document.body).scrollTop() > 0) {
+                    loadInlineProgrammeMap();
+                }
+                else {
+                    setTimeout(loadInlineProgrammeMap, 50);
+                    /*$(document.body).one("scroll", function () {
+                        loadInlineProgrammeMap();
+                    });*/
+                }
+            });
+    
+    </script>
+
+    <script src="/mapboxwithplugins.js?cs=742602adb49174a1d9b9fea65c9c1e86" type="text/javascript"></script>
+    <script src="/programmescripts.js?cs=ce727b4ca752d0ddb984db3e7f1710c2" type="text/javascript"></script>
+
+</body>
+</html>

@@ -39,3 +39,8 @@ outreach/
 .vercel
 .staging-db-password
 .env.prod
+
+# MFP investigation raw pulls (large)
+mfp-api/probes/
+mfp-api/raw/
+mfp-api/site/

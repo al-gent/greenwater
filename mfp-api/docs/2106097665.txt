@@ -1,0 +1,54 @@
+# List of Cruise Participants (API)
+version 3 2024-03-04T16:03:51.125Z
+
+
+Authentication
+The API requires you to provide an API key in your requests to get responses. The key should be included in the header of your request:
+  --header 'x-api-key: <your_api_key_here> ' 
+HTTP Request Format
+https://{mfp.url}/api/v1/programme/cruise/{id}/cruiseparticipants
+Parameter
+Description
+mfp.url
+The MFP url for your organisation
+id
+The identification number of the cruise
+Errors
+MFP APIs follow the HTTP response status codes, which indicate whether a specific HTTP request has been successfully completed. Below a summary of the most common codes you'll find in our responses:
+Code
+Description
+200
+OK. Everything worked as expected.
+400
+Bad Request. The request was unacceptable, often due to missing a required parameter.
+401
+Unauthorized. No valid API key provided.
+403
+Forbidden. The API key doesn't have permissions to perform the request.
+404
+Not Found. The requested resource doesn't exist.
+429
+Too Many Requests. Too many requests hit the API too quickly. We recommend an exponential backoff of your requests.
+500, 502, 503, 504
+Server Errors. Something went wrong on MFP end.
+Response
+OK
+Response schema type: object
+Typical output HTTP request
+{
+    "Firstname": null,
+    "Surname": null,
+    "Role": "Chief Scientist",
+    "EmailAddress": null
+},
+Output variables
+Variable
+Description
+Firstname
+The first name of the participant
+Surname
+The last name of the participant
+Role
+The role of the participant
+EmailAddress
+The email address of the participant

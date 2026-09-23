@@ -1,0 +1,122 @@
+# Post Operation Log API
+version 2 2026-03-26T18:46:13.115Z
+
+
+Purpose
+Use this API to submit ship operation metrics for a specific date.
+You can:
+submit metrics for one ship (
+single
+ endpoint), or
+submit metrics for multiple ships in one request (
+bulk
+ endpoint).
+Authentication
+Include your API key in every request header:
+mfp-apikey: <your-api-key>
+Content-Type: application/json
+Base Routes
+Single ship
+POST /API/v1/{grid_id}/{shipICESPlatformCode}/operationlog/post
+Bulk
+POST /API/v1/{grid_id}/operationlog/post_bulk
+Path Parameters
+Parameter
+Type
+Required
+Description
+grid_id
+string
+Yes
+Organisation identifier (example: 
+grid.3532.7
+)
+shipICESPlatformCode
+string
+Yes (single only)
+Ship code (example: 
+3322
+, 
+317W
+)
+Request Models
+Entry
+Property
+Type
+Required
+Description
+ICESPlatformCode
+string
+Yes
+Ship code.
+Date
+string
+Yes
+Date in ISO format, example: 
+2026-03-26
+Metrics
+array of Metric
+Yes
+One or more metrics
+Metric
+Property
+Type
+Required
+Description
+Id
+integer
+Yes
+Metric identifier
+Value
+number
+Yes
+Metric value
+Single Endpoint Example
+URL
+POST https://<host>/API/v1/grid.3532.7/3322/operationlog/post
+Body
+wide
+760
+Bulk Endpoint Example
+URL
+POST https://<host>/API/v1/grid.3532.7/operationlog/post_bulk
+Body
+wide
+760
+Success Response
+wide
+760
+Field
+Type
+Description
+success
+boolean
+true
+ if request was saved
+processedCount
+integer
+Number of entries processed
+errors
+array of string
+Validation errors (empty on success)
+Error Responses
+400 Bad Request
+Returned when request data is invalid, for example:
+missing required path parameters
+missing body
+invalid 
+Date
+empty 
+Metrics
+a metric without 
+Id
+ICESPlatformCode
+ mismatch on single endpoint
+404 Not Found
+Returned when:
+grid_id
+ is unknown
+shipICESPlatformCode
+ is unknown (single endpoint)
+500 Internal Server Error
+Returned when data could not be saved.

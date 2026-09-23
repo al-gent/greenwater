@@ -1,0 +1,132 @@
+# Public Cruise Information (API)
+version 13 2026-01-15T13:02:28.099Z
+
+
+Authentication
+The API requires you to provide an API key in your requests to get responses. The key should be included in the header of your request:
+  --header 'x-api-key: <your_api_key_here> ' 
+HTTP Request Format
+https://{mfp.url}/API/v1/{organisation}/schedule/{year}/{ship}
+Parameter
+Description
+mfp.url
+The MFP url for your organisation.
+organisation
+GRID ID (for more information, go to 
+https://grid.ac/
+).
+year
+The calendar year of which you want to receive the scheduled cruises, passages, and other possible events.
+ship
+ICES code of the ship. Lookup the code here: 
+https://vocab.seadatanet.org/v_bodc_vocab_v2/search.asp?lib=C17
+Errors
+MFP APIs follow the HTTP response status codes, which indicate whether a specific HTTP request has been successfully completed. Below a summary of the most common codes you'll find in our responses:
+Code
+Description
+200
+OK. Everything worked as expected.
+400
+Bad Request. The request was unacceptable, often due to missing a required parameter.
+401
+Unauthorized. No valid API key provided.
+403
+Forbidden. The API key doesn't have permissions to perform the request.
+404
+Not Found. The requested resource doesn't exist.
+429
+Too Many Requests. Too many requests hit the API too quickly. We recommend an exponential backoff of your requests.
+500, 502, 503, 504
+Server Errors. Something went wrong on MFP end.
+Response
+OK
+Response schema type: object
+Typical output HTTP request
+Standard Result Object
+760
+json
+Result Object when Performance Metrics are Used
+760
+json
+note
+a5ecf7b7-59f0-44ab-ba4a-e9fcce15b54a
+Update: Now includes Performance Metric information, including Vocab field. This information will only be included when available.
+Update: Now includes Performance Metric information, including Vocab field. This information will only be included when available.
+Output variables
+Variable
+Description
+Ship
+ICES code of the ship. Lookup the code here: 
+https://vocab.seadatanet.org/v_bodc_vocab_v2/search.asp?lib=C17
+Name
+The name of the ship
+Event_id
+A unique MFP number for identifying the event.
+AlternateId
+The alternate event ID
+EventName
+The name of the event (e.g., the name of a cruise).
+EventType
+The type of event (e.g., At Sea for Science or Barter)
+EventStartDate
+The start date of the event (ISO 8601)
+EventEndDate
+The end date of the event (ISO 8601)
+CruiseTrack
+The cruise track/stations (geoJSON)
+Latitude
+(PortOfDeparture)
+The departure port latitude coordinate in decimal degrees
+Longitude
+(PortOfDeparture)
+The departure port longitude coordinate in decimal degrees
+Name
+(PortOfDeparture)
+The departure port name
+State
+(PortOfDeparture)
+The departure port state
+CountryCode
+(PortOfDeparture)
+The departure port country code
+PortCode
+(PortOfDeparture)
+The departure port UN/LOCODE. For more info go to 
+https://unece.org/trade/cefact/unlocode-code-list-country-and-territory
+)
+Latitude
+(PortOfArrival)
+The arrival port latitude coordinate in decimal degrees
+Longitude
+(PortOfArrival)
+The arrival port longitude coordinate in decimal degrees
+Name
+(PortOfArrival)
+The arrival port name
+State
+(PortOfArrival)
+The arrival port state
+CountryCode
+(PortOfArrival)
+The arrival port country code
+PortCode
+(PortOfArrival)
+The arrival port UN/LOCODE. For more info go to 
+https://unece.org/trade/cefact/unlocode-code-list-country-and-territory
+)
+PerformanceMetricGroup (PerformanceMetrics)
+Group heading Name for the Performance Metric
+PerformanceMetric (PerformanceMetrics)
+Actual Performance Metric field
+ MetricValue (PerformanceMetrics)
+Value captured for the Performance Metric
+Vocab (PerformanceMetrics)
+Applicable Vocab Code associated with the Metric
+Name
+The name of the principle investigator
+Organisation
+The GRID (Global Research Identifier Database) ID for the principle investigator’s affiliated organization. For more info go to 
+https://grid.ac/
+ORCID
+The principle investigator’s ORCID ID. For more info go to 
+https://orcid.org/

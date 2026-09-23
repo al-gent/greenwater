@@ -1,0 +1,51 @@
+[
+    {
+        "Ship": "33FI",
+        "Name": "Ferdinand R. Hassler",
+        "Events": [
+            {
+                "Event_id": 956,
+                "AlternateId": "Onslow Bay",
+                "EventName": "Onslow Bay, NC",
+                "EventType": "Cruise",
+                "EventStartDate": "2025-11-15T13:00:00.0000000Z",
+                "EventEndDate": "2025-12-14T21:00:00.0000000Z",
+                "CruiseTrack": "{\"features\":[],\"type\":\"FeatureCollection\",\"properties\":{}}",
+                "PortOfDeparture": {
+                    "Latitude": 32.8084869384766,
+                    "Longitude": -79.8908767700195,
+                    "Name": "Charleston",
+                    "State": "South Carolina",
+                    "CountryCode": "US",
+                    "PortCode": "USCHS"
+                },
+                "PortOfArrival": {
+                    "Latitude": 41.61316,
+                    "Longitude": -71.40961,
+                    "Name": "Davisville",
+                    "State": "Rhode Island",
+                    "CountryCode": "US",
+                    "PortCode": "USDVV"
+                },
+                "PerformanceMetrics": [
+                    {
+                        "PerformanceMetricGroup": "Survey",
+                        "Metric": "Mammal Transects Linear Miles",
+                        "FullMetricValue": "Total Mammal Transects Linear Miles: 47",
+                        "MetricValue": "47",
+                        "Vocab": "SDN:P01::DISTPR01"
+                    }
+                ],
+                "Events": [],
+                "Scientist": {
+                    "Name": "Martin Herzog",
+                    "Organisation": {
+                        "GRID": "grid.3532.7",
+                        "Name": "National Oceanic and Atmospheric Administration"
+                    },
+                    "ORCID": null
+                }
+            }
+        ]
+    }
+]

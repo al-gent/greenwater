@@ -1,0 +1,18 @@
+{
+  "Ship": "99XX",
+  "Name": "R/V Example Vessel",
+  "ProjectShortname": "Example Project",
+  "ScientistName": "John Doe",
+  "StartDate": "2025-12-20T12:00:00.000Z",
+  "EndDate": "2026-01-25T20:00:00.000Z",
+  "PortOfDeparture": {
+    "Name": "Example Port",
+    "Latitude": 10.11,
+    "Longitude": -20.22
+  },
+  "PortOfArrival": {
+    "Name": "Example Port",
+    "Latitude": 10.11,
+    "Longitude": -20.22
+  }
+}

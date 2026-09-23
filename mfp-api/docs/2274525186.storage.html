@@ -1,0 +1,46 @@
+<p>This page documents the file management endpoints for the Equipment&nbsp;API. These endpoints allow you to retrieve file information and download files associated with equipment items.</p><h2>API Base&nbsp;URL</h2><ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="9366e10b-48c5-4c50-a84b-612c95057cf5"><ac:plain-text-body><![CDATA[API/v1/{grid.id}/equipment/{id}/fileoverview]]></ac:plain-text-body></ac:structured-macro><h3>Endpoints</h3><ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="2cf3e59e-b65b-4cfd-b5cc-e18713965119"><ac:plain-text-body><![CDATA[GET API/v1/{grid.id}/equipment/{id}/fileoverview
+GET API/v1/{grid.id}/equipment/{id}/fileoverview/download]]></ac:plain-text-body></ac:structured-macro><p>Where:</p><ul><li><p><code>{grid.id}</code>&nbsp;is your grid identifier&nbsp;(e.g., grid.1016.6)</p></li><li><p><code>{id}</code>&nbsp;is the&nbsp;equipment ID</p></li></ul><h2>Authentication</h2><p>All endpoints require authentication&nbsp;with an API key that has the&nbsp;<code>EXTERNALINVENTORYMANAGEMENT</code>&nbsp;role.</p><h2>Endpoints</h2><h3>1. List Files</h3><h4>Request</h4><ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="d87a24eb-d341-45b0-9296-27793e4262f0"><ac:plain-text-body><![CDATA[GET API/v1/{grid.id}/equipment/{id}/fileoverview]]></ac:plain-text-body></ac:structured-macro><h4>Description</h4><p>Retrieves a hierarchical&nbsp;list of all files associated with the specified equipment item.</p><h4>Path Parameters</h4><table data-table-width="760" data-layout="default" ac:local-id="0e48f2a8-b6cc-4615-9643-75c85b0d135b"><tbody><tr><th><p><strong>Parameter </strong></p></th><th><p><strong>Type </strong></p></th><th><p><strong>Description </strong></p></th></tr><tr><td><p>grid.id  &nbsp;</p></td><td><p>string </p></td><td><p>Your grid identifier&nbsp;</p></td></tr><tr><td><p>id&nbsp;</p></td><td><p>integer </p></td><td><p>Equipment ID to retrieve files for&nbsp;</p></td></tr></tbody></table><h4>Response</h4><ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="8b1520be-8515-4dca-a365-85aa1efcdf4e"><ac:plain-text-body><![CDATA[[
+  {
+    "File_id": 123,
+    "Name": "Equipment Manual.pdf",
+    "Items": [
+      {
+        "File_id": 456,
+        "Name": "Chapter 1.pdf",
+        "Items": []
+      },
+      {
+        "File_id": 789,
+        "Name": "Chapter 2.pdf",
+        "Items": []
+      }
+    ]
+  },
+  {
+    "File_id": 234,
+    "Name": "Maintenance Records.xlsx",
+    "Items": []
+  }
+]]]></ac:plain-text-body></ac:structured-macro><h4>Response&nbsp;Fields</h4><table data-table-width="760" data-layout="default" ac:local-id="14e0a888-fca2-4b50-b1f8-123dd4a65c27"><tbody><tr><th><p><strong>Field</strong></p></th><th><p><strong>Type</strong></p></th><th><p><strong>Description</strong></p></th></tr><tr><td><p>File_id&nbsp;</p></td><td><p>integer </p></td><td><p>Unique identifier for the file&nbsp;</p></td></tr><tr><td><p>Name&nbsp;</p></td><td><p>string </p></td><td><p>Name&nbsp;of the file </p></td></tr><tr><td><p>Items&nbsp;</p></td><td><p>array </p></td><td><p>List of child files/folders&nbsp;(recursive structure)</p></td></tr></tbody></table><p /><h4>Status Codes</h4><table data-table-width="760" data-layout="default" ac:local-id="718606d5-6b83-455a-8f19-b731c8fc8895"><colgroup><col style="width: 148.0px;" /><col style="width: 610.0px;" /></colgroup><tbody><tr><td><p><strong>Code</strong></p></td><td><p><strong>Description</strong></p></td></tr><tr><td><p>200</p></td><td><p>OK. Everything worked as expected.</p></td></tr><tr><td><p>400</p></td><td><p>Bad Request. The request was unacceptable, often due to missing a required parameter.</p></td></tr><tr><td><p>401</p></td><td><p>Unauthorized. No valid API key provided.</p></td></tr><tr><td><p>403</p></td><td><p>Forbidden. The API key doesn't have permissions to perform the request.</p></td></tr><tr><td><p>404</p></td><td><p>Not Found. The requested resource doesn't exist.</p></td></tr><tr><td><p>429</p></td><td><p>Too Many Requests. Too many requests hit the API too quickly. We recommend an exponential backoff of your requests.</p></td></tr><tr><td><p>500, 502, 503, 504</p></td><td><p>Server Errors. Something went wrong on MFP end.</p></td></tr></tbody></table><h3>2. Download Files</h3><h4>Request</h4><ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="1bdbc1dd-c0a5-486f-b1b3-0d0c0e6882cd"><ac:plain-text-body><![CDATA[POST API/v1/{grid.id}/equipment/{id}/fileoverview/download?file_ids=123&file_ids=456]]></ac:plain-text-body></ac:structured-macro><h4>Description</h4><p>Downloads one or more files associated with the specified equipment as a ZIP archive.</p><h4>Path Parameters</h4><table data-table-width="760" data-layout="default" ac:local-id="70a2bb98-1a15-436a-8494-262ba49d5717"><tbody><tr><th><p><strong>Parameter </strong></p></th><th><p><strong>Type </strong></p></th><th><p><strong>Description </strong></p></th></tr><tr><td><p>grid.id &nbsp;</p></td><td><p>string </p></td><td><p>Your grid identifier&nbsp;</p></td></tr><tr><td><p>id&nbsp;</p></td><td><p>integer </p></td><td><p>Equipment ID&nbsp;to download files for </p></td></tr></tbody></table><h4>Query Parameters</h4><table data-table-width="760" data-layout="default" ac:local-id="4dd110ca-1c16-4a18-9683-5b2aecaa723f"><tbody><tr><th><p><strong>Parameter </strong></p></th><th><p><strong>Type </strong></p></th><th><p><strong>Description </strong></p></th></tr><tr><td><p>file_ids&nbsp;</p></td><td><p>integer[]</p></td><td><p>Array of file IDs to include in the download. If&nbsp;not specified, all files will be included.&nbsp;</p></td></tr></tbody></table><h4>Response</h4><p>A binary file stream containing a&nbsp;ZIP archive with the requested files.</p><p>The filename format will be:&nbsp;<code>{Barcode}_{EquipmentName}_{CurrentDate}.zip</code></p><h4>Special Features</h4><p>The ZIP archive handles:</p><ul><li><p>International&nbsp;characters in filenames</p></li><li><p>Duplicate filenames&nbsp;(by appending a counter)</p></li><li><p>Removal of invalid characters from filenames</p></li></ul><h4>Status&nbsp;Codes</h4><table data-table-width="760" data-layout="default" ac:local-id="a17f32e2-1b68-4ef0-85be-b2f0b52e7dda"><colgroup><col style="width: 148.0px;" /><col style="width: 610.0px;" /></colgroup><tbody><tr><td><p><strong>Code</strong></p></td><td><p><strong>Description</strong></p></td></tr><tr><td><p>200</p></td><td><p>OK. Returns ZIP file .</p></td></tr><tr><td><p>400</p></td><td><p>Bad Request. The request was unacceptable, often due to missing a required parameter.</p></td></tr><tr><td><p>401</p></td><td><p>Unauthorized. No valid API key provided.</p></td></tr><tr><td><p>403</p></td><td><p>Forbidden. The API key doesn't have permissions to perform the request.</p></td></tr><tr><td><p>404</p></td><td><p>Not Found. The requested resource doesn't exist.</p></td></tr><tr><td><p>429</p></td><td><p>Too Many Requests. Too many requests hit the API too quickly. We recommend an exponential backoff of your requests.</p></td></tr><tr><td><p>500, 502, 503, 504</p></td><td><p>Server Errors. Something went wrong on MFP end.</p></td></tr></tbody></table><h2>Example Usage</h2><h3>List&nbsp;Files Example</h3><h4>Request</h4><ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="a150d38d-7c3a-4379-95e7-6cb248d0db4b"><ac:plain-text-body><![CDATA[GET API/v1/grid.1016.6/equipment/60/fileoverview]]></ac:plain-text-body></ac:structured-macro><h4>Response</h4><ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="c8f7d2dc-0ab8-4c7b-a401-710e3cc586b7"><ac:plain-text-body><![CDATA[[
+  {
+    "File_id": 1001,
+    "Name": "Calibration Certificate.pdf",
+    "Items": []
+  },
+  {
+    "File_id": 1002,
+    "Name": "User Manuals",
+    "Items": [
+      {
+        "File_id": 1003,
+        "Name": "Operation Manual.pdf",
+        "Items": []
+      },
+      {
+        "File_id": 1004,
+        "Name": "Maintenance Guide.pdf",
+        "Items": []
+      }
+    ]
+  }
+]]]></ac:plain-text-body></ac:structured-macro><h3>Download Files Example</h3><h4>Request</h4><ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="c3513782-0218-4907-8e41-eaad77851b86"><ac:plain-text-body><![CDATA[GET API/v1/grid.1016.6/equipment/60/fileoverview/download?file_ids=1001&file_ids=1003]]></ac:plain-text-body></ac:structured-macro><h4>Response</h4><p>Binary file stream containing a ZIP archive named&nbsp;<code>Barcode_EquipmentName_20230615.zip</code>&nbsp;with the two requested files.</p><h2>Notes</h2><ul><li><p>File operations may be subject to user permissions&nbsp;within the system</p></li><li><p>Large ZIP files may take longer to generate</p></li><li><p>The API uses streaming&nbsp;to efficiently handle large files</p></li></ul>

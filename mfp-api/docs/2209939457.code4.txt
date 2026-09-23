@@ -1,0 +1,8 @@
+{
+  "transect_id": "T001",
+  "name": "Example Transect",
+  "start_coordinates": { "latitude": 18.00, "longitude": -64.00 },
+  "end_coordinates": { "latitude": 17.50, "longitude": -63.50 },
+  "travel_time": "120.5",
+  "speed_regime": "2"
+}

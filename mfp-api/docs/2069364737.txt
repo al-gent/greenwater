@@ -1,0 +1,199 @@
+# Inventory Management Equipment (API)
+version 12 2026-03-18T13:01:15.939Z
+
+
+(Updated for Enhanced Filtering Capabilities — 2026)
+Authentication
+The API requires a valid API key.
+Include your key in the request header exactly as shown:
+wide
+760
+']]>
+HTTP Request Format
+wide
+760
+You may supply filtering parameters using either:
+Query parameters
+, e.g.:
+OR JSON body
+, e.g.:
+json
+Both methods map to the same filter model.
+Supported Query Parameters
+All parameters are 
+optional
+ unless stated otherwise.
+Parameter
+Type
+Description
+grid_id
+string       
+(Required)
+ Organisation GRID identifier.               
+sensor
+bool         
+Filter by Sensor-enabled equipment.                      
+eventTrigger
+bool         
+Filter by EventTrigger-enabled equipment.                
+barcode
+string       
+Exact-match filter for Barcode.                          
+serialNumber
+string       
+Exact-match filter for Serial Number.                    
+equipmentType
+string       
+Matches 
+Type.Name
+ (contains).                          
+status
+int (number)       
+Exact-match on equipment status. (See options below)
+manufacturer
+string       
+Contains-match on Manufacturer name.                     
+description
+string       
+Contains-match on Remarks/Description.                   
+active
+bool         
+Active equipment (
+true
+) or deleted/inactive (
+false
+). 
+location
+string       
+Exact-match on Current Location name.                    
+dateAddedFrom
+ISO8601 date 
+Filter: CreatedDate ≥ this date.                         
+dateAddedTo
+ISO8601 date 
+Filter: CreatedDate ≤ this date.                         
+lastUpdatedFrom
+ISO8601 date 
+Filter: ModifiedDate ≥ this date.                        
+lastUpdatedTo
+ISO8601 date 
+Filter: ModifiedDate ≤ this date.                        
+groupName
+string
+Contains-match on Equipment Group name. 
+textSearch
+string
+Contains-match on one of this fields: Equipment Name, Barcode, Type Name, Equipemnt Group Name, Remarks, Serial Number, Supplier Name, Manufacturer Name, Base Location, Current Location, Device Identifier.
+equipmentCodeName
+string
+Contains-match on EquipmentCode CodeType name.
+equipmentCodeValue
+string
+Contains-match on EquipmentCode value
+note
+f6d362a2b26e
+Valid Options for “status”:
+Unknown = -1
+Active = 1
+Discarded = 2
+Lost = 3
+ApplyForDiscarded = 4
+Valid Options for “status”:
+Unknown = -1
+Active = 1
+Discarded = 2
+Lost = 3
+ApplyForDiscarded = 4
+When 
+equipmentCodeName
+ and/or 
+equipmentCodeValue
+ are provided, the endpoint performs bottom-up filtering: it first finds matching Equipment Codes, then returns only Equipment that have those codes. All other filters are applied on top of this filtered set.
+Filter Combination Rules
+The endpoint supports 
+full combinability
+ of filters.
+Examples:
+Filter by Barcode + Active
+Filter by Manufacturer + Description
+Filter by Date Range + Location
+Filter by Sensor + EventTrigger + Status
+Each filter narrows the result set.
+If a filter is omitted, it is simply ignored.
+Example Requests
+Basic request (sensor only)
+wide
+760
+Enhanced filtering (multiple combined)
+wide
+760
+Flattened:
+wide
+760
+Filtering by manufacturer
+wide
+760
+Filtering by date range
+wide
+760
+JSON Body Example
+(Alternative to query parameters)
+json
+wide
+760
+Response
+json
+wide
+760
+  OCS  ->  B00 GEO storage outside -> 
+43489
+ Container GEO Opslag -> 
+74520
+ Alu Box Modem 3",
+        "cLoc": "NIOZ  ->  OCS  ->  B00 GEO storage outside  ->  
+43489
+ Container GEO Opslag  ->  
+74520
+ Alu Box Modem 3",
+        "Sensor": false,
+        "EventTrigger": false,
+        "L22": null,
+        "Content": [],
+        "Maintenance": {
+            "LastPerformed": null,
+            "LastCalibration": null,
+            "NextExpiry": null
+        },
+        "EquipmentCodes": [
+            {
+                "Value": "300025010629270",
+                "Name": "IMEI code"
+            },
+            {
+                "Value": "8988169514001019509",
+                "Name": "Serial number"
+            }
+        ]
+    }
+]]]>
+(Exact shape depends on configuration and API version.)
+Errors
+The API follows standard HTTP status codes:
+Code
+Description
+200 OK
+Request succeeded.                            
+400 Bad Request
+Missing required parameter (e.g., 
+grid_id
+). 
+401 Unauthorized
+Missing/invalid API key.                      
+403 Forbidden
+API key lacks permissions.                    
+404 Not Found
+GRID not found or org not configured.         
+429 Too Many Requests
+Rate limit exceeded.                          
+500–504 Server Errors
+Unexpected processing failure.                

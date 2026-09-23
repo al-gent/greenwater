@@ -1,0 +1,13 @@
+{
+  "event_id": "E001",
+  "event_name": "Mobilization",
+  "event_type": "At Sea for Science",
+  "event_start_date": "2025-12-20T12:00:00.000Z",
+  "event_end_date": "2026-01-25T20:00:00.000Z",
+  "scientists": [
+    {
+      "name": "John Doe",
+      "organisation": "Example University"
+    }
+  ]
+}

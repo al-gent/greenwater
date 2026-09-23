@@ -1,0 +1,6 @@
+{
+  "Firstname": "John",
+  "Surname": "Doe",
+  "Role": "Chief Scientist",
+  "EmailAddress": "John.doe@example.org"
+}

@@ -1,0 +1,123 @@
+# Equipment File Management API Documentation
+version 1 2025-08-12T06:58:26.452Z
+
+
+This page documents the file management endpoints for the Equipment API. These endpoints allow you to retrieve file information and download files associated with equipment items.
+API Base URL
+Endpoints
+Where:
+{grid.id}
+ is your grid identifier (e.g., grid.1016.6)
+{id}
+ is the equipment ID
+Authentication
+All endpoints require authentication with an API key that has the 
+EXTERNALINVENTORYMANAGEMENT
+ role.
+Endpoints
+1. List Files
+Request
+Description
+Retrieves a hierarchical list of all files associated with the specified equipment item.
+Path Parameters
+Parameter 
+Type 
+Description 
+grid.id   
+string 
+Your grid identifier 
+id 
+integer 
+Equipment ID to retrieve files for 
+Response
+Response Fields
+Field
+Type
+Description
+File_id 
+integer 
+Unique identifier for the file 
+Name 
+string 
+Name of the file 
+Items 
+array 
+List of child files/folders (recursive structure)
+Status Codes
+Code
+Description
+200
+OK. Everything worked as expected.
+400
+Bad Request. The request was unacceptable, often due to missing a required parameter.
+401
+Unauthorized. No valid API key provided.
+403
+Forbidden. The API key doesn't have permissions to perform the request.
+404
+Not Found. The requested resource doesn't exist.
+429
+Too Many Requests. Too many requests hit the API too quickly. We recommend an exponential backoff of your requests.
+500, 502, 503, 504
+Server Errors. Something went wrong on MFP end.
+2. Download Files
+Request
+Description
+Downloads one or more files associated with the specified equipment as a ZIP archive.
+Path Parameters
+Parameter 
+Type 
+Description 
+grid.id  
+string 
+Your grid identifier 
+id 
+integer 
+Equipment ID to download files for 
+Query Parameters
+Parameter 
+Type 
+Description 
+file_ids 
+integer[]
+Array of file IDs to include in the download. If not specified, all files will be included. 
+Response
+A binary file stream containing a ZIP archive with the requested files.
+The filename format will be: 
+{Barcode}_{EquipmentName}_{CurrentDate}.zip
+Special Features
+The ZIP archive handles:
+International characters in filenames
+Duplicate filenames (by appending a counter)
+Removal of invalid characters from filenames
+Status Codes
+Code
+Description
+200
+OK. Returns ZIP file .
+400
+Bad Request. The request was unacceptable, often due to missing a required parameter.
+401
+Unauthorized. No valid API key provided.
+403
+Forbidden. The API key doesn't have permissions to perform the request.
+404
+Not Found. The requested resource doesn't exist.
+429
+Too Many Requests. Too many requests hit the API too quickly. We recommend an exponential backoff of your requests.
+500, 502, 503, 504
+Server Errors. Something went wrong on MFP end.
+Example Usage
+List Files Example
+Request
+Response
+Download Files Example
+Request
+Response
+Binary file stream containing a ZIP archive named 
+Barcode_EquipmentName_20230615.zip
+ with the two requested files.
+Notes
+File operations may be subject to user permissions within the system
+Large ZIP files may take longer to generate
+The API uses streaming to efficiently handle large files

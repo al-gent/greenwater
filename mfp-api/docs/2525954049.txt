@@ -1,0 +1,61 @@
+# Metrics Read API
+version 1 2026-03-26T15:42:10.374Z
+
+
+Purpose
+Use this endpoint to retrieve the list of available metrics that can be posted to the Operation Log API.
+Typical use:
+load metrics in your client
+map metric IDs to metric names and value types
+Authentication
+Send the API key in request headers:
+mfp-apikey: <your-api-key>
+Content-Type: application/json
+Endpoint
+Method
+GET
+URL
+/API/v1/{grid_id}/metrics/read
+Path parameter
+Name
+Type
+Required
+Description
+grid_id
+string
+Yes
+Organisation identifier (example: 
+grid.3532.7
+)
+Response
+Returns a hierarchical list of metrics.
+wide
+760
+Fields
+Field
+Type
+Description
+id
+integer
+Metric ID used in Operation Log payloads
+name
+string
+Metric display name
+valuetype
+string
+Expected value type
+children
+array
+Child metrics (empty if none)
+Status Codes
+Status
+Meaning
+200 OK
+Request successful
+401 Unauthorized
+Missing or invalid API key
+Postman example
+Request
+GET https://<host>/API/v1/grid.3532.7/metrics/read
+Headers
+mfp-apikey: <your-api-key>

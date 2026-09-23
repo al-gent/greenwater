@@ -1,0 +1,7 @@
+{
+  "waypoint_id": "W001",
+  "name": "Station 1",
+  "coordinates": { "latitude": 15.73, "longitude": -57.78 },
+  "speed_regime": 2,
+  "order_number": 1
+}

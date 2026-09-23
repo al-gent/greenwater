@@ -1,0 +1,92 @@
+# Combined Cruise Data API – Expanded Documentation
+version 5 2025-08-26T12:06:24.692Z
+
+
+Introduction & Purpose
+This document provides a unified specification of the Cruise Data APIs. It integrates participant data, public cruise information, and maritime cruise data into one comprehensive reference. The document also incorporates recent enhancements, including enriched participant data, application-specific endpoints, and extended response schemas.
+Authentication
+All API endpoints require authentication using an API key.
+The key should be included in the header of your request:
+']]>
+Endpoints Overview
+Endpoint
+Description
+GET /api/v1/programme/cruise/{id}/cruiseparticipants
+Retrieve list of participants for a cruise
+GET /api/v1/schedule/participants/application/{workflow_id}
+Retrieve participants for a specific application by workflow ID
+GET /API/v1/{organisation}/schedule/{year}/{ship}
+Retrieve schedule and public cruise information
+GET /cruise
+Retrieve cruise details including project, scientists, and ports
+GET /transect
+Retrieve transect (ship movement) information
+GET /event
+Retrieve cruise event information (mobilization, demobilization, operations)
+GET /waypoints
+Retrieve cruise waypoints
+Errors
+Code
+Description
+200
+OK. Everything worked as expected.
+400
+Bad Request. The request was unacceptable, often due to missing a required parameter.
+401
+Unauthorized. No valid API key provided.
+403
+Forbidden. The API key doesn't have permissions to perform the request.
+404
+Not Found. The requested resource doesn't exist.
+429
+Too Many Requests. Too many requests hit the API too quickly. We recommend exponential backoff.
+500, 502, 503, 504
+Server Errors. Something went wrong on MFP end.
+Response Schemas & Examples
+Participant Object (basic)
+Enriched Application Participant Response
+Cruise Information Response
+Transect Response
+Event Response
+Waypoint Response
+Output Variables
+Field
+Description
+Firstname / Surname / Role / EmailAddress
+Participant information
+Ship / Name
+Vessel code and vessel name
+Event_id / AlternateId / EventName
+Cruise identifiers and project name
+EventType
+Type of cruise event
+EventStartDate / EventEndDate
+Cruise start and end dates
+PortOfDeparture / PortOfArrival
+Port details including name, code, coordinates
+PI
+Principal Investigator details
+CoPIs
+List of Co-Investigators
+ChiefScientists
+List of Chief Scientists
+ChangesHistory
+Log of changes across cruise applications
+CruiseTrack
+Geospatial track (geoJSON)
+Transects
+Ship movements during cruise
+Events
+Events such as mobilization, demobilization, operations
+Waypoints
+Defined waypoints in cruise track
+Notes & Known Issues
+Some participant fields may be null due to incomplete data.
+Chief Scientist must reflect the most recent application.
+Use 
+/application/{workflow_id}
+ to retrieve the most recent application-level participant data.
+Cruise and event data may be updated; always check 
+ChangesHistory
+ for audit trail.
+Coordinates and waypoints use geoJSON conventions for interoperability.
