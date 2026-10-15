@@ -14,7 +14,14 @@ interface Profile {
   title: string | null
 }
 
-export default function RequestButton({ vesselId, vesselName, compact = false }: { vesselId: number; vesselName: string; compact?: boolean }) {
+export interface RequestPrefill { startDate?: string; endDate?: string; message?: string; context?: string }
+
+export default function RequestButton({ vesselId, vesselName, compact = false, label = 'Connect with this Vessel', className, prefill, next }: {
+  vesselId: number; vesselName: string; compact?: boolean
+  label?: string; className?: string          // override the button's text / styling
+  prefill?: RequestPrefill                    // seed the message form (e.g. from a cruise)
+  next?: string                               // where to come back to after sign-in
+}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<User | null | undefined>(undefined) // undefined = loading
@@ -38,7 +45,7 @@ export default function RequestButton({ vesselId, vesselName, compact = false }:
   const handleClick = () => {
     if (user === undefined) return // still loading
     if (!user) {
-      router.push(`/auth/signin?next=/vessels/${vesselId}`)
+      router.push(`/auth/signin?next=${encodeURIComponent(next ?? `/vessels/${vesselId}`)}`)
       return
     }
     setOpen(true)
@@ -65,11 +72,11 @@ export default function RequestButton({ vesselId, vesselName, compact = false }:
     <>
       <button
         onClick={handleClick}
-        className={compact
+        className={className ?? (compact
           ? 'bg-navy text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-navy-600 transition-all hover:shadow-lg active:scale-[0.98] whitespace-nowrap'
-          : 'w-full bg-navy text-white py-4 rounded-2xl font-semibold text-base hover:bg-navy-600 transition-all hover:shadow-lg active:scale-[0.98]'}
+          : 'w-full bg-navy text-white py-4 rounded-2xl font-semibold text-base hover:bg-navy-600 transition-all hover:shadow-lg active:scale-[0.98]')}
       >
-        Connect with this Vessel
+        {label}
       </button>
       {open && user && profile && (
         <RequestModal
@@ -77,6 +84,7 @@ export default function RequestButton({ vesselId, vesselName, compact = false }:
           vesselName={vesselName}
           user={user}
           profile={profile}
+          prefill={prefill}
           onClose={() => setOpen(false)}
         />
       )}

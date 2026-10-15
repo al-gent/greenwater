@@ -1,5 +1,7 @@
 # UNOLS / Marine Facilities Planning (MFP) — cruise data investigation
 
+> Things MFP does that don't make sense, and what we do about each: `QUIRKS.md`.
+
 Investigated 2026-09-17. Read-only; no integration code. Raw responses are in this folder (see
 "Files" at the bottom).
 

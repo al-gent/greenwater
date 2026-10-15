@@ -5,6 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import UpdateLocationModal from '@/components/UpdateLocationModal'
+import AvailabilityButton from '@/components/AvailabilityButton'
 
 const PositionMap = dynamic(() => import('@/components/PositionMap'), {
   ssr: false,
@@ -14,10 +15,14 @@ import { stripHtml, getPhotoUrl } from '@/lib/vessel-utils'
 import type { Vessel } from '@/lib/vessel-utils'
 import InquiryThread from '@/components/InquiryThread'
 import InboxClient from '@/components/InboxClient'
+import PreferencesBox from '@/components/PreferencesBox'
 import NotificationPrefsMenu, { USER_PREF_OPTIONS } from '@/components/NotificationPrefsMenu'
 import ProfileEditForm from '@/components/ProfileEditForm'
+import type { MyProject, MyBid } from '@/lib/projects'
+import MyBids from '@/components/MyBids'
+import { fmtDate } from '@/lib/cruise-utils'
 
-type Tab = 'listings' | 'messages' | 'profile'
+type Tab = 'listings' | 'projects' | 'messages' | 'profile'
 
 /** The listing fields we ask for in the /list-your-vessel onboarding flow —
  *  the definition of a "complete" listing. Checked against the vessels row. */
@@ -107,6 +112,8 @@ interface DashboardTabsProps {
   sentRoots: (Message & { vessel_name?: string })[]
   sentReplies: Message[]
   scientistProfiles: ScientistProfile[]
+  projects: MyProject[]
+  bids: MyBid[]
 }
 
 export default function DashboardTabs({
@@ -120,6 +127,8 @@ export default function DashboardTabs({
   sentRoots,
   sentReplies,
   scientistProfiles,
+  projects,
+  bids,
 }: DashboardTabsProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -128,7 +137,7 @@ export default function DashboardTabs({
   // Tab lives in the URL (?tab=) so refresh/back/forward keep it; state
   // follows the URL (same pattern as AdminDashboard).
   // No vessels → no My Listings tab (and ?tab=listings falls through to default)
-  const validTabs: Tab[] = vessels.length > 0 ? ['listings', 'messages', 'profile'] : ['messages', 'profile']
+  const validTabs: Tab[] = vessels.length > 0 ? ['listings', 'projects', 'messages', 'profile'] : ['projects', 'messages', 'profile']
   const defaultTab: Tab = vessels.length > 0 ? 'listings' : 'profile'
   const urlTab = searchParams.get('tab') as Tab | null
   const tab: Tab = urlTab && validTabs.includes(urlTab) ? urlTab : defaultTab
@@ -164,6 +173,12 @@ export default function DashboardTabs({
             My Listings
           </button>
         )}
+        <button onClick={() => setTab('projects')} className={`${tabClass('projects')} flex items-center gap-1.5`}>
+          Projects
+          {(projects.reduce((n, p) => n + p.bids_open, 0) + bids.filter((b) => b.accepted_at && !b.confirmed_at && !b.declined_at && !b.withdrawn_at).length) > 0 && (
+            <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{projects.reduce((n, p) => n + p.bids_open, 0) + bids.filter((b) => b.accepted_at && !b.confirmed_at && !b.declined_at && !b.withdrawn_at).length}</span>
+          )}
+        </button>
         <button onClick={() => setTab('messages')} className={`${tabClass('messages')} flex items-center gap-1.5`}>
           Messages
           {newTotal > 0 && (
@@ -250,6 +265,7 @@ export default function DashboardTabs({
                       >
                         Edit
                       </Link>
+                      <AvailabilityButton vesselId={v.id} vesselName={v.name} className="border border-navy/20 text-navy px-4 py-1.5 rounded-full text-xs font-medium hover:bg-navy-50 transition-colors">Availability</AvailabilityButton>
                       {missing.length > 0 && (
                         <span className="text-xs text-amber-600 font-medium" title={`Missing: ${missing.join(', ')}`}>
                           {missing.length} field{missing.length > 1 ? 's' : ''} missing
@@ -299,6 +315,42 @@ export default function DashboardTabs({
       )}
 
       {/* ── Messages ── */}
+      {/* ── Projects ── research the user wants to get done; bids arrive here */}
+      {tab === 'projects' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-500">{projects.length === 0 ? 'Describe the research you want to do and operators can bid to run it.' : `${projects.length} project${projects.length === 1 ? '' : 's'}`}</p>
+            <Link href="/projects/new" className="bg-navy text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-navy-600 transition-colors">New project</Link>
+          </div>
+          {projects.length > 0 && (
+            <ul className="bg-white rounded-2xl shadow-card divide-y divide-gray-100 overflow-hidden">
+              {projects.map((p) => {
+                const status = p.cruise_id ? 'Scheduled' : p.published_at ? 'Open for bids' : 'Draft'
+                const cls = p.cruise_id ? 'bg-teal/10 text-teal border-teal/30' : p.published_at ? 'bg-navy-50 text-navy border-navy/10' : 'bg-gray-100 text-gray-500 border-gray-200'
+                const when = [fmtDate(p.requested_start_earliest), fmtDate(p.requested_start_latest)].filter(Boolean).join(' – ')
+                return (
+                  <li key={p.id}>
+                    <Link href={`/projects/${p.slug}`} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-navy truncate group-hover:text-teal transition-colors">{p.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">{[p.area_label, when, p.requested_science_days != null ? `${p.requested_science_days} science days` : null].filter(Boolean).join(' · ') || 'No dates or area yet'}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0 text-xs text-gray-500">
+                        {p.bids_open > 0 && <p className="text-gold-700 font-semibold">{p.bids_open} bid{p.bids_open === 1 ? '' : 's'} to review</p>}
+                        {p.bids_accepted > 0 && <p className="text-teal font-medium">bid accepted{p.cruise_id ? '' : ', awaiting the operator'}</p>}
+                        {p.bids_total === 0 && p.published_at && !p.cruise_id && <p>No bids yet</p>}
+                      </div>
+                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${cls}`}>{status}</span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          <MyBids bids={bids} />
+        </div>
+      )}
+
       {tab === 'messages' && (
         <div>
           {vessels.map((v) => {
@@ -367,6 +419,7 @@ export default function DashboardTabs({
             {/* Admins manage all four notification types; everyone else has the messages toggle */}
             <NotificationPrefsMenu options={profile.isAdmin ? undefined : USER_PREF_OPTIONS} />
           </div>
+          <PreferencesBox />
         </div>
       )}
     </div>

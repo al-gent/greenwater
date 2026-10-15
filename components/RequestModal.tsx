@@ -18,15 +18,16 @@ interface RequestModalProps {
   user: User
   profile: Profile
   onClose: () => void
+  prefill?: { startDate?: string; endDate?: string; message?: string; context?: string }
 }
 
-export default function RequestModal({ vesselId, vesselName, user: _user, profile, onClose }: RequestModalProps) {
+export default function RequestModal({ vesselId, vesselName, user: _user, profile, onClose, prefill }: RequestModalProps) {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [message, setMessage] = useState('')
+  const [startDate, setStartDate] = useState(prefill?.startDate ?? '')
+  const [endDate, setEndDate] = useState(prefill?.endDate ?? '')
+  const [message, setMessage] = useState(prefill?.message ?? '')
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -73,8 +74,8 @@ export default function RequestModal({ vesselId, vesselName, user: _user, profil
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-navy">Connect with this Vessel</h2>
-            <p className="text-sm text-gray-500 mt-0.5">{vesselName}</p>
+            <h2 className="text-lg font-semibold text-navy">{prefill?.context ? 'Message the operator' : 'Connect with this Vessel'}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{vesselName}{prefill?.context ? ` · ${prefill.context}` : ''}</p>
           </div>
           <button
             onClick={onClose}

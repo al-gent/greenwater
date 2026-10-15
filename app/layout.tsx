@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Navbar from '@/components/Navbar'
+import TimeZoneCookie from '@/components/TimeZoneCookie'
 import AuthHashHandler from '@/components/AuthHashHandler'
 import NewsletterForm from '@/components/NewsletterForm'
 import { Analytics } from '@vercel/analytics/react'
@@ -58,6 +59,7 @@ export default function RootLayout({
         <AuthHashHandler />
         <PageViewTracker />
         <Navbar />
+        <TimeZoneCookie />
         <main className="min-h-screen">{children}</main>
 
         {/* Footer */}

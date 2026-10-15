@@ -220,6 +220,57 @@ export function newInquiryOperatorEmail(
   `)
 }
 
+// ── Project / bid handshake ──────────────────────────────────────────────────
+const button = (href: string, label: string) => `
+    <p>
+      <a href="${href}" style="background: #2A7B6F; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 8px;">${label}</a>
+    </p>`
+const facts = (pairs: Array<[string, string | null | undefined]>) => `
+    <table style="border-collapse: collapse; margin: 12px 0;">${pairs.filter(([, v]) => v).map(([k, v]) => `<tr><td style="color:#666; padding: 3px 16px 3px 0;">${k}</td><td style="padding: 3px 0;"><strong>${v}</strong></td></tr>`).join('')}</table>`
+
+export function bidOfferedEmail(projectTitle: string, vesselName: string, operatorName: string | null, dates: string, berths: number | null, cost: string | null, projectUrl: string) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">New bid on ${projectTitle}</h2>
+    <p><strong>${vesselName}</strong>${operatorName ? ` (${operatorName})` : ''} has offered to run your project.</p>
+    ${facts([['Dates', dates], ['Science berths', berths != null ? String(berths) : null], ['Cost', cost]])}
+    <p>Review the bid, including which of your gear they can provide, and accept it when you're ready. Accepting asks the operator to confirm and schedule the cruise.</p>
+    ${button(projectUrl, 'Review the bid')}
+  `)
+}
+
+export function bidAcceptedEmail(projectTitle: string, vesselName: string, researcherName: string, dates: string, dashboardUrl: string) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">Your bid was accepted</h2>
+    <p><strong>${researcherName}</strong> accepted your bid to run <strong>${projectTitle}</strong> on <strong>${vesselName}</strong>, ${dates}.</p>
+    <p>One step left: confirm it from your dashboard. Confirming creates the cruise, puts it on ${vesselName}'s schedule, and lets the researcher know it's set.</p>
+    ${button(dashboardUrl, 'Confirm and schedule')}
+  `)
+}
+
+export function bidConfirmedEmail(projectTitle: string, vesselName: string, dates: string, cruiseUrl: string) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">${projectTitle} is scheduled</h2>
+    <p><strong>${vesselName}</strong> confirmed the cruise for ${dates}. It's on the fleet timeline now, and the cruise page is where the operator and your team will see the route, the people aboard, and the gear.</p>
+    ${button(cruiseUrl, 'View the cruise')}
+  `)
+}
+
+export function bidDeclinedEmail(projectTitle: string, vesselName: string, projectUrl: string) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">Bid not taken</h2>
+    <p>The researcher went another way on <strong>${projectTitle}</strong>; your bid from <strong>${vesselName}</strong> was declined. Thanks for offering. The project stays open to view in case things change.</p>
+    ${button(projectUrl, 'View the project')}
+  `)
+}
+
+export function bidWithdrawnEmail(projectTitle: string, vesselName: string, projectUrl: string) {
+  return base(`
+    <h2 style="color: #1B3A6B; margin-top: 0;">A bid was withdrawn</h2>
+    <p><strong>${vesselName}</strong> withdrew its bid on <strong>${projectTitle}</strong>. Any other bids you have are unaffected, and the project is still open for new ones.</p>
+    ${button(projectUrl, 'View the project')}
+  `)
+}
+
 // ── Internal admin notifications ─────────────────────────────────────────────
 // These go to the team, not to users: no banner, no marketing footer. Layout
 // is a colored type-eyebrow, label/value rows, optional quoted message, and a

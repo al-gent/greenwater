@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getOperatedVesselIds } from '@/lib/operators'
 import type { Vessel } from '@/lib/vessel-utils'
 import DashboardTabs from '@/components/DashboardTabs'
+import { listMyProjectsWithBids, listMyBids } from '@/lib/projects'
 
 export const dynamic = 'force-dynamic'
 
@@ -152,6 +153,8 @@ export default async function DashboardPage() {
     }
   }
 
+  const [myProjects, myBids] = await Promise.all([listMyProjectsWithBids(user.id), listMyBids(user.id)])
+
   return (
     <div className="pt-[88px] min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -173,6 +176,8 @@ export default async function DashboardPage() {
           sentRoots={sentRoots}
           sentReplies={sentReplies}
           scientistProfiles={scientistProfiles ?? []}
+          projects={myProjects}
+          bids={myBids}
         />
       </div>
     </div>

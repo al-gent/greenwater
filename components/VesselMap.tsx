@@ -46,6 +46,8 @@ interface Props {
   showLegend?: boolean // default: !editable
   fitToContent?: boolean // default: !editable (editable fits once on mount)
   scrollWheelZoom?: boolean // default: editable
+  /** Move the view to a searched place; `key` changes on each selection so repeats re-fire. */
+  focus?: { key: number; lat: number; lon: number; bbox?: [number, number, number, number] } | null
 }
 
 const TEAL = '#2A7B6F'
@@ -180,6 +182,16 @@ function GeomanArea({ value, onChange }: { value: FC | null; onChange: (fc: FC |
 }
 
 // ── fit the view to whatever content exists ────────────────────────────────
+function FocusOn({ focus }: { focus?: { key: number; lat: number; lon: number; bbox?: [number, number, number, number] } | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!focus) return
+    if (focus.bbox) map.fitBounds([[focus.bbox[1], focus.bbox[0]], [focus.bbox[3], focus.bbox[2]]], { padding: [20, 20] })
+    else map.setView([focus.lat, focus.lon], 8)
+  }, [map, focus?.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
+
 function FitBounds({ homePort, lastPort, track, area, once }: {
   homePort?: LatLng | null
   lastPort?: LatLng | null
@@ -231,6 +243,7 @@ export default function VesselMap({
   showLegend,
   fitToContent,
   scrollWheelZoom,
+  focus = null,
 }: Props) {
   const legend = showLegend ?? !editable
   const fitOnce = !(fitToContent ?? !editable)
@@ -428,6 +441,7 @@ export default function VesselMap({
         )}
 
         <FitBounds homePort={homePort} lastPort={lastPort} track={track ?? undefined} area={operatingArea} once={fitOnce} />
+        <FocusOn focus={focus} />
       </MapContainer>
     </div>
   )
