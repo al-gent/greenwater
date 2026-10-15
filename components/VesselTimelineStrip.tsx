@@ -34,7 +34,7 @@ export default async function VesselTimelineStrip({ vesselId, vesselName, from, 
         timeZone={viewer.timeZone} today={today}
         initialRows={rows} resources={resources} highlightCruiseId={highlightCruiseId}
       />
-      {linkLabel && <p className="text-xs text-gray-400 mt-2"><Link href={`/cruises?view=timeline&scale=month&at=${iso(from)}`} className="text-teal hover:underline">{linkLabel}</Link></p>}
+      {linkLabel && <p className="text-xs text-gray-400 mt-2"><Link href={`/research?view=timeline&scale=month&at=${iso(from)}`} className="text-teal hover:underline">{linkLabel}</Link></p>}
     </div>
   )
 }

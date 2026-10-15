@@ -69,7 +69,14 @@ visibility mirrors `published_at`), RLS, seeds, backfill one vessel entry per cr
   accepted → vessel operators (confirm nudge); confirmed → author (cruise link); declined → operators;
   withdrawn → author. Honour the 'messages' pref; fire-and-forget. In dev, Brevo redirects to
   ADMIN_NOTIFY_DEV_EMAIL or drops.
-- Remaining: people linking to the directory.
+- My fleet DONE 10/15: `fleet_vessels (user_id, vessel_id)` (migration 20261017, applied), owner-only RLS;
+  Add to my fleet on the vessel page; /fleet = the user's vessels on the resource timeline; "Copy a
+  link" shares it as /research (renamed from /ship-time 10/15: "it's research")?view=timeline&vessels=1,2,3 (read-only). Sharing/editing a fleet
+  together = later: a `fleets` table + members, backfilled from these rows.
+- Nav 10/15: Vessels · Ship Time · My Fleet (signed in) · List Your Vessel (signed out). Vessel page
+  shows the project card row (past → future, lazy) instead of the timeline strip; the strip stays
+  on the cruise page.
+- Remaining: people linking to the directory; dashboard listing schedule line + operator's upcoming cruises.
 
 ### M4-old — Operator authoring form (superseded; kept for reference).
 Permission = membership in `vessel_operators` for the cruise's vessel (same check as
@@ -115,7 +122,7 @@ Permission = membership in `vessel_operators` for the cruise's vessel (same chec
 - Done when: Hopkins can see Vita, the Grady White, MLML's boats and their operators on one
   screen and answer "is any boat free Thursday".
 
-### M7b — Timeline on the homepage, driven by search. Not yet; Adam's direction 2026-10-01.
+### M7b (tried 10/15 as a half-width schedule panel beside the homepage map, driven by the search; Adam: not until more vessels have schedules. Navbar link instead. 10/15: list page is /research (renamed from /ship-time 10/15: "it's research") ("ship time" = requested projects + scheduled cruises; Adam's term), /cruises redirects, cruise detail stays /cruises/[slug]; Post a project on it; dashboard tab renamed Ship Time, operators lead with their bids.) — Timeline on the homepage, driven by search. Not yet; Adam's direction 2026-10-01.
 `FleetTimeline` is a drop-in block (`<FleetTimeline basePath="/" />`). The plan is to put it on
 the homepage and have it show the schedules of whatever vessels the existing search/filters
 return (location, country, activity…), instead of growing its own vessel filter. Rows = the

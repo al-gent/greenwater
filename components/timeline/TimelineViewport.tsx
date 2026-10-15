@@ -29,9 +29,10 @@ interface Props<Row> {
   density?: 'compact' | 'comfortable' | 'spacious'
   renderCard?: (entry: TimelineEntry, close: () => void) => React.ReactNode   // hover card body
   pxPerDay?: number                // override the scale's pixel density (the vessel strip uses 12)
+  boxClass?: string                // scroll box sizing; default caps at 75vh
 }
 
-export default function TimelineViewport<Row extends { id: string }>({ scale, at, span: initialSpan, timeZone, today, initialRows, resources, toTimeline, fetchUrl, palette, emptyRowText, density, renderCard, pxPerDay }: Props<Row>) {
+export default function TimelineViewport<Row extends { id: string }>({ scale, at, span: initialSpan, timeZone, today, initialRows, resources, toTimeline, fetchUrl, palette, emptyRowText, density, renderCard, pxPerDay, boxClass = 'max-h-[75vh]' }: Props<Row>) {
   const px = pxPerDay ?? SCALE_PX[scale]
   const chunk = SCALE_SPAN[scale].chunk
   const box = useRef<HTMLDivElement>(null)
@@ -149,7 +150,7 @@ export default function TimelineViewport<Row extends { id: string }>({ scale, at
 
   return (
     <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-card">
-      <div ref={box} className="overflow-auto max-h-[75vh] overscroll-x-contain" onMouseOver={renderCard ? onOver : undefined} onMouseOut={renderCard ? onOut : undefined}>
+      <div ref={box} className={`overflow-auto overscroll-x-contain ${boxClass}`} onMouseOver={renderCard ? onOver : undefined} onMouseOut={renderCard ? onOut : undefined}>
         <ResourceTimeline resources={rs} entries={entries} window={{ start: span.start, end: span.end, pxPerDay: px }} timeZone={timeZone} today={today} palette={palette} emptyRowText={emptyRowText} density={density} />
       </div>
       {renderCard && card && cardEntry && (

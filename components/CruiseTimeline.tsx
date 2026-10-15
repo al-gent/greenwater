@@ -25,17 +25,25 @@ interface Props {
   vesselId?: number               // only this vessel's entries
   highlightCruiseId?: string      // drawn in gold
   pxPerDay?: number
+  vesselIds?: number[]            // only these vessels (homepage search); rows sorted by name
+  boxClass?: string
 }
 
 const HIGHLIGHT_PALETTE = { ...CRUISE_PALETTE, current: 'bg-gold text-navy-800 ring-2 ring-gold-500/60' }
 
-export default function CruiseTimeline({ vesselId, highlightCruiseId, ...props }: Props) {
-  const fetchUrl = useCallback((from: string, to: string) => `/api/timeline/vessels?from=${from}&to=${to}${vesselId ? `&vessel=${vesselId}` : ''}`, [vesselId])
+export default function CruiseTimeline({ vesselId, highlightCruiseId, vesselIds, ...props }: Props) {
+  const idKey = vesselIds ? vesselIds.join(',') : ''
+  const fetchUrl = useCallback((from: string, to: string) => {
+    const narrow = vesselIds && vesselIds.length <= 100 ? `&vessels=${idKey}` : ''
+    return `/api/timeline/vessels?from=${from}&to=${to}${vesselId ? `&vessel=${vesselId}` : ''}${narrow}`
+  }, [vesselId, idKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const toTimeline = useCallback((rows: VesselTimelineEntry[], fixed: TimelineResource[]) => {
-    const out = vesselEntriesToTimeline(rows, fixed)
+    const keep = vesselIds ? new Set(vesselIds) : null
+    const out = vesselEntriesToTimeline(keep ? rows.filter((r) => keep.has(r.vessel_id)) : rows, fixed)
+    if (keep) out.resources.sort((a, b) => a.label.localeCompare(b.label))
     if (highlightCruiseId) for (const e of out.entries as TimelineEntry[]) if (e.meta?.cruiseId === highlightCruiseId) e.status = 'current'
     return out
-  }, [highlightCruiseId])
+  }, [highlightCruiseId, idKey]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <TimelineViewport<VesselTimelineEntry>
       {...props}

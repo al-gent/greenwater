@@ -8,8 +8,10 @@ import RequestButton from '@/components/RequestButton'
 import ClaimButton from '@/components/ClaimButton'
 import VesselPhotoGallery from '@/components/VesselPhotoGallery'
 import VesselDetailSpecs from '@/components/VesselDetailSpecs'
-import VesselTimelineStrip from '@/components/VesselTimelineStrip'
+import VesselProjects from '@/components/VesselProjects'
 import AvailabilityButton from '@/components/AvailabilityButton'
+import FleetButton from '@/components/FleetButton'
+import { inMyFleet } from '@/lib/fleet'
 import VesselTrackSection from '@/components/VesselTrackSection'
 import SignupNudge from '@/components/SignupNudge'
 import BackButton from '@/components/BackButton'
@@ -80,6 +82,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   }
   const isClaimed = (operators ?? []).length > 0
   const isOperator = !!user && (operators ?? []).some((o) => o.user_id === user.id)
+  const inFleet = user ? await inMyFleet(user.id, vessel.id) : false
 
   const isAdmin = user
     ? await supabaseAdmin.from('profiles').select('is_admin').eq('id', user.id).single()
@@ -121,7 +124,10 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-2">
         <nav className="flex items-center justify-between gap-2 text-sm text-gray-400">
           <BackButton />
-          {(isOperator || isAdmin) && <span className="ml-auto"><AvailabilityButton vesselId={vessel.id} vesselName={vessel.name} /></span>}
+          <span className="ml-auto flex items-center gap-2">
+            <FleetButton vesselId={vessel.id} initial={inFleet} signedIn={!!user} nextPath={`/vessels/${id}`} />
+            {(isOperator || isAdmin) && <AvailabilityButton vesselId={vessel.id} vesselName={vessel.name} />}
+          </span>
           {isAdmin && (
             <Link
               href={`/admin/vessels/${id}/edit`}
@@ -212,14 +218,11 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
               )}
             </div>
 
-            {/* Schedule: two weeks back, twelve ahead; only once the vessel has anything on its timeline */}
-            <VesselTimelineStrip
-              vesselId={vessel.id} vesselName={vessel.name} hideIfEmpty
-              from={new Date(Date.now() - 14 * 86_400_000)} to={new Date(Date.now() + 84 * 86_400_000)}
-            />
-
             {/* Specs */}
             <VesselDetailSpecs vessel={vessel} />
+
+            {/* The research aboard, past to future, as cards. Scheduling lives on the Research timeline. */}
+            <VesselProjects vesselId={vessel.id} />
 
             {/* Divider */}
             <hr className="border-gray-100" />

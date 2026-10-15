@@ -138,7 +138,7 @@ export default function DashboardTabs({
   // follows the URL (same pattern as AdminDashboard).
   // No vessels → no My Listings tab (and ?tab=listings falls through to default)
   const validTabs: Tab[] = vessels.length > 0 ? ['listings', 'projects', 'messages', 'profile'] : ['projects', 'messages', 'profile']
-  const defaultTab: Tab = vessels.length > 0 ? 'listings' : 'profile'
+  const defaultTab: Tab = vessels.length > 0 ? 'listings' : 'projects'
   const urlTab = searchParams.get('tab') as Tab | null
   const tab: Tab = urlTab && validTabs.includes(urlTab) ? urlTab : defaultTab
   const setTab = (t: Tab) =>
@@ -159,39 +159,34 @@ export default function DashboardTabs({
     email[0]?.toUpperCase() ||
     '?'
 
-  const tabClass = (t: Tab) =>
-    `px-4 py-2.5 text-sm font-medium rounded-full transition-colors ${
+  const attention = projects.reduce((n, p) => n + p.bids_open, 0) + bids.filter((b) => b.accepted_at && !b.confirmed_at && !b.declined_at && !b.withdrawn_at).length
+  const NAV: { key: Tab | 'fleet'; label: string; badge?: number; href?: string }[] = [
+    ...(vessels.length > 0 ? [{ key: 'listings' as Tab, label: 'My Listings' }] : []),
+    { key: 'projects', label: 'Projects', badge: attention },
+    { key: 'fleet', label: 'My Fleet', href: '/fleet' },
+    { key: 'messages', label: 'Messages', badge: newTotal },
+    { key: 'profile', label: 'Profile' },
+  ]
+  const navItem = (t: Tab) =>
+    `w-full flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors text-left ${
       tab === t ? 'bg-navy text-white' : 'text-gray-600 hover:text-navy hover:bg-gray-100'
     }`
 
   return (
-    <div>
-      {/* Tab bar */}
-      <div className="flex items-center gap-1.5 mb-8 flex-wrap">
-        {vessels.length > 0 && (
-          <button onClick={() => setTab('listings')} className={tabClass('listings')}>
-            My Listings
+    <div className="lg:grid lg:grid-cols-[200px_1fr] lg:gap-10 lg:items-start">
+      {/* Section nav: a sidebar on wide screens, a row of pills on small ones */}
+      <nav className="flex lg:flex-col gap-1.5 mb-8 lg:mb-0 flex-wrap lg:sticky lg:top-[104px]" aria-label="Dashboard">
+        {NAV.map((n) => n.href ? (
+          <Link key={n.key} href={n.href} className={navItem(n.key as Tab)}><span>{n.label}</span></Link>
+        ) : (
+          <button key={n.key} onClick={() => setTab(n.key as Tab)} className={navItem(n.key as Tab)} aria-current={tab === n.key ? 'page' : undefined}>
+            <span>{n.label}</span>
+            {n.badge ? <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full leading-none bg-gold text-navy`}>{n.badge}</span> : null}
           </button>
-        )}
-        <button onClick={() => setTab('projects')} className={`${tabClass('projects')} flex items-center gap-1.5`}>
-          Projects
-          {(projects.reduce((n, p) => n + p.bids_open, 0) + bids.filter((b) => b.accepted_at && !b.confirmed_at && !b.declined_at && !b.withdrawn_at).length) > 0 && (
-            <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{projects.reduce((n, p) => n + p.bids_open, 0) + bids.filter((b) => b.accepted_at && !b.confirmed_at && !b.declined_at && !b.withdrawn_at).length}</span>
-          )}
-        </button>
-        <button onClick={() => setTab('messages')} className={`${tabClass('messages')} flex items-center gap-1.5`}>
-          Messages
-          {newTotal > 0 && (
-            <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-              {newTotal}
-            </span>
-          )}
-        </button>
-        <button onClick={() => setTab('profile')} className={tabClass('profile')}>
-          Profile
-        </button>
-      </div>
+        ))}
+      </nav>
 
+      <div className="min-w-0">
       {/* ── Listings ── (tab only exists when the user operates vessels) */}
       {tab === 'listings' && (
           vessels.map((v) => {
@@ -318,36 +313,46 @@ export default function DashboardTabs({
       {/* ── Projects ── research the user wants to get done; bids arrive here */}
       {tab === 'projects' && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">{projects.length === 0 ? 'Describe the research you want to do and operators can bid to run it.' : `${projects.length} project${projects.length === 1 ? '' : 's'}`}</p>
-            <Link href="/projects/new" className="bg-navy text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-navy-600 transition-colors">New project</Link>
-          </div>
-          {projects.length > 0 && (
-            <ul className="bg-white rounded-2xl shadow-card divide-y divide-gray-100 overflow-hidden">
-              {projects.map((p) => {
-                const status = p.cruise_id ? 'Scheduled' : p.published_at ? 'Open for bids' : 'Draft'
-                const cls = p.cruise_id ? 'bg-teal/10 text-teal border-teal/30' : p.published_at ? 'bg-navy-50 text-navy border-navy/10' : 'bg-gray-100 text-gray-500 border-gray-200'
-                const when = [fmtDate(p.requested_start_earliest), fmtDate(p.requested_start_latest)].filter(Boolean).join(' – ')
-                return (
-                  <li key={p.id}>
-                    <Link href={`/projects/${p.slug}`} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-navy truncate group-hover:text-teal transition-colors">{p.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">{[p.area_label, when, p.requested_science_days != null ? `${p.requested_science_days} science days` : null].filter(Boolean).join(' · ') || 'No dates or area yet'}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0 text-xs text-gray-500">
-                        {p.bids_open > 0 && <p className="text-gold-700 font-semibold">{p.bids_open} bid{p.bids_open === 1 ? '' : 's'} to review</p>}
-                        {p.bids_accepted > 0 && <p className="text-teal font-medium">bid accepted{p.cruise_id ? '' : ', awaiting the operator'}</p>}
-                        {p.bids_total === 0 && p.published_at && !p.cruise_id && <p>No bids yet</p>}
-                      </div>
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${cls}`}>{status}</span>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
+          {/* Operators lead with the bids they've made; researchers with their projects. */}
+          {vessels.length > 0 && <MyBids bids={bids} />}
+          {(projects.length > 0 || vessels.length === 0) && (
+            <div className={vessels.length > 0 ? 'mt-10' : ''}>
+              <div className="flex items-center justify-between mb-3">
+                {projects.length === 0
+                  ? <p className="text-sm text-gray-500">Describe the research you want to do and operators can bid to run it.</p>
+                  : <h3 className="text-sm font-semibold text-navy">Your projects</h3>}
+                <Link href="/projects/new" className="bg-navy text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-navy-600 transition-colors">Post a project</Link>
+              </div>
+              {projects.length > 0 && (
+                <ul className="bg-white rounded-2xl shadow-card divide-y divide-gray-100 overflow-hidden">
+                  {projects.map((p) => {
+                    const status = p.cruise_id ? 'Scheduled' : p.published_at ? 'Open for bids' : 'Draft'
+                    const cls = p.cruise_id ? 'bg-teal/10 text-teal border-teal/30' : p.published_at ? 'bg-navy-50 text-navy border-navy/10' : 'bg-gray-100 text-gray-500 border-gray-200'
+                    const when = [fmtDate(p.requested_start_earliest), fmtDate(p.requested_start_latest)].filter(Boolean).join(' – ')
+                    // One line: the single thing waiting on someone.
+                    const next = p.cruise_id ? null
+                      : p.bids_open > 0 ? { text: `${p.bids_open} bid${p.bids_open === 1 ? '' : 's'} to review`, cls: 'text-gold-700 font-semibold' }
+                      : p.bids_accepted > 0 ? { text: 'Waiting on the operator to confirm', cls: 'text-teal font-medium' }
+                      : p.published_at ? { text: 'No bids yet', cls: 'text-gray-400' }
+                      : { text: 'Not published', cls: 'text-gray-400' }
+                    return (
+                      <li key={p.id}>
+                        <Link href={`/projects/${p.slug}`} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-navy truncate group-hover:text-teal transition-colors">{p.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5 truncate">{[p.area_label, when, p.requested_science_days != null ? `${p.requested_science_days} science days` : null].filter(Boolean).join(' · ') || 'No dates or area yet'}</p>
+                          </div>
+                          {next && <p className={`text-xs flex-shrink-0 ${next.cls}`}>{next.text}</p>}
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${cls}`}>{status}</span>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
           )}
-          <MyBids bids={bids} />
+          {vessels.length === 0 && <MyBids bids={bids} />}
         </div>
       )}
 
@@ -422,6 +427,7 @@ export default function DashboardTabs({
           <PreferencesBox />
         </div>
       )}
+      </div>
     </div>
   )
 }

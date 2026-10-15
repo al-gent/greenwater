@@ -14,24 +14,27 @@ import { isScale, initialSpan, SCALES, SCALE_LABEL, type TimelineScale } from '@
 import { getViewerPreferences, timeZoneLabel } from '@/lib/preferences'
 
 interface Props {
-  basePath: string                           // '/', '/cruises'
+  basePath: string                           // '/research'
   baseParams?: Record<string, string>        // params to keep on every link, e.g. { view: 'timeline' }
   scale?: string                             // from the page's searchParams
   at?: string
   toolbarStart?: React.ReactNode             // extra controls on the left of the toolbar (e.g. a view toggle)
+  vessels?: { id: number; name: string; operator_name?: string | null; affiliation?: string | null }[]   // fixed rows instead of the ARF fleet (My fleet, shared links)
 }
 
-export default async function FleetTimeline({ basePath, baseParams = {}, scale: scaleParam, at: atParam, toolbarStart }: Props) {
+export default async function FleetTimeline({ basePath, baseParams = {}, scale: scaleParam, at: atParam, toolbarStart, vessels }: Props) {
   const viewer = await getViewerPreferences()
   const timeZone = viewer.timeZone
   const today = todayIso(timeZone)
   const scale: TimelineScale = isScale(scaleParam) ? scaleParam : viewer.timelineScale ?? 'year'
   const at = /^\d{4}-\d{2}-\d{2}$/.test(atParam ?? '') ? atParam! : today
   const span = initialSpan(scale, at)
+  const vesselIds = vessels?.map((v) => v.id)
   const [entries, fleet] = await Promise.all([
-    getVesselTimeline({ from: indexToDate(isoDateIndex(span.start)), to: indexToDate(isoDateIndex(span.end)) }),
-    getArfFleet(),
+    getVesselTimeline({ from: indexToDate(isoDateIndex(span.start)), to: indexToDate(isoDateIndex(span.end)), vesselIds }),
+    vessels ? Promise.resolve(null) : getArfFleet(),
   ])
+  const resources = fleet ? fleetToResources(fleet) : (vessels ?? []).map((v) => ({ id: `vessel:${v.id}`, label: v.name, kind: 'vessel' as const, href: `/vessels/${v.id}`, sublabel: v.operator_name ?? v.affiliation ?? undefined }))
 
   const href = (q: { scale?: TimelineScale; at?: string }) => {
     const p = new URLSearchParams(baseParams)
@@ -67,7 +70,8 @@ export default async function FleetTimeline({ basePath, baseParams = {}, scale: 
         timeZone={timeZone}
         today={today}
         initialRows={entries}
-        resources={fleetToResources(fleet)}
+        resources={resources}
+        vesselIds={vesselIds}
         emptyRowText={scale === 'year' ? undefined : 'Nothing scheduled'}
         density="spacious"
       />

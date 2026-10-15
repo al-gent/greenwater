@@ -48,6 +48,39 @@ export const getEquipmentTypes = cache(async (): Promise<{ id: string; name: str
   return (data ?? []) as any[]
 })
 
+/** Published projects not yet scheduled on a cruise: the "Requested" tab of /research. Anon client, so RLS decides. */
+export async function listOpenProjects(): Promise<BrowseProject[]> {
+  const { data } = await supabase.from('projects').select(PROJECT_COLS).not('published_at', 'is', null).is('cruise_id', null).is('deleted_at', null)
+    .order('requested_start_earliest', { ascending: true, nullsFirst: false }).limit(200)
+  return withLeads((data ?? []) as Project[])
+}
+
+export interface BrowseProject extends Project { lead: { name: string; role: string; affiliation: string | null } | null }
+
+/** The projects aboard a set of cruises, with their PI or chief scientist. Anon client (RLS: visible through the published cruise). */
+export async function listProjectsForCruises(cruiseIds: string[]): Promise<BrowseProject[]> {
+  if (!cruiseIds.length) return []
+  const { data } = await supabase.from('projects').select(PROJECT_COLS).in('cruise_id', cruiseIds).is('deleted_at', null).order('created_at')
+  const projects = (data ?? []) as Project[]
+  return withLeads(projects)
+}
+
+async function withLeads(projects: Project[]): Promise<BrowseProject[]> {
+  if (!projects.length) return []
+  const { data: people } = await supabase.from('project_people').select('project_id, name, role:cruise_roles!inner(slug, label), person:people(affiliation)').in('project_id', projects.map((p) => p.id)).in('role.slug', ['pi', 'chief_scientist', 'co_pi'])
+  const rank: Record<string, number> = { pi: 0, chief_scientist: 1, co_pi: 2 }
+  const lead = new Map<string, { name: string; role: string; affiliation: string | null; r: number }>()
+  for (const row of (people ?? []) as any[]) {
+    const role = Array.isArray(row.role) ? row.role[0] : row.role
+    const person = Array.isArray(row.person) ? row.person[0] : row.person
+    if (!role || !row.name) continue
+    const r = rank[role.slug] ?? 9
+    const cur = lead.get(row.project_id)
+    if (!cur || r < cur.r) lead.set(row.project_id, { name: row.name, role: role.label, affiliation: person?.affiliation || null, r })
+  }
+  return projects.map((p) => { const l = lead.get(p.id); return { ...p, lead: l ? { name: l.name, role: l.role, affiliation: l.affiliation } : null } })
+}
+
 export async function listMyProjects(userId: string): Promise<Project[]> {
   const { data } = await supabaseAdmin.from('projects').select(PROJECT_COLS).eq('created_by', userId).is('deleted_at', null).order('updated_at', { ascending: false })
   return (data ?? []) as Project[]

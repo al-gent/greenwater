@@ -24,7 +24,7 @@ export default function MyBids({ bids }: { bids: MyBid[] }) {
   }
   if (!bids.length) return null
   return (
-    <div className="mt-8">
+    <div>
       <h3 className="text-sm font-semibold text-navy mb-3">Bids you&apos;ve made</h3>
       {error && <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">{error}</div>}
       <ul className="bg-white rounded-2xl shadow-card divide-y divide-gray-100 overflow-hidden">

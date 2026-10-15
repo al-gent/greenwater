@@ -124,14 +124,30 @@ export default function Navbar() {
               href="/"
               className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
             >
-              Home
+              Vessels
             </Link>
             <Link
-              href="/list-your-vessel"
+              href="/research"
               className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
             >
-              List Your Vessel
+              Research
             </Link>
+            {user && (
+              <Link
+                href="/fleet"
+                className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
+              >
+                My Fleet
+              </Link>
+            )}
+            {!user && (
+              <Link
+                href="/list-your-vessel"
+                className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
+              >
+                List Your Vessel
+              </Link>
+            )}
           </div>
 
           {/* Auth section */}
@@ -200,11 +216,21 @@ export default function Navbar() {
         {menuOpen && (
           <div className="md:hidden border-t border-gray-100 py-2">
             <Link href="/" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-              Home
+              Vessels
             </Link>
-            <Link href="/list-your-vessel" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-              List Your Vessel
+            <Link href="/research" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+              Research
             </Link>
+            {user && (
+              <Link href="/fleet" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                My Fleet
+              </Link>
+            )}
+            {!user && (
+              <Link href="/list-your-vessel" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                List Your Vessel
+              </Link>
+            )}
             {profile?.is_admin && (
               <Link href="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
                 Admin

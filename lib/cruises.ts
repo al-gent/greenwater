@@ -80,15 +80,9 @@ export interface CruiseListItem extends Omit<Cruise, 'operating_area_geojson' | 
 }
 
 /** Published cruises departing on/after `from` (default now), soonest first. */
-export const getUpcomingCruises = cache(async (opts: { from?: Date; vesselId?: number; limit?: number } = {}): Promise<CruiseListItem[]> => {
-  const from = (opts.from ?? new Date()).toISOString()
-  let q = supabase.from('cruises').select(LIST_COLS).is('cancelled_at', null).gte('arrival_at', from).order('departure_at').limit(opts.limit ?? 500)
-  if (opts.vesselId) q = q.eq('vessel_id', opts.vesselId)
-  const { data, error } = await q
-  if (error) throw error
-  const rows = (data ?? []) as any[]
+async function hydrateList(rows: any[]): Promise<CruiseListItem[]> {
   const vesselIds = [...new Set(rows.map((r) => r.vessel_id))]
-  const orgIds = [...new Set(rows.map((r) => r.organization_id))]
+  const orgIds = [...new Set(rows.map((r) => r.organization_id).filter(Boolean))]
   const [{ data: vessels }, { data: orgs }] = await Promise.all([
     vesselIds.length ? supabase.from('vessels').select('id, name, photo_urls, country').in('id', vesselIds) : Promise.resolve({ data: [] as any[] }),
     orgIds.length ? supabase.from('organizations').select('id, name, short_name').in('id', orgIds) : Promise.resolve({ data: [] as any[] }),
@@ -96,6 +90,26 @@ export const getUpcomingCruises = cache(async (opts: { from?: Date; vesselId?: n
   const vById = new Map((vessels ?? []).map((v: any) => [v.id, v]))
   const oById = new Map((orgs ?? []).map((o: any) => [o.id, o]))
   return rows.map((r) => ({ ...r, vessel: vById.get(r.vessel_id) ?? null, organization: oById.get(r.organization_id) ?? null }))
+}
+
+export const getUpcomingCruises = cache(async (opts: { from?: Date; vesselId?: number; limit?: number } = {}): Promise<CruiseListItem[]> => {
+  const from = (opts.from ?? new Date()).toISOString()
+  let q = supabase.from('cruises').select(LIST_COLS).is('cancelled_at', null).gte('arrival_at', from).order('departure_at').limit(opts.limit ?? 500)
+  if (opts.vesselId) q = q.eq('vessel_id', opts.vesselId)
+  const { data, error } = await q
+  if (error) throw error
+  return hydrateList((data ?? []) as any[])
+})
+
+/** Finished cruises, most recent first, one page at a time (there are ~1,300). */
+export const getPastCruises = cache(async (opts: { page?: number; limit?: number; vesselId?: number } = {}): Promise<{ cruises: CruiseListItem[]; total: number }> => {
+  const limit = opts.limit ?? 24, page = Math.max(1, opts.page ?? 1)
+  let q = supabase.from('cruises').select(LIST_COLS, { count: 'exact' }).is('cancelled_at', null).lt('arrival_at', new Date().toISOString())
+    .order('departure_at', { ascending: false }).range((page - 1) * limit, page * limit - 1)
+  if (opts.vesselId) q = q.eq('vessel_id', opts.vesselId)
+  const { data, error, count } = await q
+  if (error) throw error
+  return { cruises: await hydrateList((data ?? []) as any[]), total: count ?? 0 }
 })
 
 // ── timeline ──────────────────────────────────────────────────────────────────
@@ -119,12 +133,13 @@ export interface VesselTimelineEntry {
   vessel: { id: number; name: string; photo_urls: string[] | null; country: string | null } | null
 }
 
-export const getVesselTimeline = cache(async (opts: { from: Date; to: Date; vesselId?: number }): Promise<VesselTimelineEntry[]> => {
+export const getVesselTimeline = cache(async (opts: { from: Date; to: Date; vesselId?: number; vesselIds?: number[] }): Promise<VesselTimelineEntry[]> => {
   let q = supabase.from('timeline_entries').select(ENTRY_COLS)
     .not('vessel_id', 'is', null).is('deleted_at', null)
     .lt('start_at', opts.to.toISOString()).gt('end_at', opts.from.toISOString())
     .order('start_at').limit(2000)
   if (opts.vesselId) q = q.eq('vessel_id', opts.vesselId)
+  if (opts.vesselIds) q = q.in('vessel_id', opts.vesselIds)
   const { data, error } = await q
   if (error) throw error
   return ((data ?? []) as any[])
