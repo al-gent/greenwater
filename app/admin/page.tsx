@@ -1,11 +1,10 @@
 import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import AdminDashboard from '@/components/AdminDashboard'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminPage() {
+export default async function AdminPage({ searchParams }: { searchParams: { tab?: string } }) {
   const user = await getServerUser()
   if (!user) redirect('/auth/signin?next=/admin')
 
@@ -17,5 +16,6 @@ export default async function AdminPage() {
 
   if (profile?.is_admin !== true) redirect('/')
 
-  return <AdminDashboard />
+  // Admin lives inside the dashboard now; old links carry their tab across.
+  redirect(`/dashboard?tab=admin:${searchParams.tab ?? 'analytics'}`)
 }

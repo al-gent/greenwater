@@ -111,7 +111,12 @@ const VESSEL_COLS: { key: VesselColKey; label: string }[] = [
   { key: 'scientists', label: 'Scientists' },
 ]
 
-type Tab = 'submissions' | 'claims' | 'scientists' | 'vessels' | 'analytics' | 'messages' | 'changes'
+export type AdminTab = 'analytics' | 'submissions' | 'claims' | 'scientists' | 'vessels' | 'messages' | 'changes'
+type Tab = AdminTab
+export const ADMIN_TABS: { key: AdminTab; label: string }[] = [
+  { key: 'analytics', label: 'Analytics' }, { key: 'submissions', label: 'Submissions' }, { key: 'claims', label: 'Operators' },
+  { key: 'scientists', label: 'Users' }, { key: 'vessels', label: 'Vessels' }, { key: 'messages', label: 'All Messages' }, { key: 'changes', label: 'Changes' },
+]
 type ChangesWindow = 'hour' | 'day' | 'week' | 'month' | 'year' | 'all'
 const CHANGES_WINDOWS: { value: ChangesWindow; label: string }[] = [
   { value: 'hour', label: 'Hour' },
@@ -410,15 +415,18 @@ function ScientistActions({ scientist, onUpdate }: {
   )
 }
 
-export default function AdminDashboard() {
+// Standalone at /admin, or embedded in the user dashboard with the tab controlled by its sidebar
+// (`tab` + `onTabChange`); embedded, it renders only the header line and the active section.
+export default function AdminDashboard({ embedded = false, tab: controlledTab, onTabChange }: { embedded?: boolean; tab?: AdminTab; onTabChange?: (t: AdminTab) => void } = {}) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const TABS: Tab[] = ['submissions', 'claims', 'scientists', 'vessels', 'messages', 'changes', 'analytics']
-  // Tab lives in the URL (?tab=) so browser back/forward works; state follows the URL.
+  const TABS: Tab[] = ADMIN_TABS.map((t) => t.key)
+  // Standalone: tab lives in the URL (?tab=) so browser back/forward works; state follows the URL.
   const urlTab = searchParams.get('tab') as Tab | null
-  const tab: Tab = urlTab && TABS.includes(urlTab) ? urlTab : 'submissions'
+  const tab: Tab = controlledTab ?? (urlTab && TABS.includes(urlTab) ? urlTab : 'analytics')
   const setTab = (t: Tab) => {
-    router.push(t === 'submissions' ? '/admin' : `/admin?tab=${t}`, { scroll: false })
+    if (onTabChange) return onTabChange(t)
+    router.push(t === 'analytics' ? '/admin' : `/admin?tab=${t}`, { scroll: false })
   }
   const [changesSort, setChangesSort] = useState<{ col: 'when' | 'who' | 'what' | 'field'; dir: 'asc' | 'desc' }>({ col: 'when', dir: 'desc' })
   const [changesSearch, setChangesSearch] = useState('') // input value (uncommitted)
@@ -575,26 +583,25 @@ export default function AdminDashboard() {
     ? (filter === 'all' ? scientists : filter === 'pending' ? scientists.filter(s => !s.verified) : filter === 'approved' ? scientists.filter(s => s.verified) : [])
     : []
 
-  return (
-    <div className="pt-[88px] min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  const inner = (
+    <>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-navy">Admin Dashboard</h1>
+            {!embedded && <h1 className="text-2xl font-bold text-navy">Admin Dashboard</h1>}
             <p className="text-sm text-gray-500 mt-0.5">
               {pendingSubs} pending submission{pendingSubs !== 1 ? 's' : ''} · {pendingClaims} operator claim{pendingClaims !== 1 ? 's' : ''} to review · {pendingScientists} unverified user{pendingScientists !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <NotificationPrefsMenu />
+            {!embedded && <NotificationPrefsMenu />}
             <a href="/admin/vessels/new" className="bg-navy text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-navy-600 transition-colors">+ Add Vessel</a>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-card mb-4 w-fit max-w-full overflow-x-auto">
-          {(['submissions', 'claims', 'scientists', 'vessels', 'messages', 'changes', 'analytics'] as Tab[]).map((t) => (
+        {/* Tabs (standalone only; embedded, the dashboard sidebar switches sections) */}
+        {!embedded && <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-card mb-4 w-fit max-w-full overflow-x-auto">
+          {ADMIN_TABS.map(({ key: t, label }) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -602,7 +609,7 @@ export default function AdminDashboard() {
                 tab === t ? 'bg-navy text-white shadow-sm' : 'text-gray-500 hover:text-navy'
               }`}
             >
-              {t === 'scientists' ? 'Users' : t === 'claims' ? 'Operators' : t.charAt(0).toUpperCase() + t.slice(1)}
+              {label}
               {t === 'submissions' && pendingSubs > 0 && (
                 <span className="ml-2 bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {pendingSubs}
@@ -620,7 +627,7 @@ export default function AdminDashboard() {
               )}
             </button>
           ))}
-        </div>
+        </div>}
 
         {/* Filter pills */}
         {tab !== 'vessels' && tab !== 'analytics' && tab !== 'messages' && tab !== 'changes' && (
@@ -1267,7 +1274,12 @@ export default function AdminDashboard() {
             )}
           </div>
         )}
-      </div>
+    </>
+  )
+  if (embedded) return <div>{inner}</div>
+  return (
+    <div className="pt-[88px] min-h-screen bg-gray-50">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{inner}</div>
     </div>
   )
 }

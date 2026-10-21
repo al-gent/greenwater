@@ -20,9 +20,11 @@ import NotificationPrefsMenu, { USER_PREF_OPTIONS } from '@/components/Notificat
 import ProfileEditForm from '@/components/ProfileEditForm'
 import type { MyProject, MyBid } from '@/lib/projects'
 import MyBids from '@/components/MyBids'
+import AdminDashboard, { ADMIN_TABS, type AdminTab } from '@/components/AdminDashboard'
 import { fmtDate } from '@/lib/cruise-utils'
 
-type Tab = 'listings' | 'projects' | 'messages' | 'profile'
+type UserTab = 'listings' | 'projects' | 'messages' | 'profile'
+type Tab = UserTab | `admin:${AdminTab}`
 
 /** The listing fields we ask for in the /list-your-vessel onboarding flow —
  *  the definition of a "complete" listing. Checked against the vessels row. */
@@ -133,12 +135,21 @@ export default function DashboardTabs({
   const router = useRouter()
   const searchParams = useSearchParams()
   const [locationModal, setLocationModal] = useState<{ id: number; name: string } | null>(null)
+  const [adminCounts, setAdminCounts] = useState<Partial<Record<AdminTab, number>>>({})
+  useEffect(() => {
+    if (!profile.isAdmin) return
+    fetch('/api/admin/pending-count').then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d) setAdminCounts({ submissions: d.submissions, claims: d.claims, scientists: d.scientists })
+    }).catch(() => {})
+  }, [profile.isAdmin])
 
   // Tab lives in the URL (?tab=) so refresh/back/forward keep it; state
   // follows the URL (same pattern as AdminDashboard).
   // No vessels → no My Listings tab (and ?tab=listings falls through to default)
-  const validTabs: Tab[] = vessels.length > 0 ? ['listings', 'projects', 'messages', 'profile'] : ['projects', 'messages', 'profile']
-  const defaultTab: Tab = vessels.length > 0 ? 'listings' : 'projects'
+  const adminTabs: Tab[] = profile.isAdmin ? ADMIN_TABS.map((t) => `admin:${t.key}` as Tab) : []
+  const validTabs: Tab[] = [...adminTabs, ...(vessels.length > 0 ? ['listings' as Tab] : []), 'projects', 'messages', 'profile']
+  // Admins open on analytics; operators on their listings; researchers on their projects.
+  const defaultTab: Tab = profile.isAdmin ? 'admin:analytics' : vessels.length > 0 ? 'listings' : 'projects'
   const urlTab = searchParams.get('tab') as Tab | null
   const tab: Tab = urlTab && validTabs.includes(urlTab) ? urlTab : defaultTab
   const setTab = (t: Tab) =>
@@ -160,7 +171,8 @@ export default function DashboardTabs({
     '?'
 
   const attention = projects.reduce((n, p) => n + p.bids_open, 0) + bids.filter((b) => b.accepted_at && !b.confirmed_at && !b.declined_at && !b.withdrawn_at).length
-  const NAV: { key: Tab | 'fleet'; label: string; badge?: number; href?: string }[] = [
+  const NAV: { key: Tab | 'fleet'; label: string; badge?: number; href?: string; group?: string }[] = [
+    ...ADMIN_TABS.filter(() => profile.isAdmin).map((t) => ({ key: `admin:${t.key}` as Tab, label: t.label, badge: adminCounts[t.key], group: 'Admin' })),
     ...(vessels.length > 0 ? [{ key: 'listings' as Tab, label: 'My Listings' }] : []),
     { key: 'projects', label: 'Projects', badge: attention },
     { key: 'fleet', label: 'My Fleet', href: '/fleet' },
@@ -176,10 +188,11 @@ export default function DashboardTabs({
     <div className="lg:grid lg:grid-cols-[200px_1fr] lg:gap-10 lg:items-start">
       {/* Section nav: a sidebar on wide screens, a row of pills on small ones */}
       <nav className="flex lg:flex-col gap-1.5 mb-8 lg:mb-0 flex-wrap lg:sticky lg:top-[104px]" aria-label="Dashboard">
-        {NAV.map((n) => n.href ? (
+        {profile.isAdmin && <p className="hidden lg:block px-3.5 pb-1 text-[11px] font-semibold text-gray-400">Admin</p>}
+        {NAV.map((n, i) => n.href ? (
           <Link key={n.key} href={n.href} className={navItem(n.key as Tab)}><span>{n.label}</span></Link>
         ) : (
-          <button key={n.key} onClick={() => setTab(n.key as Tab)} className={navItem(n.key as Tab)} aria-current={tab === n.key ? 'page' : undefined}>
+          <button key={n.key} onClick={() => setTab(n.key as Tab)} className={`${navItem(n.key as Tab)} ${!n.group && i > 0 && NAV[i - 1].group ? 'lg:mt-3 lg:border-t lg:border-gray-200 lg:pt-3 lg:rounded-t-none' : ''}`} aria-current={tab === n.key ? 'page' : undefined}>
             <span>{n.label}</span>
             {n.badge ? <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full leading-none bg-gold text-navy`}>{n.badge}</span> : null}
           </button>
@@ -187,6 +200,11 @@ export default function DashboardTabs({
       </nav>
 
       <div className="min-w-0">
+      {/* ── Admin sections ── (one component, the sidebar picks the section) */}
+      {tab.startsWith('admin:') && (
+        <AdminDashboard embedded tab={tab.slice(6) as AdminTab} onTabChange={(t) => setTab(`admin:${t}`)} />
+      )}
+
       {/* ── Listings ── (tab only exists when the user operates vessels) */}
       {tab === 'listings' && (
           vessels.map((v) => {

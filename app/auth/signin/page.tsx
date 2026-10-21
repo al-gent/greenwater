@@ -9,7 +9,8 @@ import { createClient } from '@/lib/supabase-browser'
 function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') ?? '/'
+  const nextParam = searchParams.get('next')
+  const next = nextParam ?? '/'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -32,7 +33,10 @@ function SignInForm() {
       return
     }
 
-    router.push(next)
+    // No explicit destination: admins land on the admin dashboard, everyone else on theirs.
+    // Everyone lands on the dashboard; admins open on its Analytics section.
+    const dest = nextParam ?? '/dashboard'
+    router.push(dest)
     router.refresh()
   }
 

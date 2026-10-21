@@ -154,27 +154,14 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             {user ? (
               <>
-                {profile?.is_admin && (
-                  <Link
-                    href="/admin"
-                    className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
-                  >
-                    Admin
-                    {pendingCount > 0 && (
-                      <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                        {pendingCount}
-                      </span>
-                    )}
-                  </Link>
-                )}
                 <Link
                   href="/dashboard"
                   className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
                 >
                   Dashboard
-                  {unreadCount > 0 && (
+                  {(unreadCount + pendingCount) > 0 && (
                     <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                      {unreadCount}
+                      {unreadCount + pendingCount}
                     </span>
                   )}
                 </Link>
@@ -231,23 +218,13 @@ export default function Navbar() {
                 List Your Vessel
               </Link>
             )}
-            {profile?.is_admin && (
-              <Link href="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-                Admin
-                {pendingCount > 0 && (
-                  <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                    {pendingCount}
-                  </span>
-                )}
-              </Link>
-            )}
             {user && (
               <>
                 <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
                   Dashboard
-                  {unreadCount > 0 && (
+                  {(unreadCount + pendingCount) > 0 && (
                     <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                      {unreadCount}
+                      {unreadCount + pendingCount}
                     </span>
                   )}
                 </Link>
