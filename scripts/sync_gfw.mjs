@@ -1,9 +1,9 @@
 /**
  * GFW port visit sync — CLI wrapper around lib/gfw-sync-core.mjs.
- * Run weekly by GitHub Actions (.github/workflows/gfw-sync.yml) or manually.
+ * Run daily by GitHub Actions (.github/workflows/gfw-sync.yml) or manually.
  *
  * Usage:
- *   node scripts/sync_gfw.mjs                    # weekly sync, all vessels
+ *   node scripts/sync_gfw.mjs                    # incremental sync, all vessels
  *   node scripts/sync_gfw.mjs --limit=5          # test with first 5 vessels
  *   node scripts/sync_gfw.mjs --backfill         # full history, rewrites existing rows
  *   node scripts/sync_gfw.mjs --only=loitering   # one event stream: ports | loitering
@@ -21,12 +21,13 @@ const supabase = createClient(
 const limitArg = process.argv.find((a) => a.startsWith('--limit='))
 const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : undefined
 const backfill = process.argv.includes('--backfill')
+const catchUp = process.argv.includes('--catch-up')
 const onlyArg = process.argv.find((a) => a.startsWith('--only='))
 const datasets = onlyArg ? [onlyArg.split('=')[1]] : undefined
 const idsArg = process.argv.find((a) => a.startsWith('--ids='))
 const ids = idsArg ? idsArg.split('=')[1].split(',').map((n) => parseInt(n, 10)).filter((n) => !isNaN(n)) : undefined
 
-syncGfw(supabase, process.env.GLOBAL_FISHING_WATCH_API_KEY, { limit, backfill, datasets, ids })
+syncGfw(supabase, process.env.GLOBAL_FISHING_WATCH_API_KEY, { limit, backfill, catchUp, datasets, ids })
   .then((result) => {
     console.log('\nDone:')
     console.log(`  Vessels processed: ${result.vessels}`)

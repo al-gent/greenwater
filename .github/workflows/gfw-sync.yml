@@ -2,13 +2,21 @@ name: GFW port visit sync
 
 on:
   schedule:
-    - cron: '0 6 * * 1' # Mondays 06:00 UTC (same slot as the old Vercel cron)
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
+      catch_up:
+        description: 'Fetch full history and insert missing events only'
+        type: boolean
+        default: false
       backfill:
         description: 'Full history backfill (rewrites existing rows)'
         type: boolean
         default: false
+
+concurrency:
+  group: gfw-sync
+  cancel-in-progress: false
 
 jobs:
   sync:
@@ -21,8 +29,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Test sync
+        run: npm run test:gfw
       - name: Run sync
-        run: node scripts/sync_gfw.mjs ${{ inputs.backfill && '--backfill' || '' }}
+        run: node scripts/sync_gfw.mjs ${{ inputs.backfill && '--backfill' || '' }} ${{ inputs.catch_up && '--catch-up' || '' }}
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
