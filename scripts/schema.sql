@@ -2013,3 +2013,27 @@ alter table fleet_vessels enable row level security;
 create policy fleet_vessels_own on fleet_vessels
   for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Vessel roles describe real-world associations. Platform permissions live in vessel_operators.
+create table public.vessel_people (
+  id uuid primary key default gen_random_uuid(),
+  vessel_id integer not null references public.vessels(id) on delete cascade,
+  person_id uuid not null references public.people(id),
+  role text not null check (role = trim(role) and length(role) between 1 and 100),
+  starts_on date,
+  ends_on date,
+  check (ends_on >= starts_on),
+  exclude using gist (vessel_id with =, person_id with =, lower(role) with =, daterange(starts_on, ends_on, '[]') with &&)
+);
+create index vessel_people_person_idx on public.vessel_people(person_id);
+create index vessel_people_vessel_idx on public.vessel_people(vessel_id);
+alter table public.vessel_people enable row level security;
+revoke all on public.vessel_people from public, anon, authenticated;
+grant select on public.vessel_people to authenticated;
+grant all on public.vessel_people to service_role;
+create policy vessel_people_managers_read on public.vessel_people for select to authenticated using (
+  exists (select from public.people p where p.id = vessel_people.person_id) and (
+    exists (select from public.vessel_operators vo where vo.vessel_id = vessel_people.vessel_id and vo.user_id = (select auth.uid()) and vo.status = 'active')
+    or exists (select from public.profiles p where p.id = (select auth.uid()) and p.is_admin)
+  )
+);

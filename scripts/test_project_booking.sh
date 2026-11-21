@@ -35,12 +35,13 @@ migrations=(
   20261015_project_area_label 20261015_project_soft_delete
   20261015_project_people 20261015_project_slugs
   20261016_cruise_org_nullable 20261016_project_gear_rls 20261016_projects_own_people_gear
-  20261114_research_publication 20261115073006_atomic_project_booking 20261121211444_restrict_booking_details
+  20261114_research_publication 20261115073006_atomic_project_booking 20261121211444_restrict_booking_details 20261121222950_planning_people
 )
 for migration in "${migrations[@]}"; do
   run_sql -q -1 -f "supabase/migrations/$migration.sql" >> "$scratch/migrations.log" 2>&1 || { cat "$scratch/migrations.log"; exit 1; }
 done
 run_sql -q -c 'grant select on all tables in schema public to anon, authenticated; grant all on all tables in schema public to service_role;'
 run_sql -q -f scripts/test_project_booking.sql
+run_sql -q -f scripts/test_planning_people.sql
 node --test scripts/project_booking_concurrency.test.mjs
 echo 'PASS: isolated project saves, booking rollback, authorization, retries and races'

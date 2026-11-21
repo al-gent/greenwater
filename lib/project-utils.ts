@@ -6,6 +6,7 @@ export const FUNDING_STATUSES = ['funded', 'pending', 'proposed', 'unfunded'] as
 export type FundingStatus = (typeof FUNDING_STATUSES)[number]
 
 export interface ProjectPerson {
+  person_id?: string | null
   id?: string
   role_id: string
   name: string
@@ -22,6 +23,8 @@ export function validatePeople(v: unknown): string | null {
       if (typeof r.id !== 'string' || !isUuid(r.id) || ids.has(r.id.toLowerCase())) return 'Invalid or duplicate person ID'
       ids.add(r.id.toLowerCase())
     }
+    if (r.person_id != null && (typeof r.person_id !== 'string' || !isUuid(r.person_id))) return 'Invalid directory person'
+    if (r.create_person != null && (typeof r.create_person !== 'boolean' || (r.create_person && r.person_id))) return 'Invalid directory choice'
     if (typeof r.name !== 'string' || !r.name.trim() || r.name.length > 200) return 'Each person needs a name'
   }
   return null

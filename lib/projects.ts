@@ -88,7 +88,7 @@ export async function listMyProjects(userId: string): Promise<Project[]> {
 
 export async function getProjectPeople(id: string, admin = false): Promise<ProjectPerson[]> {
   const client = admin ? supabaseAdmin : supabase
-  const { data } = await client.from('project_people').select('id, role_id, name, notes, role:cruise_roles(slug, label)').eq('project_id', id).order('created_at')
+  const { data } = await client.from('project_people').select('id, role_id, person_id, name, notes, role:cruise_roles(slug, label)').eq('project_id', id).order('created_at')
   return ((data ?? []) as any[]).map((r) => ({ ...r, role: Array.isArray(r.role) ? r.role[0] ?? null : r.role ?? null })) as ProjectPerson[]
 }
 

@@ -139,9 +139,10 @@ test('project form includes IDs, baseline gear IDs and linked person identity', 
       'next/navigation': { useRouter: () => ({ push: () => {}, refresh: () => {} }) },
       'next/dynamic': { default: () => 'map' },
       '@/lib/project-utils': helpers,
+      '@/components/PersonPicker': { default: 'person-picker' },
       '@/components/PlaceAutocomplete': { default: 'place-search' },
     }).default
-    const person = { id: 'person-row', role_id: 'pi', name: 'Researcher', notes: 'Keep this' }
+    const person = { id: 'person-row', person_id: authorId, role_id: 'pi', name: 'Researcher', notes: 'Keep this' }
     const form = Form({ project: { ...project, title: 'Title' }, gear: [{ id: gearId, label: 'CTD', quantity: 2, notes: '', equipment_type_id: null }], people: [person], equipmentTypes: [], roles: [{ id: 'pi', slug: 'pi', label: 'PI' }] })
     form.props.onSubmit({ preventDefault() {} })
     await new Promise((resolve) => setImmediate(resolve))

@@ -221,6 +221,8 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             {/* Specs */}
             <VesselDetailSpecs vessel={vessel} />
 
+            {(isOperator || isAdmin) && <Link href={`/vessels/${vessel.id}/people`} className="inline-block font-medium text-teal">Manage vessel people</Link>}
+
             <VesselProjects vesselId={vessel.id} vesselName={vessel.name} />
 
             {/* Divider */}
