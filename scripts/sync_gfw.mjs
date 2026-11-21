@@ -36,7 +36,13 @@ syncGfw(supabase, process.env.GLOBAL_FISHING_WATCH_API_KEY, { limit, backfill, c
     console.log(`  Latest calls geocoded: ${result.geocoded}`)
     console.log(`  Name mismatches: ${result.nameMismatches.length}`)
     console.log(`  Errors: ${result.errors}`)
-    if (result.errors > 0) process.exitCode = 1
+    if (result.missedStreams.length > 0) {
+      const misses = result.missedStreams.map(({ vesselId, stream }) => `${vesselId}/${stream}`)
+      const message = `Missed vessel feeds (vessel ID/stream): ${misses.join(', ')}`
+      const annotation = result.status === 'warning' ? 'warning' : 'error'
+      console.warn(process.env.GITHUB_ACTIONS === 'true' ? `::${annotation}::${message}` : `${annotation}: ${message}`)
+    }
+    if (result.status === 'failure') process.exitCode = 1
   })
   .catch((e) => {
     console.error(e)
