@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:smoke": "node scripts/smoke_test.mjs"
+    "test:smoke": "node scripts/smoke_test.mjs",
+    "test:gfw": "node --test scripts/gfw_sync.test.mjs"
   },
   "dependencies": {
     "@geoman-io/leaflet-geoman-free": "^2.19.3",
