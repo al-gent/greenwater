@@ -1782,8 +1782,16 @@ create policy "people_public_read"             on people             for select 
 create policy "people_credentials_public_read" on people_credentials for select using (true);
 create policy "timeline_entries_public_read" on timeline_entries for select using (visibility = 'public' and deleted_at is null);
 create policy "timeline_entries_operators_read" on timeline_entries for select to authenticated
-  using (deleted_at is null and (visibility in ('public', 'operators') or created_by = auth.uid()
-         or exists (select 1 from profiles p where p.id = auth.uid() and p.is_admin)));
+  using (
+  deleted_at is null and (
+    visibility = 'public' or created_by = (select auth.uid())
+    or exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_admin)
+    or (visibility = 'operators' and exists (
+      select 1 from public.vessel_operators vo where vo.user_id = (select auth.uid()) and vo.status = 'active'
+        and (timeline_entries.vessel_id is null or vo.vessel_id = timeline_entries.vessel_id)
+    ))
+  )
+);
 create policy "cruise_people_public_read" on cruise_people for select
   using (deleted_at is null and exists (select 1 from cruises c where c.id = cruise_id and c.published_at is not null));
 
@@ -1902,10 +1910,13 @@ alter table project_bids enable row level security;
 -- A bid is visible to the project's author, the operators of the bidding vessel, and admins.
 -- Competing operators do not see each other's cost.
 create policy project_bids_read on project_bids for select to authenticated
-  using (offered_by = auth.uid()
-         or exists (select 1 from projects p where p.id = project_id and p.created_by = auth.uid())
-         or exists (select 1 from vessel_operators vo where vo.vessel_id = project_bids.vessel_id and vo.user_id = auth.uid())
-         or exists (select 1 from profiles pr where pr.id = auth.uid() and pr.is_admin));
+  using (
+  offered_by = (select auth.uid())
+  or exists (select 1 from public.projects p where p.id = project_bids.project_id and p.created_by = (select auth.uid()))
+  or exists (select 1 from public.vessel_operators vo where vo.vessel_id = project_bids.vessel_id
+             and vo.user_id = (select auth.uid()) and vo.status = 'active')
+  or exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_admin)
+);
 create trigger project_bids_set_updated_at before update on project_bids for each row execute function set_updated_at();
 
 -- ── bid_gear: what this bid can cover, per requested line ───────────────────

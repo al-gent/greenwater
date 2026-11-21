@@ -6,6 +6,7 @@
  * browser's zone and sent as instants with that zone recorded. A live check against the
  * vessel's timeline says what is already in the way.
  */
+import type { AvailabilityConflict } from '@/lib/visible-conflicts'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -42,7 +43,7 @@ export default function BidForm({ project, gear, vessels, bid }: { project: Proj
     for (const g of gear) { const a = bid?.gear.find((x) => x.project_gear_id === g.id); m[g.id!] = { answer: a?.answer ?? 'none', notes: a?.notes ?? '' } }
     return m
   })
-  const [conflicts, setConflicts] = useState<{ id: string; label: string; start_at: string; end_at: string; slug: string | null; kind: string }[] | null>(null)
+  const [conflicts, setConflicts] = useState<AvailabilityConflict[] | null>(null)
   const [saving, setSaving] = useState<'save' | 'withdraw' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -131,7 +132,7 @@ export default function BidForm({ project, gear, vessels, bid }: { project: Proj
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
             <p className="font-medium">{vessel?.name ?? 'This vessel'} already has something in that window:</p>
             <ul className="mt-1 space-y-0.5">
-              {conflicts.map((c) => <li key={c.id}>{c.slug ? <Link href={`/cruises/${c.slug}`} className="underline" target="_blank">{c.label}</Link> : c.label}, {new Date(c.start_at).toLocaleDateString()} – {new Date(c.end_at).toLocaleDateString()}</li>)}
+              {conflicts.map((c, i) => <li key={c.id ?? i}>{c.slug ? <Link href={`/cruises/${c.slug}`} className="underline" target="_blank">{c.label}</Link> : c.label}, {new Date(c.start_at).toLocaleDateString()} – {new Date(c.end_at).toLocaleDateString()}</li>)}
             </ul>
             <p className="mt-1 text-xs">You can still bid; confirming later will need the dates to be clear.</p>
           </div>

@@ -22,7 +22,7 @@ create role anon;
 create role authenticated;
 create role service_role bypassrls;
 create schema auth;
-create function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth, public to anon, authenticated, service_role;
 create table profiles (id uuid primary key, is_admin boolean default false);
 create table vessels (id serial primary key, name text, status text);
@@ -35,7 +35,7 @@ migrations=(
   20261015_project_area_label 20261015_project_soft_delete
   20261015_project_people 20261015_project_slugs
   20261016_cruise_org_nullable 20261016_project_gear_rls 20261016_projects_own_people_gear
-  20261114_research_publication 20261115073006_atomic_project_booking
+  20261114_research_publication 20261115073006_atomic_project_booking 20261121211444_restrict_booking_details
 )
 for migration in "${migrations[@]}"; do
   run_sql -q -1 -f "supabase/migrations/$migration.sql" >> "$scratch/migrations.log" 2>&1 || { cat "$scratch/migrations.log"; exit 1; }

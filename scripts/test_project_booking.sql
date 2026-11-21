@@ -231,3 +231,41 @@ begin
   raise notice 'PASS: held MFP and demo entries do not block; published MFP does';
 end;
 $$;
+
+-- Check actual SELECT policies for two bidders' views of the same vessel.
+begin;
+select booking_test.project('Privacy test') as project \gset
+select booking_test.bid(:'project') as bid \gset
+insert into project_gear(project_id,label) values (:'project','CTD') returning id as gear \gset
+insert into bid_gear(project_id,bid_id,project_gear_id,answer) values (:'project',:'bid',:'gear','provide');
+insert into timeline_entries(vessel_id,start_at,end_at,source,visibility,label,created_by)
+  values (1,'2050-01-01','2050-01-02','vesselconnect','operators','Operator schedule','00000000-0000-0000-0000-000000000001'),
+         (1,'2050-01-02','2050-01-03','vesselconnect','private','Private schedule','00000000-0000-0000-0000-000000000001');
+create function pg_temp.check_visibility(b uuid, see_bid boolean, see_operator boolean, see_private boolean) returns void language plpgsql as $$
+begin
+  if (exists(select from project_bids where id=b)) <> see_bid or (exists(select from bid_gear where bid_id=b)) <> see_bid
+     or (exists(select from timeline_entries where label='Operator schedule')) <> see_operator
+     or (exists(select from timeline_entries where label='Private schedule')) <> see_private then
+    raise exception 'Incorrect bid or timeline visibility for %', auth.uid();
+  end if;
+end $$;
+set local role authenticated;
+set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000003';
+select pg_temp.check_visibility(:'bid',false,false,false); -- pending
+reset role;
+update vessel_operators set status='active' where user_id='00000000-0000-0000-0000-000000000003';
+set local role authenticated;
+select pg_temp.check_visibility(:'bid',true,true,false);
+reset role;
+update vessel_operators set status='suspended' where user_id='00000000-0000-0000-0000-000000000003';
+insert into vessel_operators values (2,'00000000-0000-0000-0000-000000000003','active');
+set local role authenticated;
+select pg_temp.check_visibility(:'bid',false,false,false); -- suspended here, active elsewhere
+set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000001';
+select pg_temp.check_visibility(:'bid',true,true,true); -- project and block author
+reset role;
+update profiles set is_admin=true where id='00000000-0000-0000-0000-000000000003';
+set local role authenticated;
+set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000003';
+select pg_temp.check_visibility(:'bid',true,true,true);
+rollback;

@@ -152,3 +152,20 @@ test('project form includes IDs, baseline gear IDs and linked person identity', 
     globalThis.fetch = previousFetch
   }
 })
+
+test('availability shows only caller-readable details and keeps hidden reservations busy', async () => {
+  const { visibleConflicts } = load('lib/visible-conflicts.ts')
+  const dates = { start_at: '2050-01-01', end_at: '2050-01-02' }
+  const entries = ['hidden', 'hidden-cruise', 'public', 'block'].map(id => ({ id, ...dates, label: 'private label', notes: 'private notes' }))
+  const visible = [
+    { id: 'hidden-cruise', label: 'unpublished', cruise_id: 'draft', cruise: null },
+    { id: 'public', cruise_id: 'published', cruise: { title: 'Survey', slug: 'survey' } },
+    { id: 'block', label: 'In port', cruise_id: null, cruise: null },
+  ]
+  const query = { select: () => query, in: () => query, returns: async () => ({ data: visible }) }
+  const viewer = { from(table) { assert.equal(table, 'timeline_entries'); return query } }
+  const busy = { id: null, ...dates, label: 'Busy', slug: null, kind: 'busy' }
+  const expected = [busy, busy, { id: 'public', ...dates, label: 'Survey', slug: 'survey', kind: 'cruise' }, { id: 'block', ...dates, label: 'In port', slug: null, kind: 'block' }]
+  assert.deepEqual(await visibleConflicts(viewer, entries, 'draft'), expected)
+  assert.deepEqual(await visibleConflicts(viewer, entries, 'published'), expected.filter(row => row.id !== 'public'))
+})
