@@ -128,14 +128,52 @@ test('loitering-only mode does not require the port visit dataset', async (conte
 test('a port request failure does not skip loitering or later vessels', async (context) => {
   const db = database({ vessels: [vessel, { ...vessel, id: 6, vessel_id_gfw: 'another-id' }] })
   const logs = []
-  mockApi(context, (url) => url.searchParams.get('datasets[0]') === portDataset
+  const requests = mockApi(context, (url) => url.searchParams.get('datasets[0]') === portDataset
     ? new Response('temporarily unavailable', { status: 503, statusText: 'Service Unavailable' })
     : { entries: [loiteringEvent], total: 1 })
   const result = await syncGfw(db, 'test-key', { log: (message) => logs.push(message) })
   assert.equal(result.errors, 2)
   assert.equal(result.newPortCalls, 0)
   assert.equal(result.newLoiteringEvents, 2)
+  assert.equal(requests.filter((url) => url.searchParams.get('datasets[0]') === portDataset).length, 6)
   assert.ok(logs.some((message) => message.includes('GFW API 503') && message.includes('Service Unavailable')))
+})
+
+test('recovers from a dropped connection and 503 on the same event page', async (context) => {
+  const db = database()
+  const offsets = []
+  mockApi(context, (url) => {
+    if (url.pathname.includes('/datasets/')) return {}
+    const offset = url.searchParams.get('offset')
+    offsets.push(offset)
+    if (offset === '0') {
+      const entries = Array.from({ length: 500 }, (_, index) => ({
+        ...portEvent, start: new Date(Date.UTC(2020, 0, index + 1)).toISOString(),
+      }))
+      return { entries, total: 501 }
+    }
+    if (offsets.length === 2) throw new TypeError('fetch failed')
+    if (offsets.length === 3) return new Response('socket hang up', { status: 503 })
+    return { entries: [portEvent], total: 501 }
+  })
+  const result = await syncGfw(db, 'test-key', { ...options, catchUp: true, datasets: ['ports'] })
+  assert.deepEqual(offsets, ['0', '500', '500', '500'])
+  assert.equal(result.errors, 0)
+  assert.equal(result.newPortCalls, 501)
+  assert.equal(db.writes.length, 1)
+})
+
+test('recovers from a timeout fetching dataset metadata', async (context) => {
+  let attempts = 0
+  const requests = mockApi(context, () => {
+    if (++attempts === 1) throw new DOMException('Request timed out', 'TimeoutError')
+    return { entries: [], total: 0 }
+  })
+  const result = await syncGfw(database(), 'test-key', { ...options, datasets: ['loitering'] })
+  assert.deepEqual(requests.map((url) => url.pathname), [
+    `/v3/datasets/${loiteringDataset}`, `/v3/datasets/${loiteringDataset}`, '/v3/events',
+  ])
+  assert.equal(result.errors, 0)
 })
 
 for (const status of [401, 403]) {
