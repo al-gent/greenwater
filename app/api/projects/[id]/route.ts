@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { PROJECT_FIELDS, validateGear, validatePeople, getProjectAsAdmin } from '@/lib/projects'
-import { syncProjectPeopleEntries } from '@/lib/timeline-service'
+import { projectWriteError } from '@/lib/project-write-errors'
 
 async function authorize(id: string) {
   const { data: { user } } = await createServerSupabaseClient().auth.getUser()
@@ -22,6 +22,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if ('error' in auth) return auth.error
   let body: Record<string, unknown>
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Invalid project data' }, { status: 400 })
 
   const updates: Record<string, unknown> = {}
   for (const [key, validate] of Object.entries(PROJECT_FIELDS)) {
@@ -38,24 +39,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     updates.published_at = null
   }
 
-  if (Object.keys(updates).length) {
-    const { error } = await supabaseAdmin.from('projects').update(updates).eq('id', params.id)
-    if (error) { console.error('project update:', error); return NextResponse.json({ error: 'Could not save the project' }, { status: 500 }) }
-  }
-  if (Array.isArray(body.gear)) {
-    await supabaseAdmin.from('project_gear').delete().eq('project_id', params.id)
-    if (body.gear.length) {
-      const { error: gErr } = await supabaseAdmin.from('project_gear').insert((body.gear as any[]).map((g) => ({ project_id: params.id, label: g.label.trim(), equipment_type_id: g.equipment_type_id ?? null, quantity: g.quantity ?? null, notes: g.notes ?? null })))
-      if (gErr) { console.error('project_gear replace:', gErr); return NextResponse.json({ error: 'Saved, but the gear list failed' }, { status: 500 }) }
-    }
-  }
-  if (Array.isArray(body.people)) {
-    await supabaseAdmin.from('project_people').delete().eq('project_id', params.id)
-    if (body.people.length) {
-      const { error: pErr } = await supabaseAdmin.from('project_people').insert((body.people as any[]).map((r) => ({ project_id: params.id, role_id: r.role_id, name: r.name.trim(), notes: r.notes ?? null })))
-      if (pErr) { console.error('project_people replace:', pErr); return NextResponse.json({ error: 'Saved, but the people list failed' }, { status: 500 }) }
-    }
-    if (auth.project.cruise_id) await syncProjectPeopleEntries(auth.project.cruise_id)
+  const { error } = await supabaseAdmin.rpc('save_project_changes', {
+    p_project_id: auth.project.id, p_actor_id: auth.user.id, p_updates: updates,
+    p_gear: body.gear ?? null, p_gear_ids: body.gear_ids ?? null, p_people: body.people ?? null,
+  })
+  if (error) {
+    console.error('project save:', error)
+    const failure = projectWriteError(error)
+    return NextResponse.json({ error: failure.error }, { status: failure.status })
   }
   const project = await getProjectAsAdmin(params.id)
   return NextResponse.json({ project })

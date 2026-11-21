@@ -15,8 +15,13 @@ export interface ProjectPerson {
 
 export function validatePeople(v: unknown): string | null {
   if (!Array.isArray(v) || v.length > 100) return 'People must be a list of up to 100'
+  const ids = new Set<string>()
   for (const r of v) {
     if (!r || typeof r.role_id !== 'string' || !r.role_id) return 'Each person needs a role'
+    if (r.id != null) {
+      if (typeof r.id !== 'string' || !isUuid(r.id) || ids.has(r.id.toLowerCase())) return 'Invalid or duplicate person ID'
+      ids.add(r.id.toLowerCase())
+    }
     if (typeof r.name !== 'string' || !r.name.trim() || r.name.length > 200) return 'Each person needs a name'
   }
   return null
@@ -76,8 +81,13 @@ export const PROJECT_FIELDS: Record<string, (v: unknown) => string | null> = {
 
 export function validateGear(v: unknown): string | null {
   if (!Array.isArray(v) || v.length > 50) return 'Gear must be a list of up to 50 lines'
+  const ids = new Set<string>()
   for (const g of v) {
     if (!g || typeof g.label !== 'string' || !g.label.trim() || g.label.length > 200) return 'Each gear line needs a label'
+    if (g.id != null) {
+      if (typeof g.id !== 'string' || !isUuid(g.id) || ids.has(g.id.toLowerCase())) return 'Invalid or duplicate gear ID'
+      ids.add(g.id.toLowerCase())
+    }
     if (g.quantity != null && !(Number.isInteger(g.quantity) && g.quantity > 0 && g.quantity <= 999)) return 'Gear quantity must be a whole number'
     if (g.equipment_type_id != null && typeof g.equipment_type_id !== 'string') return 'Bad equipment type'
   }

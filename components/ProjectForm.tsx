@@ -20,9 +20,9 @@ const VesselMap = dynamic(() => import('@/components/VesselMap'), {
 const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition'
 const label = 'block text-xs font-medium text-gray-500 mb-1'
 
-type Gear = { label: string; equipment_type_id: string | null; quantity: string; notes: string }
+type Gear = { id?: string; label: string; equipment_type_id: string | null; quantity: string; notes: string }
 
-type Person = { role_id: string; name: string }
+type Person = { id?: string; role_id: string; name: string; notes?: string | null }
 
 interface Props {
   project?: Project | null
@@ -58,8 +58,8 @@ export default function ProjectForm({ project, gear: initialGear = [], people: i
   const [grantNumber, setGrantNumber] = useState(p?.grant_number ?? '')
   const [fundingNotes, setFundingNotes] = useState(p?.funding_notes ?? '')
   const piRole = roles.find((r) => r.slug === 'pi')?.id ?? roles[0]?.id ?? ''
-  const [people, setPeople] = useState<Person[]>(initialPeople.map((r) => ({ role_id: r.role_id, name: r.name })))
-  const [gear, setGear] = useState<Gear[]>(initialGear.map((g) => ({ label: g.label, equipment_type_id: g.equipment_type_id, quantity: g.quantity != null ? String(g.quantity) : '', notes: g.notes ?? '' })))
+  const [people, setPeople] = useState<Person[]>(initialPeople.map((r) => ({ id: r.id, role_id: r.role_id, name: r.name, notes: r.notes })))
+  const [gear, setGear] = useState<Gear[]>(initialGear.map((g) => ({ id: g.id, label: g.label, equipment_type_id: g.equipment_type_id, quantity: g.quantity != null ? String(g.quantity) : '', notes: g.notes ?? '' })))
   const [saving, setSaving] = useState<'draft' | 'publish' | 'unpublish' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -80,8 +80,9 @@ export default function ProjectForm({ project, gear: initialGear = [], people: i
     funding_status: fundingStatus || null,
     grant_number: nz(grantNumber),
     funding_notes: nz(fundingNotes),
-    people: people.filter((r) => r.name.trim()).map((r) => ({ role_id: r.role_id, name: r.name.trim() })),
-    gear: gear.filter((g) => g.label.trim()).map((g) => ({ label: g.label.trim(), equipment_type_id: g.equipment_type_id, quantity: num(g.quantity), notes: nz(g.notes) })),
+    people: people.filter((r) => r.name.trim()).map((r) => ({ id: r.id, role_id: r.role_id, name: r.name.trim(), notes: r.notes ?? null })),
+    gear: gear.filter((g) => g.label.trim()).map((g) => ({ id: g.id, label: g.label.trim(), equipment_type_id: g.equipment_type_id, quantity: num(g.quantity), notes: nz(g.notes) })),
+    gear_ids: initialGear.map((g) => g.id),
     publish,
   })
 
