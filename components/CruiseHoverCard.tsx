@@ -27,6 +27,7 @@ export default function CruiseHoverCard({ entry }: { entry: TimelineEntry }) {
       <p className="text-xs text-gray-600 mt-1.5">{m.dates}</p>
       {m.area && <p className="text-xs text-gray-600">{m.area}</p>}
       <p className="text-xs text-gray-500 mt-1.5">{m.vesselName}{m.operator ? ` · ${m.operator}` : ''}</p>
+      {m.isDemo && <p className="text-xs text-amber-800 mt-2">Fictional itinerary, not an actual booking or vessel availability.</p>}
       <div className="mt-3">
         <Link href={`/cruises/${m.slug}`} className="text-xs font-medium text-teal hover:underline">View cruise</Link>
       </div>

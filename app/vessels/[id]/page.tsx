@@ -221,8 +221,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             {/* Specs */}
             <VesselDetailSpecs vessel={vessel} />
 
-            {/* The research aboard, past to future, as cards. Scheduling lives on the Research timeline. */}
-            <VesselProjects vesselId={vessel.id} />
+            <VesselProjects vesselId={vessel.id} vesselName={vessel.name} />
 
             {/* Divider */}
             <hr className="border-gray-100" />

@@ -60,10 +60,10 @@ export function vesselEntriesToTimeline(rows: VesselTimelineEntry[], fixed: Time
         detail: [
           c.title + (extra ? ` (+${extra} project${extra > 1 ? 's' : ''} aboard)` : ''),
           c.operating_area,
-          `${fmtDateRange(c.departure_at, c.arrival_at)} · ${STAGE_LABEL[stage]}`,
+          `${fmtDateRange(c.departure_at, c.arrival_at)} · ${c.source === 'demo' ? 'Example only — not actual availability' : STAGE_LABEL[stage]}`,
         ].filter(Boolean).join('\n'),
         meta: {
-          title: c.title, area: c.operating_area, dates: fmtDateRange(c.departure_at, c.arrival_at), stage, stageLabel: STAGE_LABEL[stage],
+          title: c.title, area: c.operating_area, dates: fmtDateRange(c.departure_at, c.arrival_at), stage, stageLabel: c.source === 'demo' ? 'Example only' : STAGE_LABEL[stage], isDemo: c.source === 'demo',
           departure: c.departure_at.slice(0, 10), arrival: c.arrival_at.slice(0, 10), projects: extra + 1,
           vesselId: e.vessel.id, vesselName: e.vessel.name, operator: org?.name ?? null, slug: c.slug, cruiseId: c.id,
         },

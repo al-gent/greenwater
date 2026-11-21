@@ -57,7 +57,7 @@ export interface Cruise {
   confirmed_at: string | null
   cancelled_at: string | null
   published_at: string | null
-  source: 'vesselconnect' | 'unols_mfp'
+  source: 'vesselconnect' | 'unols_mfp' | 'demo'
   external_id: string | null
   external_refs: Record<string, any> | null
   raw: Record<string, any> | null
@@ -77,7 +77,7 @@ export interface CruiseProject {
   requested_science_days: number | null
   science_party_size: number | null
   summary: string | null
-  source: 'vesselconnect' | 'unols_mfp'
+  source: 'vesselconnect' | 'unols_mfp' | 'demo'
   external_id: string | null
   external_refs: Record<string, any> | null
   raw: Record<string, any> | null

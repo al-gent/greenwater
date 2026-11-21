@@ -47,7 +47,7 @@ export interface Project {
   funding_status: FundingStatus | null
   grant_number: string | null
   funding_notes: string | null
-  source: 'vesselconnect' | 'unols_mfp'
+  source: 'vesselconnect' | 'unols_mfp' | 'demo'
   created_by: string | null
   published_at: string | null
   deleted_at: string | null

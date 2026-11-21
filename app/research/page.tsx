@@ -6,6 +6,8 @@ import FleetTimeline from '@/components/FleetTimeline'
 import ProjectCard from '@/components/ProjectCard'
 import PagedList from '@/components/PagedList'
 import { getVesselsByIds } from '@/lib/fleet'
+import DemoNotice from '@/components/DemoNotice'
+import { getResearchPublication } from '@/lib/research-publication'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +24,7 @@ const PAST_PAGE = 24
 // Projects are the unit here; a cruise is how several of them share a vessel. Cards for the
 // scheduled ones read through their cruise. The timeline stays the vessel view.
 export default async function ShipTimePage({ searchParams }: { searchParams: { tab?: string; page?: string; view?: string; scale?: string; at?: string; vessels?: string } }) {
+  const publication = await getResearchPublication()
   const view = searchParams.view === 'timeline' ? 'timeline' : 'cards'
   // A shared fleet link: ?vessels=1,2,3 pins the timeline to those rows.
   const pinnedIds = (searchParams.vessels ?? '').split(',').map((x) => parseInt(x, 10)).filter((n) => Number.isInteger(n) && n > 0).slice(0, 100)
@@ -67,6 +70,7 @@ export default async function ShipTimePage({ searchParams }: { searchParams: { t
           </div>
         </div>
 
+        {publication.demo && <div className="mb-6 max-w-7xl mx-auto"><DemoNotice /></div>}
         {view === 'timeline' && pinned && pinned.length > 0 && (
           <p className="text-xs text-gray-500 mb-3">A shared fleet of {pinned.length} vessel{pinned.length === 1 ? '' : 's'}. <Link href="/research?view=timeline" className="text-teal hover:underline">See the whole fleet</Link></p>
         )}

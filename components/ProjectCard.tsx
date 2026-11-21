@@ -10,7 +10,7 @@ import { getPhotoUrl } from '@/lib/vessel-utils'
  */
 export default function ProjectCard({ project: p, cruise: c, siblings = 0, showPhoto = true }: { project: BrowseProject; cruise: CruiseListItem | null; siblings?: number; showPhoto?: boolean }) {
   const stage = c ? cruiseStage(c as any) : null
-  const status = stage ? STAGE_LABEL[stage] : 'Proposed'
+  const status = p.source === 'demo' ? 'Example' : stage ? STAGE_LABEL[stage] : 'Proposed'
   const statusCls = stage ? STAGE_CLASS[stage] : 'bg-gold-100 text-navy-800 border-gold-300'
   const photo = c?.vessel?.photo_urls?.length ? getPhotoUrl(c.vessel as any) : null
   const where = c?.operating_area ?? p.area_label ?? null

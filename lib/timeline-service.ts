@@ -11,6 +11,7 @@
  * See RESOURCE_TIMELINE_PLAN.md and supabase/migrations/20261002_timeline.sql.
  */
 import { supabaseAdmin } from './supabase-admin'
+import { getResearchPublication } from './research-publication'
 
 const DAY_MS = 86_400_000
 
@@ -29,7 +30,7 @@ export interface TimelineEntryRow {
   seat_id: string | null
   label: string | null
   notes: string | null
-  source: 'vesselconnect' | 'unols_mfp'
+  source: 'vesselconnect' | 'unols_mfp' | 'demo'
   visibility: 'public' | 'operators' | 'private'
   created_by: string | null
   deleted_at: string | null
@@ -44,7 +45,7 @@ interface CruiseWindowFields {
   demobilization_at: string | null
   published_at: string | null
   cancelled_at: string | null
-  source: 'vesselconnect' | 'unols_mfp'
+  source: 'vesselconnect' | 'unols_mfp' | 'demo'
   created_by: string | null
 }
 
@@ -54,7 +55,7 @@ interface SeatFields {
   person_id: string | null
   start_at: string | null
   end_at: string | null
-  source: 'vesselconnect' | 'unols_mfp'
+  source: 'vesselconnect' | 'unols_mfp' | 'demo'
   deleted_at: string | null
 }
 
@@ -106,9 +107,11 @@ export async function findConflicts(opts: {
   if (opts.personIds?.length) ors.push(`person_id.in.(${opts.personIds.join(',')})`)
   if (opts.equipmentIds?.length) ors.push(`equipment_id.in.(${opts.equipmentIds.join(',')})`)
   if (!ors.length) return []
+  const publication = await getResearchPublication()
   let q = supabaseAdmin
     .from('timeline_entries')
-    .select('*')
+    .select('*, cruise:cruises(source), person:people(source), equipment:equipment(source)')
+    .neq('source', 'demo')
     .is('deleted_at', null)
     .lt('start_at', opts.end)
     .gt('end_at', opts.start)
@@ -117,7 +120,10 @@ export async function findConflicts(opts: {
   if (opts.ignoreCruiseId) q = q.or(`cruise_id.is.null,cruise_id.neq.${opts.ignoreCruiseId}`)
   const { data, error } = await q
   if (error) throw error
-  return (data ?? []) as TimelineEntryRow[]
+  return (data ?? []).filter((entry) => {
+    const sources = [entry.source, entry.cruise?.source, entry.person?.source, entry.equipment?.source]
+    return sources.every((source) => source !== 'demo' && (publication.mfp || !source?.startsWith('unols_mfp')))
+  }).map(({ cruise, person, equipment, ...entry }) => entry) as TimelineEntryRow[]
 }
 
 // Turn the exclusion-constraint rejection into a ConflictError with the colliding rows.
@@ -164,7 +170,7 @@ export async function syncCruiseEntries(cruiseId: string): Promise<void> {
  * no longer on those projects are soft-deleted. Called from syncCruiseEntries and after a
  * scheduled project's people change.
  */
-export async function syncProjectPeopleEntries(cruiseId: string, w?: { start: string; end: string; allDay: boolean }, source: 'vesselconnect' | 'unols_mfp' = 'vesselconnect'): Promise<void> {
+export async function syncProjectPeopleEntries(cruiseId: string, w?: { start: string; end: string; allDay: boolean }, source: 'vesselconnect' | 'unols_mfp' | 'demo' = 'vesselconnect'): Promise<void> {
   const now = new Date().toISOString()
   if (!w) {
     const { data: c } = await supabaseAdmin.from('cruises').select('id, vessel_id, mobilization_at, departure_at, arrival_at, demobilization_at, published_at, cancelled_at, source, created_by').eq('id', cruiseId).single()

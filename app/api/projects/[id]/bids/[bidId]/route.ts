@@ -17,6 +17,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
   const project = await getProjectAsAdmin(params.id)
   if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (project.source === 'demo') return NextResponse.json({ error: 'Example projects do not accept bids' }, { status: 409 })
   const { data: profile } = await supabaseAdmin.from('profiles').select('is_admin').eq('id', user.id).single()
   let body: Record<string, unknown> & { action?: string }
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }

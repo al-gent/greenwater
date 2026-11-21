@@ -12,7 +12,7 @@ export default async function EditProjectPage({ params }: { params: { slug: stri
   const user = await getServerUser()
   if (!user) redirect(`/auth/signin?next=/projects/${params.slug}/edit`)
   const project = await getProjectAsAdmin(params.slug)
-  if (!project) notFound()
+  if (!project || project.source === 'demo') notFound()
   const { data: profile } = await supabaseAdmin.from('profiles').select('is_admin').eq('id', user.id).single()
   if (project.created_by !== user.id && !profile?.is_admin) notFound()
   const [gear, people, equipmentTypes, roles] = await Promise.all([getProjectGear(project.id, true), getProjectPeople(project.id, true), getEquipmentTypes(), getProjectRoles()])

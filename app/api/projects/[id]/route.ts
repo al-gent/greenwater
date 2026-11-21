@@ -9,6 +9,7 @@ async function authorize(id: string) {
   if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
   const project = await getProjectAsAdmin(id)
   if (!project) return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) }
+  if (project.source === 'demo') return { error: NextResponse.json({ error: 'Example projects are read-only' }, { status: 409 }) }
   const { data: profile } = await supabaseAdmin.from('profiles').select('is_admin').eq('id', user.id).single()
   if (project.created_by !== user.id && !profile?.is_admin) return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
   return { user, project }

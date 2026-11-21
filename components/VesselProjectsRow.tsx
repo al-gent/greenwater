@@ -2,14 +2,16 @@
 
 // The vessel page's project row. Holds the loaded cards; pulls an older page of past
 // projects from the API whenever the row is scrolled to its left edge.
-import { useCallback, useState } from 'react'
+import { useCallback, useId, useState, type ReactNode } from 'react'
 import CardRow from '@/components/CardRow'
 import ProjectCard from '@/components/ProjectCard'
 import type { ProjectCardData } from '@/lib/project-cards'
 
-export default function VesselProjectsRow({ vesselId, pastCards, upcomingCards, pastCruisesTotal, pastPagesLoaded, pastPageSize }: {
-  vesselId: number; pastCards: ProjectCardData[]; upcomingCards: ProjectCardData[]; pastCruisesTotal: number; pastPagesLoaded: number; pastPageSize: number
+export default function VesselProjectsRow({ vesselId, pastCards, upcomingCards, pastCruisesTotal, pastPagesLoaded, pastPageSize, timeline }: {
+  vesselId: number; pastCards: ProjectCardData[]; upcomingCards: ProjectCardData[]; pastCruisesTotal: number; pastPagesLoaded: number; pastPageSize: number; timeline: ReactNode
 }) {
+  const [view, setView] = useState<'projects' | 'timeline'>('projects')
+  const viewId = useId()
   const [past, setPast] = useState(pastCards)
   const [pages, setPages] = useState(pastPagesLoaded)
   const [loading, setLoading] = useState(false)
@@ -32,13 +34,27 @@ export default function VesselProjectsRow({ vesselId, pastCards, upcomingCards, 
   const counts = [past.length ? `${past.length}${morePast ? '+' : ''} past` : null, upcomingCards.length ? `${upcomingCards.length} upcoming` : null].filter(Boolean).join(' · ')
   return (
     <section>
-      <div className="flex items-baseline justify-between gap-3 mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h2 className="text-lg font-semibold text-navy">Projects</h2>
-        <p className="text-xs text-gray-400">{loading ? 'Loading earlier…' : counts}</p>
+        <div className="inline-flex rounded-xl border border-gray-200 p-0.5 bg-gray-50" role="group" aria-label="Vessel research view">
+          {(['projects', 'timeline'] as const).map((option) => (
+            <button key={option} type="button" aria-pressed={view === option} aria-controls={viewId} onClick={() => setView(option)}
+              className={`px-3 py-1.5 rounded-[10px] text-sm font-medium transition-colors ${view === option ? 'bg-white text-navy shadow-sm' : 'text-gray-500 hover:text-navy'}`}>
+              {option === 'projects' ? 'Projects' : 'Timeline'}
+            </button>
+          ))}
+        </div>
       </div>
-      <CardRow startIndex={past.length} cardWidth={300} onReachStart={morePast ? loadOlder : undefined}>
-        {cards.map((x) => <ProjectCard key={x.project.id} {...x} showPhoto={false} />)}
-      </CardRow>
+      <div id={viewId}>
+        {view === 'projects' ? (
+          <>
+            <p className="text-xs text-gray-400 mb-1" aria-live="polite">{loading ? 'Loading earlier…' : counts}</p>
+            <CardRow startIndex={past.length} cardWidth={300} onReachStart={morePast ? loadOlder : undefined}>
+              {cards.map((card) => <ProjectCard key={card.project.id} {...card} showPhoto={false} />)}
+            </CardRow>
+          </>
+        ) : timeline}
+      </div>
     </section>
   )
 }

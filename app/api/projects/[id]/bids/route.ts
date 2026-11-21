@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { canOperateVessel } from '@/lib/operators'
-import { getProjectAsAdmin } from '@/lib/projects'
+import { getProject } from '@/lib/projects'
 import { readBidBody } from '@/lib/project-utils'
 import { notifyBidOffered } from '@/lib/project-notify'
 
@@ -10,8 +10,9 @@ import { notifyBidOffered } from '@/lib/project-notify'
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const { data: { user } } = await createServerSupabaseClient().auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
-  const project = await getProjectAsAdmin(params.id)
+  const project = await getProject(params.id)
   if (!project || !project.published_at) return NextResponse.json({ error: 'Project not open for bids' }, { status: 404 })
+  if (project.source === 'demo') return NextResponse.json({ error: 'Example projects do not accept bids' }, { status: 409 })
   if (project.cruise_id) return NextResponse.json({ error: 'This project is already scheduled' }, { status: 409 })
   let body: Record<string, unknown>
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }

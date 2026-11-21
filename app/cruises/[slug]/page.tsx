@@ -7,6 +7,7 @@ import CruiseMapSection from '@/components/CruiseMapSection'
 import VesselTimelineStrip from '@/components/VesselTimelineStrip'
 import CruiseProjectsTabs from '@/components/CruiseProjectsTabs'
 import RequestButton from '@/components/RequestButton'
+import DemoNotice from '@/components/DemoNotice'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,15 +66,16 @@ export default async function CruisePage({ params }: { params: { slug: string } 
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-8">
+        {cruise.source === 'demo' && <DemoNotice />}
         {/* Title */}
         <div>
           <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
             <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-2">
               <h1 className="text-3xl font-bold text-navy leading-tight">{cruise.title}</h1>
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${STAGE_CLASS[stage]}`}>{STAGE_LABEL[stage]}</span>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${STAGE_CLASS[stage]}`}>{cruise.source === 'demo' ? 'Example only' : STAGE_LABEL[stage]}</span>
             </div>
             <div className="flex items-center gap-4 flex-shrink-0">
-              {vessel && (
+              {vessel && cruise.source !== 'demo' && (
                 <RequestButton
                 vesselId={vessel.id}
                 vesselName={vessel.name}
@@ -222,7 +224,7 @@ export default async function CruisePage({ params }: { params: { slug: string } 
             {cruise.science_party_size != null && (
               <p className="text-xs text-gray-500 mt-2">Party size: {cruise.science_party_size}</p>
             )}
-            {berthsOpen != null && (
+            {cruise.source !== 'demo' && berthsOpen != null && (
               <p className="text-xs text-gray-500 mt-1">{berthsEstimated ? 'Estimated vacant berths' : 'Vacant berths'}: <span className="font-semibold text-navy">{berthsOpen}</span></p>
             )}
           </div>

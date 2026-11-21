@@ -13,7 +13,7 @@ export default async function BidPage({ params }: { params: { slug: string } }) 
   const user = await getServerUser()
   if (!user) redirect(`/auth/signin?next=/projects/${params.slug}/bid`)
   const project = await getProject(params.slug)
-  if (!project || !project.published_at) notFound()
+  if (!project || !project.published_at || project.source === 'demo') notFound()
   const vesselIds = await getOperatedVesselIds(user.id)
   if (!vesselIds.length) {
     return (
