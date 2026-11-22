@@ -167,7 +167,7 @@ function ClaimForm({ vessels }: { vessels: VesselOption[] }) {
               <ClaimVesselPicker vessels={vessels} selected={vessel} onSelect={setVessel} />
               {vessel?.claimed && (
                 <p className="text-xs text-gray-500 mt-1.5">
-                  <strong>{vessel.name}</strong> already has an operator. You can still claim it —
+                  <strong>{vessel.name}</strong> already has a claim on file. You can still claim it —
                   our team will review before granting access.
                 </p>
               )}

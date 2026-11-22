@@ -4,7 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 export async function getClaimVessels() {
   const [vessels, { data: memberships }] = await Promise.all([
     getAllVessels(),
-    supabaseAdmin.from('vessel_operators').select('vessel_id').eq('status', 'active'),
+    // Match the server's rule (handle_new_user, /api/vessel-claims): any existing
+    // membership row, pending included, means a new claim needs admin review.
+    supabaseAdmin.from('vessel_operators').select('vessel_id'),
   ])
 
   const claimedIds = new Set((memberships ?? []).map((m) => m.vessel_id as number))

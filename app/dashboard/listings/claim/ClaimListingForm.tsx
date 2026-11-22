@@ -52,7 +52,7 @@ export default function ClaimListingForm({ vessels, selectedId }: { vessels: Ves
         <div>
           <p className="mb-2 text-sm font-medium text-gray-700">Your vessel</p>
           <ClaimVesselPicker vessels={vessels} selected={vessel} onSelect={setVessel} />
-          {vessel?.claimed && <p className="mt-2 text-sm text-gray-600">This vessel already has an operator. Our team will review your claim.</p>}
+          {vessel?.claimed && <p className="mt-2 text-sm text-gray-600">This vessel already has a claim on file. Our team will review yours.</p>}
           <p className="mt-2 text-sm text-gray-500">Can’t find your vessel? <Link href="/dashboard/listings/new" className="text-teal hover:underline">List a new vessel</Link></p>
         </div>
         <label className="block text-sm font-medium text-gray-700">Your relationship to this vessel

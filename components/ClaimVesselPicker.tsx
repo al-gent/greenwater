@@ -82,7 +82,7 @@ export default function ClaimVesselPicker({
               >
                 <span className="text-sm text-navy font-medium">{v.name}</span>
                 {v.claimed && (
-                  <span className="ml-2 text-[10px] uppercase tracking-wide bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">Has operator</span>
+                  <span className="ml-2 text-[10px] uppercase tracking-wide bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">Claimed</span>
                 )}
                 <span className="block text-xs text-gray-400">
                   {[v.port_city, v.country].filter(Boolean).join(', ')}
