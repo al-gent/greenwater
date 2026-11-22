@@ -36,11 +36,11 @@ export default async function AudienceLandingPage({ audience, hero, overview, pl
     <article className="pt-16">
       <header className="bg-gradient-to-br from-navy via-navy-600 to-teal text-white">
         <div className="page-gutter py-12 sm:py-16 grid items-center gap-8 md:grid-cols-[1.2fr_1fr]">
-          <div className="max-w-2xl">
+          <div className="text-center md:max-w-2xl md:text-left">
             <p className="text-gold font-semibold text-sm uppercase tracking-widest mb-4">{audience}</p>
             <h1 className="text-4xl sm:text-5xl font-bold leading-tight mb-5">{hero.title}</h1>
             <p className="text-lg text-white/80 leading-relaxed">{hero.description}</p>
-            <div className="mt-8 flex flex-wrap items-center gap-2">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2 md:justify-start">
               <Link href={hero.primary.href} className="btn-primary">{hero.primary.label}</Link>
               <Link href={hero.secondary.href} className="btn-secondary border-white/60 text-white hover:bg-white/10">{hero.secondary.label}</Link>
             </div>

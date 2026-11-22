@@ -34,11 +34,11 @@ export default function CruisePlanningPage() {
     <article className="pt-16">
       <header className="border-b border-teal-100 bg-teal-50">
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-2 lg:gap-12">
-          <div>
+          <div className="text-center lg:text-left">
             <p className="mb-3 text-sm font-semibold text-teal">Cruise planning</p>
             <h1 className="text-4xl font-bold tracking-tight text-navy sm:text-5xl">Plan ship time across your research fleet</h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-gray-600">When five organizations operate their own boats, a team looking for a ride can miss a cruise already headed to its study site. Bring your vessels into one calendar to see who’s going where, when they sail, and where another project could fit.</p>
-            <div className="mt-6 flex flex-wrap gap-2">
+            <p className="mt-5 lg:max-w-xl text-lg leading-relaxed text-gray-600">When five organizations operate their own boats, a team looking for a ride can miss a cruise already headed to its study site. Bring your vessels into one calendar to see who’s going where, when they sail, and where another project could fit.</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
               <Link href={timeline} className="btn-primary">Explore the fleet timeline</Link>
               <Link href={watchlist} className="btn-secondary">Set up your watchlist</Link>
             </div>

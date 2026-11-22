@@ -32,6 +32,27 @@ async function previewProjects(): Promise<ProjectCardData[]> {
 const sectionTitle = 'text-2xl sm:text-3xl font-bold tracking-tight text-navy'
 const textLink = 'text-sm font-semibold text-teal hover:underline underline-offset-4'
 
+const howItWorks = [
+  {
+    audience: 'For researchers', title: 'Find a vessel for your fieldwork', href: '/researchers',
+    // Heroicons v1 outline "beaker"
+    icon: ['M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z'],
+    description: 'Search near your study site, compare deck space, equipment, and berths, then message operators directly about dates and costs.',
+  },
+  {
+    audience: 'For vessel operators', title: 'Put your vessel to work', href: '/operators',
+    // Lucide "anchor" (ISC); ring drawn as a path so it renders like the other icons
+    icon: ['M15 5a3 3 0 11-6 0 3 3 0 016 0z', 'M12 22V8', 'M5 12H2a10 10 0 0020 0h-3'],
+    description: 'List where you operate and when you’re available so research teams can contact you about paid work in your area.',
+  },
+  {
+    audience: 'For research fleets', title: 'Plan ship time across your fleet', href: '/cruise-planning',
+    // Heroicons v1 outline "calendar"
+    icon: ['M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
+    description: 'Bring several organizations’ vessels into one calendar to see who’s sailing where, and where another project could join.',
+  },
+]
+
 export default async function HomePage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
   if (!searchParams.code && Object.keys(searchParams).some(key => directoryParams.has(key))) {
     const query = new URLSearchParams()
@@ -61,12 +82,12 @@ export default async function HomePage({ searchParams }: { searchParams: Record<
   return (
     <div className="pt-16">
       <header className="bg-teal-50 border-b border-teal-100">
-        <div className="page-gutter grid items-center gap-8 py-10 sm:py-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-8">
-          <div>
+        <div className="page-gutter grid items-center gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-8">
+          <div className="text-center lg:text-left">
             <p className="mb-4 text-5xl font-bold leading-none tracking-tight text-navy sm:text-6xl lg:text-7xl">Vessel<span className="text-teal">Connect</span></p>
-            <h1 className="max-w-xl text-4xl font-bold tracking-tight leading-tight text-navy sm:text-5xl">Connecting marine researchers and vessel operators</h1>
-            <p className="mt-4 max-w-lg text-base leading-relaxed text-gray-600 sm:text-lg">Our mission is to make fieldwork at sea more accessible. Through VesselConnect, Greenwater Foundation helps researchers find boats of all sizes and gives operators a way to take part in marine science.</p>
-            <div className="mt-6 flex flex-wrap items-center gap-2">
+            <h1 className="lg:max-w-xl text-4xl font-bold tracking-tight leading-tight text-navy sm:text-5xl">Connecting marine researchers and vessel operators</h1>
+            <p className="mt-4 lg:max-w-lg text-base leading-relaxed text-gray-600 sm:text-lg">Our mission is to make fieldwork at sea more accessible. Through VesselConnect, Greenwater Foundation helps researchers find boats of all sizes and gives operators a way to take part in marine science.</p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 lg:justify-start">
               <Link href="/vessels" className="btn-primary">Find a vessel</Link>
               <Link href="/operators" className="btn-secondary">List your vessel</Link>
             </div>
@@ -104,6 +125,26 @@ export default async function HomePage({ searchParams }: { searchParams: Record<
           ) : (
             <p className="text-sm text-gray-500">{research.status === 'rejected' ? 'Project previews are currently unavailable.' : 'There are no upcoming or proposed projects to show here yet.'}</p>
           )}
+        </section>
+        <section aria-labelledby="home-how" className="border-t border-gray-200 py-9 sm:py-12">
+          <h2 id="home-how" className={sectionTitle}>How it works</h2>
+          <p className="mt-2 mb-5 max-w-2xl text-gray-600">VesselConnect brings researchers, vessel operators, and research fleets together. Choose where you fit.</p>
+          <ul className="grid gap-4 md:grid-cols-3">
+            {howItWorks.map(({ audience, title, description, href, icon }) => (
+              <li key={href} className="flex">
+                <Link href={href} className="flex w-full flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-teal-100 hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-teal sm:p-6">
+                  <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal">
+                    <svg aria-hidden="true" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      {icon.map(d => <path key={d} d={d} strokeLinecap="round" strokeLinejoin="round" />)}
+                    </svg>
+                  </span>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-teal">{audience}</p>
+                  <h3 className="mt-2 text-xl font-bold text-navy">{title}</h3>
+                  <p className="mt-2 leading-relaxed text-gray-600">{description}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
     </div>
