@@ -18,11 +18,12 @@ export async function GET() {
 
   // Memberships needing review: pending activation, or instant-granted but
   // not yet confirmed by an admin (confirmed_at is null).
-  const [subs, pendingOps, unconfirmedOps, scientists] = await Promise.all([
+  const [subs, pendingOps, unconfirmedOps, scientists, links] = await Promise.all([
     supabaseAdmin.from('vessel_submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabaseAdmin.from('vessel_operators').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabaseAdmin.from('vessel_operators').select('id', { count: 'exact', head: true }).eq('status', 'active').is('confirmed_at', null),
     supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }).eq('is_admin', false).eq('verified', false),
+    supabaseAdmin.from('person_link_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
   ])
 
   const submissions = subs.count ?? 0
@@ -30,7 +31,8 @@ export async function GET() {
   const unverified = scientists.count ?? 0
 
   return NextResponse.json({
-    count: submissions + pendingClaims + unverified,
+    count: submissions + pendingClaims + unverified + (links.count ?? 0),
+    profileLinks: links.count ?? 0,
     submissions,
     claims: pendingClaims,
     scientists: unverified,

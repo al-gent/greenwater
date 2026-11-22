@@ -4,11 +4,10 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import type { Vessel } from '@/lib/vessel-utils'
-import { getPhotoUrl, stripHtml } from '@/lib/vessel-utils'
-import { type SearchMode } from './LocationSearch'
-import { type AdvancedFilters, EMPTY_ADVANCED, advancedActive, normalizeHull } from './AdvancedSearch'
-import VesselSearchBar from './VesselSearchBar'
-import { useVesselLocationSearch, type Place } from './useVesselLocationSearch'
+import { getPhotoUrl, isFeaturedVessel, stripHtml } from '@/lib/vessel-utils'
+import LocationFilters from './LocationFilters'
+import AdvancedSearch, { type AdvancedFilters, EMPTY_ADVANCED, advancedActive, advancedCount, normalizeHull } from './AdvancedSearch'
+import { useVesselLocationSearch, type Place, type SearchMode } from './useVesselLocationSearch'
 import VesselCard from './VesselCard'
 import VesselFeaturedCard from './VesselFeaturedCard'
 import VesselList, { sortVessels, type SortKey, type SortDir } from './VesselList'
@@ -44,9 +43,14 @@ function applySearch(vessels: Vessel[], advanced: AdvancedFilters, locationIds: 
   const nameKw = advanced.name.trim().toLowerCase()
   const activityKw = advanced.activity.trim().toLowerCase()
   const affiliationKw = advanced.affiliation.trim().toLowerCase()
+  const flag = advanced.flag.trim().toLowerCase()
+  const exactFlag = flag && vessels.some(v => v.country?.toLowerCase() === flag)
   return vessels.filter((v) => {
     if (locationIds && !locationIds.has(v.id)) return false
-    if (advanced.flag && v.country !== advanced.flag) return false
+    if (flag) {
+      const country = v.country?.toLowerCase() ?? ''
+      if (exactFlag ? country !== flag : !country.includes(flag)) return false
+    }
     if (advanced.hull && normalizeHull(v.hull_material) !== advanced.hull) return false
     if (nameKw && !v.name.toLowerCase().includes(nameKw)) return false
     if (activityKw && !stripHtml(v.main_activity ?? '').toLowerCase().includes(activityKw)) return false
@@ -75,21 +79,6 @@ function applySearch(vessels: Vessel[], advanced: AdvancedFilters, locationIds: 
 
 type ViewMode = 'card' | 'list' | 'featured'
 
-// "Featured" = complete enough to render a rich card with no blanks. The required
-// fields ARE the fields the featured card shows (see VesselFeaturedCard).
-function isFeatured(v: Vessel): boolean {
-  return (
-    (v.photo_urls?.length ?? 0) > 0 &&
-    v.length != null &&
-    v.scientists != null &&
-    v.draft != null &&
-    !!(v.endurance ?? '').trim() &&
-    !!(v.last_port_city || v.port_city) &&
-    !!v.affiliation &&
-    !!stripHtml(v.main_activity ?? '').trim()
-  )
-}
-
 interface HomeClientProps {
   vessels: Vessel[]
 }
@@ -116,7 +105,6 @@ function parseAdvancedFromParams(p: URLSearchParams): AdvancedFilters {
 }
 
 interface LocationState {
-  query: string
   place: Place | null
   mode: SearchMode
   radius: number
@@ -132,8 +120,7 @@ function parseLocationFromParams(p: URLSearchParams): LocationState {
     ? (bboxRaw as [number, number, number, number])
     : undefined
   return {
-    query: label,
-    place: has ? { label, lat, lon, bbox } : null,
+    place: has ? { label, lat, lon, bbox, kind: p.has('placeCountry') ? 'country' : undefined, country: p.get('placeCountry') } : null,
     mode: (p.get('smode') as SearchMode) || 'last_port',
     radius: parseInt(p.get('radius') ?? '250', 10) || 250,
   }
@@ -149,19 +136,17 @@ function parseMapFromParams(p: URLSearchParams): MapUrlState {
   const lon = parseFloat(p.get('mlon') ?? '')
   const zoom = parseFloat(p.get('mz') ?? '')
   const viewport = !isNaN(lat) && !isNaN(lon) && !isNaN(zoom) ? { lat, lon, zoom } : null
-  return { show: p.get('map') === '1' || viewport !== null, viewport }
+  return { show: p.get('map') !== '0', viewport }
 }
 
 function buildQueryString(advanced: AdvancedFilters, loc: LocationState, view: ViewMode, sort: { key: SortKey; dir: SortDir }, map: MapUrlState): string {
   const p = new URLSearchParams()
   if (view !== 'featured') p.set('view', view) // featured is the default
-  if (map.show) {
-    p.set('map', '1')
-    if (map.viewport) {
-      p.set('mlat', map.viewport.lat.toFixed(5))
-      p.set('mlon', map.viewport.lon.toFixed(5))
-      p.set('mz', String(Math.round(map.viewport.zoom * 100) / 100))
-    }
+  if (!map.show) p.set('map', '0')
+  if (map.viewport) {
+    p.set('mlat', map.viewport.lat.toFixed(5))
+    p.set('mlon', map.viewport.lon.toFixed(5))
+    p.set('mz', String(Math.round(map.viewport.zoom * 100) / 100))
   }
   if (sort.key !== 'name' || sort.dir !== 'asc') p.set('sort', `${sort.key}:${sort.dir}`)
   if (advanced.name) p.set('name', advanced.name)
@@ -181,6 +166,7 @@ function buildQueryString(advanced: AdvancedFilters, loc: LocationState, view: V
   if (advanced.features.length > 0) p.set('features', advanced.features.join(','))
   if (loc.place) {
     p.set('loc', loc.place.label)
+    if (loc.place.kind === 'country' && loc.place.country) p.set('placeCountry', loc.place.country)
     p.set('lat', String(loc.place.lat))
     p.set('lon', String(loc.place.lon))
     if (loc.mode !== 'last_port') p.set('smode', loc.mode) // last_port is the default
@@ -242,7 +228,7 @@ export default function HomeClient({ vessels }: HomeClientProps) {
   useEffect(() => {
     const qs = buildQueryString(
       advanced,
-      { query: loc.query, place: loc.place, mode: loc.mode, radius: loc.radius },
+      loc,
       view,
       listSort,
       { show: showMap, viewport: mapViewport },
@@ -250,7 +236,7 @@ export default function HomeClient({ vessels }: HomeClientProps) {
     const next = qs ? `${pathname}?${qs}` : pathname
     const current = window.location.pathname + window.location.search
     if (next !== current) router.replace(next, { scroll: false })
-  }, [advanced, loc.place, loc.mode, loc.radius, loc.query, view, listSort, showMap, mapViewport, pathname, router])
+  }, [advanced, loc.place, loc.mode, loc.radius, view, listSort, showMap, mapViewport, pathname, router])
 
   const isAdvancedActive = advancedActive(advanced)
   const hasFilters = !!(isAdvancedActive || loc.place)
@@ -261,12 +247,7 @@ export default function HomeClient({ vessels }: HomeClientProps) {
     if (hasFilters && view === 'featured') setView('card')
   }, [hasFilters, view])
 
-  // Searching a location reveals the map so the pin/area is visible.
-  useEffect(() => {
-    if (loc.place) setShowMap(true)
-  }, [loc.place])
-
-  // distinct flags for the dropdown — derived from the vessels we already have
+  // country suggestions for flag search — derived from the vessels we already have
   const flags = useMemo(
     () => Array.from(new Set(vessels.map((v) => v.country).filter(Boolean) as string[])).sort(),
     [vessels],
@@ -274,8 +255,6 @@ export default function HomeClient({ vessels }: HomeClientProps) {
 
   const filtered = useMemo(() => applySearch(vessels, advanced, loc.match?.ids ?? null), [vessels, advanced, loc.match])
 
-  // Name matches for the search dropdown — jump straight to a listing.
-  const vesselOptions = useMemo(() => vessels.map((v) => ({ id: v.id, name: v.name })), [vessels])
   // photos-first so the grid looks good above the fold
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -286,7 +265,7 @@ export default function HomeClient({ vessels }: HomeClientProps) {
     })
   }, [filtered])
   const mapVessels = useMemo(() => filtered.map((v) => ({ ...v, photoUrl: getPhotoUrl(v) })), [filtered])
-  const featured = useMemo(() => sorted.filter(isFeatured), [sorted])
+  const featured = useMemo(() => sorted.filter(isFeaturedVessel), [sorted])
   const displayed = useMemo(() => {
     if (view === 'featured') return featured
     if (view === 'list') return sortVessels(filtered, listSort.key, listSort.dir) // column sort, not photos-first
@@ -313,112 +292,109 @@ export default function HomeClient({ vessels }: HomeClientProps) {
   const visible = displayed.slice(0, visibleCount)
 
   return (
-    <div className="pt-[88px] bg-white min-h-screen">
+    <div className="pt-16 bg-white min-h-screen">
 
-      {/* Map (default on, toggleable) */}
-      {showMap && (
-        <div style={{ height: '420px' }} className="w-full border-b border-gray-100">
-          <HomeMap
-            vessels={mapVessels}
-            initialView={mapViewport ?? undefined}
-            onViewChange={setMapViewport}
-            searchPlace={loc.place ? {
-              lat: loc.place.lat,
-              lon: loc.place.lon,
-              label: loc.place.label,
-              bbox: loc.mode === 'operating_area' ? undefined : loc.place.bbox,
-              radiusNm: loc.radiusApplies ? loc.radius : undefined,
-            } : undefined}
-          />
-        </div>
-      )}
-
-      {/* Search bar (below the map, above the results) */}
-      <div className="border-b border-gray-100 bg-white py-6 px-4">
-        <VesselSearchBar
-          loc={loc}
-          advanced={advanced}
-          onAdvancedChange={setAdvanced}
-          showAdvanced={showAdvanced}
-          onToggleAdvanced={() => setShowAdvanced((v) => !v)}
-          showMap={showMap}
-          onToggleMap={() => setShowMap((v) => !v)}
-          countries={flags}
-          vesselOptions={vesselOptions}
-          onSelectVessel={(v) => router.push(`/vessels/${v.id}`)}
-        />
-      </div>
-
-      {/* Results header: count · view switcher · clear */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 flex items-center justify-between gap-3">
-        <p className="text-sm text-gray-400 min-w-0 truncate">
-          {loc.match && `${loc.match.mode === 'operating_area' ? 'Operating near' : loc.match.mode === 'home_port' ? 'Based near' : 'Last seen near'} ${loc.match.label}`}
-        </p>
-        <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="page-gutter grid grid-cols-1 items-start gap-y-3 py-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-x-6">
+        <button type="button" className="btn-secondary justify-self-start lg:hidden" aria-expanded={showAdvanced} aria-controls="vessel-search-filters" onClick={() => setShowAdvanced(open => !open)}>
+          Filters{isAdvancedActive && ` (${advancedCount(advanced)})`}
+        </button>
+        <aside
+          id="vessel-search-filters"
+          aria-label="Vessel filters"
+          className={`${showAdvanced ? 'block' : 'hidden'} min-w-0 space-y-2 lg:sticky lg:top-20 lg:col-start-1 lg:row-start-1 lg:block lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto`}
+        >
           {hasFilters && (
-            <button onClick={clearAll} className="text-sm text-gray-500 hover:text-navy underline">Clear</button>
+            <button type="button" onClick={clearAll} className="btn-secondary w-full">Clear search</button>
           )}
-          <div className="inline-flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
-            {ICON_VIEWS.map((vw) => (
-              <button
-                key={vw.value}
-                onClick={() => setView(vw.value)}
-                title={vw.label}
-                aria-label={vw.label}
-                className={`p-1.5 rounded-md transition-colors ${view === vw.value ? 'bg-white text-navy shadow-sm' : 'text-gray-400 hover:text-navy'}`}
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  {vw.icon}
-                </svg>
+          <LocationFilters location={loc} />
+          <AdvancedSearch value={advanced} onChange={setAdvanced} onClear={() => setAdvanced(EMPTY_ADVANCED)} countries={flags} />
+        </aside>
+        <div className="min-w-0 lg:col-start-2 lg:row-start-1">
+          {showMap && (
+            <div id="directory-map" aria-label="Vessel locations" role="region" className="relative isolate mb-3 h-64 w-full overflow-hidden rounded-xl sm:h-80 xl:h-96">
+              <HomeMap
+                vessels={mapVessels}
+                initialView={mapViewport ?? undefined}
+                onViewChange={setMapViewport}
+                searchPlace={loc.place ? {
+                  lat: loc.place.lat,
+                  lon: loc.place.lon,
+                  label: loc.place.label,
+                  bbox: loc.mode === 'operating_area' ? undefined : loc.place.bbox,
+                  radiusNm: loc.radiusApplies ? loc.radius : undefined,
+                } : undefined}
+              />
+            </div>
+          )}
+          {/* Results header and view controls */}
+          <div className="pb-3 flex items-center justify-between gap-3">
+            <p className="text-sm text-gray-400 min-w-0 truncate">
+              {loc.match && `${loc.match.mode === 'operating_area' ? 'Operating near' : loc.match.mode === 'home_port' ? 'Based near' : 'Last seen near'} ${loc.match.label}`}
+            </p>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button type="button" aria-expanded={showMap} onClick={() => setShowMap(open => !open)} className="text-sm font-medium text-teal hover:underline">
+                {showMap ? 'Hide map' : 'Show map'}
               </button>
-            ))}
+              <div className="inline-flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
+                {ICON_VIEWS.map((vw) => (
+                  <button
+                    key={vw.value}
+                    onClick={() => setView(vw.value)}
+                    title={vw.label}
+                    aria-label={vw.label}
+                    className={`p-1.5 rounded-md transition-colors ${view === vw.value ? 'bg-white text-navy shadow-sm' : 'text-gray-400 hover:text-navy'}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      {vw.icon}
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Results */}
+          <div className="pb-6">
+            {displayed.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-navy mb-1">
+                  {view === 'featured' ? 'No featured vessels in these results' : 'No vessels match those filters'}
+                </h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  {view === 'featured' ? 'Featured vessels have a photo and complete specs.' : 'Try a different location or fewer filters.'}
+                </p>
+              </div>
+            ) : view === 'list' ? (
+              <>
+                <VesselList vessels={visible} sortKey={listSort.key} sortDir={listSort.dir} onSort={onSort} />
+                {visible.length < displayed.length && <div ref={sentinelRef} className="h-10" />}
+              </>
+            ) : view === 'featured' ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {visible.map((v) => (
+                    <VesselFeaturedCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} />
+                  ))}
+                </div>
+                {visible.length < displayed.length && <div ref={sentinelRef} className="h-10" />}
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                  {visible.map((v) => (
+                    <VesselCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} />
+                  ))}
+                </div>
+                {visible.length < displayed.length && <div ref={sentinelRef} className="h-10" />}
+              </>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Results */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        {displayed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <h3 className="font-semibold text-navy mb-1">
-              {view === 'featured' ? 'No featured vessels in these results' : 'No vessels match those filters'}
-            </h3>
-            <p className="text-sm text-gray-400 mb-4">
-              {view === 'featured' ? 'Featured vessels have a photo and complete specs.' : 'Try a different location or fewer filters.'}
-            </p>
-            <button onClick={clearAll} className="bg-navy text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors">
-              Clear search
-            </button>
-          </div>
-        ) : view === 'list' ? (
-          <>
-            <VesselList vessels={visible} sortKey={listSort.key} sortDir={listSort.dir} onSort={onSort} />
-            {visible.length < displayed.length && <div ref={sentinelRef} className="h-10" />}
-          </>
-        ) : view === 'featured' ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {visible.map((v) => (
-                <VesselFeaturedCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} />
-              ))}
-            </div>
-            {visible.length < displayed.length && <div ref={sentinelRef} className="h-10" />}
-          </>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {visible.map((v) => (
-                <VesselCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} />
-              ))}
-            </div>
-            {visible.length < displayed.length && <div ref={sentinelRef} className="h-10" />}
-          </>
-        )}
       </div>
     </div>
   )

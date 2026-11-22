@@ -6,10 +6,11 @@
  * dynamic({ ssr: false }); see CruiseMapSection.
  */
 import { useEffect } from 'react'
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, Tooltip, Polyline, useMap } from 'react-leaflet'
+import ThemedTileLayer from './ThemedTileLayer'
+import { MapContainer, GeoJSON, CircleMarker, Tooltip, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { CARTO_TILE_URL, CARTO_ATTRIBUTION } from '@/lib/vessel-utils'
+import { CARTO_ATTRIBUTION } from '@/lib/vessel-utils'
 import type { CruiseLeg } from '@/lib/cruise-utils'
 
 const NAVY = '#1B3A6B', TEAL = '#2A7B6F', GOLD = '#F5A623', LIGHT = '#7A9ED0'
@@ -75,7 +76,7 @@ export default function CruiseMap({ operatingArea, legs, height = 360 }: Props) 
   return (
     <div className="relative z-0 isolate rounded-xl overflow-hidden border border-gray-100" style={{ height }}>
       <MapContainer center={[30, -60]} zoom={3} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
-        <TileLayer url={CARTO_TILE_URL} attribution={CARTO_ATTRIBUTION} />
+        <ThemedTileLayer attribution={CARTO_ATTRIBUTION} />
         <FitBounds fc={operatingArea} points={portLatLngs} />
         {drawn.features.length > 0 && (
           <GeoJSON

@@ -1,7 +1,7 @@
 export default function PrivacyPolicyPage() {
   return (
-    <div className="pt-[88px] bg-white min-h-screen">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div className="pt-16 bg-white min-h-screen">
+      <div className="page-gutter max-w-3xl py-16">
         <h1 className="text-3xl font-bold text-navy mb-2">Privacy Policy</h1>
         <p className="text-sm text-gray-400 mb-10">Last updated: March 2026</p>
 
@@ -21,8 +21,7 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-lg font-semibold text-navy mb-2">Information We Collect</h2>
             <ul className="list-disc pl-5 space-y-2">
               <li>
-                <strong>Account information</strong> — when you create an account, we store your email address
-                and the role you hold on the platform (scientist, operator, or admin).
+                <strong>Account information</strong> — when you create an account, we store your name and email address. You can add an affiliation, title, or website to your profile.
               </li>
               <li>
                 <strong>Vessel inquiries</strong> — when you send a connection request to a vessel operator,

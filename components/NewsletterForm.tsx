@@ -42,15 +42,15 @@ export default function NewsletterForm() {
   }
 
   return (
-    <div className="flex-1">
-      <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 justify-center">
+    <div className="flex flex-1 flex-col">
+      <form onSubmit={handleSubmit} aria-label="Newsletter signup" className="flex flex-1 flex-col gap-2">
         <input
           type="text"
           value={fname}
           onChange={(e) => setFname(e.target.value)}
           placeholder="First name"
           required
-          className="w-32 px-3 py-2 rounded text-sm bg-white/10 text-white placeholder-white/40 border border-white/20 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+          className="footer-field"
         />
         <input
           type="text"
@@ -58,7 +58,7 @@ export default function NewsletterForm() {
           onChange={(e) => setLname(e.target.value)}
           placeholder="Last name"
           required
-          className="w-32 px-3 py-2 rounded text-sm bg-white/10 text-white placeholder-white/40 border border-white/20 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+          className="footer-field"
         />
         <input
           type="email"
@@ -66,12 +66,12 @@ export default function NewsletterForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="your@email.com"
           required
-          className="w-52 px-3 py-2 rounded text-sm bg-white/10 text-white placeholder-white/40 border border-white/20 focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+          className="footer-field"
         />
         <button
           type="submit"
           disabled={status === 'loading'}
-          className="px-4 py-2 rounded text-sm font-medium bg-teal text-white hover:bg-teal/90 transition-colors disabled:opacity-60 whitespace-nowrap"
+          className="btn-primary mt-auto w-full"
         >
           {status === 'loading' ? 'Subscribing…' : 'Subscribe'}
         </button>

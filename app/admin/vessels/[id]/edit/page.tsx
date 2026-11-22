@@ -35,7 +35,7 @@ export default function AdminEditVesselPage() {
 
   if (loading) {
     return (
-      <div className="pt-[88px] min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="pt-16 min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-400">Loading vessel data…</div>
       </div>
     )
@@ -43,24 +43,19 @@ export default function AdminEditVesselPage() {
 
   if (!vessel) {
     return (
-      <div className="pt-[88px] min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="pt-16 min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-400">Vessel not found.</div>
       </div>
     )
   }
 
   return (
-    <div className="pt-[88px] min-h-screen bg-gray-50">
+    <div className="pt-16 min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center gap-3 mb-1">
-          <Link href="/admin" className="text-gray-400 hover:text-navy transition-colors">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </Link>
           <h1 className="text-xl font-bold text-navy">Edit Vessel</h1>
         </div>
-        <p className="text-sm text-gray-400 mb-6 ml-8">
+        <p className="text-sm text-gray-400 mb-6">
           {vessel.name} ·{' '}
           <Link href={`/vessels/${vesselId}`} target="_blank" className="text-teal hover:underline">
             view listing

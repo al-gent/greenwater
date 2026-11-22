@@ -6,7 +6,6 @@ import { cache } from 'react'
 import { supabase } from './supabase'
 import { supabaseAdmin } from './supabase-admin'
 import type { Project, ProjectGearLine, ProjectPerson, ProjectBid } from './project-utils'
-import { getOperatedVesselIds } from './operators'
 import { PROJECT_COLS, slugify, isUuid } from './project-utils'
 
 export * from './project-utils'
@@ -134,8 +133,7 @@ export async function listMyProjectsWithBids(userId: string): Promise<MyProject[
 export interface MyBid extends ProjectBid { project: { id: string; slug: string; title: string; created_by: string | null; cruise_id: string | null } | null; cruise_slug: string | null }
 
 /** Bids from vessels the user operates, newest first, with the project they are on. */
-export async function listMyBids(userId: string): Promise<MyBid[]> {
-  const vesselIds = await getOperatedVesselIds(userId)
+export async function listMyBids(vesselIds: number[]): Promise<MyBid[]> {
   if (!vesselIds.length) return []
   const { data } = await supabaseAdmin.from('project_bids').select(`${BID_COLS}, project:projects(id, slug, title, created_by, cruise_id), cruise:cruises(slug)`).in('vessel_id', vesselIds).order('offered_at', { ascending: false })
   return ((data ?? []) as any[]).map((b) => ({

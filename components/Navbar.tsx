@@ -1,15 +1,36 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import HeaderSearch from './HeaderSearch'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import type { User } from '@supabase/supabase-js'
+import { authLink, destinationFromPage } from '@/lib/auth-navigation'
+
+function AuthLinks({ next, onClick }: { next: string; onClick: () => void }) {
+  return (
+    <>
+      <Link href={authLink('/get-started', next)} onClick={onClick} className="btn-primary px-2.5 sm:px-4">
+        Get started
+      </Link>
+      <Link href={authLink('/auth/signin', next)} onClick={onClick} className="btn-secondary px-2.5 sm:px-4">
+        Sign In
+      </Link>
+    </>
+  )
+}
+
+function PageAuthLinks({ onClick }: { onClick: () => void }) {
+  const path = usePathname()
+  const query = useSearchParams()
+  return <AuthLinks next={destinationFromPage(path, new URLSearchParams(query))} onClick={onClick} />
+}
+
 type Profile = { is_admin: boolean; verified?: boolean; first_name?: string | null; last_name?: string | null }
 
 export default function Navbar() {
-  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -82,103 +103,45 @@ export default function Navbar() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
-  }
-
   return (
-    <>
-    <div className="fixed top-0 left-0 right-0 z-50">
-      <div className="bg-navy py-1.5 text-center text-sm text-white font-medium tracking-wide whitespace-nowrap overflow-hidden" onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#2A7B6F')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#1B3A6B')}>
-        VesselConnect
-      </div>
-    <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative flex items-center justify-between h-16">
-          {/* Logo */}
-          <a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 flex-shrink-0">
-            <div className="relative w-10 h-10">
-              <Image
-                src="/logo.jpg"
-                alt="Greenwater Foundation"
-                fill
-                className="object-contain"
-              />
-            </div>
-            <div className="flex flex-col" style={{ lineHeight: 1.15 }}>
-              <span className="font-bold text-navy text-base" style={{ letterSpacing: '-0.01em' }}>
-                Greenwater
-              </span>
-              <span className="font-bold text-teal text-[13px] uppercase" style={{ letterSpacing: '0.1em' }}>
-                Foundation
-              </span>
-            </div>
-          </a>
-
-          {/* Nav links — absolutely centered relative to the navbar */}
-          <div className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
+    <nav className="fixed inset-x-0 top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
+      <div className="page-gutter">
+        <div className="relative flex h-16 items-center gap-3">
+          <Link href="/" aria-label="VesselConnect home" onClick={() => setMenuOpen(false)} className="shrink-0">
+            <Image src="/logo.svg" alt="" width={40} height={40} className="object-contain" />
+          </Link>
+          <HeaderSearch onOpen={() => setMenuOpen(false)} />
+          <div className="ml-auto flex items-center gap-2 md:gap-3 lg:gap-5">
             <Link
-              href="/"
-              className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
+              href="/vessels"
+              className="hidden md:block text-gray-600 hover:text-navy font-medium transition-colors text-sm"
             >
               Vessels
             </Link>
             <Link
               href="/research"
-              className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
+              className="hidden md:block text-gray-600 hover:text-navy font-medium transition-colors text-sm"
             >
               Research
             </Link>
-            {user && (
-              <Link
-                href="/fleet"
-                className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
-              >
-                My Fleet
-              </Link>
-            )}
-            {!user && (
-              <Link
-                href="/list-your-vessel"
-                className="text-gray-600 hover:text-navy font-medium transition-colors text-sm"
-              >
-                List Your Vessel
-              </Link>
-            )}
-          </div>
-
-          {/* Auth section */}
-          <div className="flex items-center gap-3">
             {user ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
-                >
-                  Dashboard
-                  {(unreadCount + pendingCount) > 0 && (
-                    <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                      {unreadCount + pendingCount}
-                    </span>
-                  )}
-                </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="text-sm font-medium text-gray-400 hover:text-navy transition-colors hidden md:block"
-                >
-                  Sign Out
-                </button>
-              </>
-            ) : (
               <Link
-                href="/auth/signin"
-                className="bg-navy text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-navy-600 transition-colors"
+                href="/dashboard"
+                className="text-sm font-medium text-gray-600 hover:text-navy transition-colors hidden md:flex items-center gap-1.5"
               >
-                Sign In
+                Dashboard
+                {(unreadCount + pendingCount) > 0 && (
+                  <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                    {unreadCount + pendingCount}
+                  </span>
+                )}
               </Link>
+            ) : (
+              <div className="hidden items-center gap-2 sm:flex">
+                <Suspense fallback={<AuthLinks next="/dashboard" onClick={() => setMenuOpen(false)} />}>
+                  <PageAuthLinks onClick={() => setMenuOpen(false)} />
+                </Suspense>
+              </div>
             )}
 
             {/* Mobile menu toggle */}
@@ -202,45 +165,31 @@ export default function Navbar() {
         {/* Mobile menu */}
         {menuOpen && (
           <div className="md:hidden border-t border-gray-100 py-2">
-            <Link href="/" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+            <Link href="/vessels" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
               Vessels
             </Link>
             <Link href="/research" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
               Research
             </Link>
-            {user && (
-              <Link href="/fleet" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-                My Fleet
+            {user ? (
+              <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
+                Dashboard
+                {(unreadCount + pendingCount) > 0 && (
+                  <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                    {unreadCount + pendingCount}
+                  </span>
+                )}
               </Link>
-            )}
-            {!user && (
-              <Link href="/list-your-vessel" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-                List Your Vessel
-              </Link>
-            )}
-            {user && (
-              <>
-                <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-1.5 py-2.5 text-sm font-medium text-gray-600 hover:text-navy transition-colors">
-                  Dashboard
-                  {(unreadCount + pendingCount) > 0 && (
-                    <span className="bg-gold text-navy text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-                      {unreadCount + pendingCount}
-                    </span>
-                  )}
-                </Link>
-                <button
-                  onClick={() => { setMenuOpen(false); handleSignOut() }}
-                  className="block w-full text-left py-2.5 text-sm font-medium text-gray-500 hover:text-navy transition-colors"
-                >
-                  Sign Out
-                </button>
-              </>
+            ) : (
+              <div className="flex items-center gap-2 py-2 sm:hidden">
+                <Suspense fallback={<AuthLinks next="/dashboard" onClick={() => setMenuOpen(false)} />}>
+                  <PageAuthLinks onClick={() => setMenuOpen(false)} />
+                </Suspense>
+              </div>
             )}
           </div>
         )}
       </div>
     </nav>
-    </div>
-    </>
   )
 }

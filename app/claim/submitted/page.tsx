@@ -13,7 +13,7 @@ export default function ClaimSubmittedPage({
   const vesselName = searchParams.vessel
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 pt-[112px] pb-12">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 pt-20 pb-12">
       <div className="w-full max-w-md text-center">
         <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg className="w-8 h-8 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">

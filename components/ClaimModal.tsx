@@ -96,7 +96,7 @@ export default function ClaimModal({ vesselId, vesselName, profile, onClose }: C
       const data = await res.json().catch(() => ({}))
       if (data.instant) {
         // Access granted immediately — straight to the listing editor.
-        router.push(`/dashboard/edit?vessel=${vesselId}&welcome=1`)
+        router.push(`/dashboard/listings/edit?vessel=${vesselId}&welcome=1`)
         return
       }
       setLoading(false)

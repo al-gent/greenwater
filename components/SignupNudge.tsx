@@ -50,8 +50,8 @@ export default function SignupNudge({ vesselId, isAuthenticated }: Props) {
 
   function dismiss() {
     if (NUDGE_CONFIG.mode === 'gate') {
-      // Hard gate: route home rather than dismiss-in-place, so they can't keep browsing
-      router.push('/')
+      // Closing the gate returns the visitor to the directory.
+      router.push('/vessels')
       return
     }
     try {
@@ -63,7 +63,7 @@ export default function SignupNudge({ vesselId, isAuthenticated }: Props) {
   if (!hydrated || isAuthenticated || !thresholdReached || dismissed) return null
 
   const nextPath = `/vessels/${vesselId}`
-  const signupHref = `/auth/signup?next=${encodeURIComponent(nextPath)}`
+  const signupHref = `/get-started?next=${encodeURIComponent(nextPath)}`
   const signinHref = `/auth/signin?next=${encodeURIComponent(nextPath)}`
 
   if (NUDGE_CONFIG.mode === 'gate') {
@@ -110,7 +110,7 @@ export default function SignupNudge({ vesselId, isAuthenticated }: Props) {
   return (
     <div className="fixed bottom-0 inset-x-0 z-40 p-4 pointer-events-none">
       <div className="max-w-2xl mx-auto bg-navy text-white rounded-2xl shadow-modal px-5 py-4 flex items-center gap-4 pointer-events-auto">
-        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 bg-[#fff]/10 rounded-xl flex items-center justify-center flex-shrink-0">
           <svg
             className="w-5 h-5 text-white"
             fill="none"
@@ -141,7 +141,7 @@ export default function SignupNudge({ vesselId, isAuthenticated }: Props) {
           <button
             onClick={dismiss}
             aria-label="Dismiss"
-            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#fff]/10 text-white/60 hover:text-white transition-all"
           >
             <svg
               className="w-4 h-4"

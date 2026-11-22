@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 
+import { authDestination } from '@/lib/auth-navigation'
+
 export default function AuthHashHandler() {
   const router = useRouter()
 
@@ -13,7 +15,9 @@ export default function AuthHashHandler() {
 
     // PKCE code landed on root instead of /auth/callback — forward it
     if (code) {
-      router.replace(`/auth/callback?code=${code}`)
+      const callback = new URLSearchParams({ code })
+      if (params.has('next')) callback.set('next', authDestination(params.get('next')))
+      router.replace(`/auth/callback?${callback}`)
       return
     }
 
@@ -26,7 +30,7 @@ export default function AuthHashHandler() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         subscription.unsubscribe()
-        router.replace('/dashboard')
+        router.replace(authDestination(params.get('next') ?? session.user.user_metadata.signup_next))
       }
     })
 

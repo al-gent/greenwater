@@ -88,3 +88,19 @@ describe('isolated PostgreSQL booking concurrency', { skip: !isolated }, () => {
     })
   }
 })
+
+
+test('competing profile confirmations link the directory person to exactly one member', { skip: !isolated }, async () => {
+  const [adminA, adminB, memberA, memberB, person] = Array.from({ length: 5 }, () => randomUUID())
+  await query(`insert into profiles(id,is_admin) values ('${adminA}',true),('${adminB}',true),('${memberA}',false),('${memberB}',false);
+    insert into people(id,name) values ('${person}','Directory scientist')`)
+  const [first, second] = await Promise.all([memberA, memberB].map(member =>
+    query(`select request_person_link('${member}','${person}',null,null)`)))
+  const results = await Promise.allSettled([[adminA, first], [adminB, second]].map(([admin, request]) =>
+    query(`begin; select review_person_link('${admin}','${request}','confirmed'); select pg_sleep(0.15); commit`)))
+  assertOneWinner(results)
+  const winner = results[0].status === 'fulfilled' ? memberA : memberB
+  assert.equal(await query(`select profile_id from people where id='${person}'`), winner)
+  assert.equal(await query(`select count(*) from person_link_requests where person_id='${person}' and
+    status = case when profile_id='${winner}' then 'confirmed' else 'declined' end and reviewed_at is not null`), '2')
+})

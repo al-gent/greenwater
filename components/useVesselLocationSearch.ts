@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { SearchMode } from './LocationSearch'
+export type SearchMode = 'operating_area' | 'home_port' | 'last_port'
 
 export interface Place {
   label: string
@@ -19,7 +19,6 @@ export interface LocationMatch {
 }
 
 export interface VesselLocationSearch {
-  query: string
   place: Place | null
   mode: SearchMode
   radius: number
@@ -27,8 +26,7 @@ export interface VesselLocationSearch {
   loading: boolean
   /** Radius applies for any place except a country (matched by name). */
   radiusApplies: boolean
-  setQuery: (v: string) => void
-  selectPlace: (r: Place) => void
+  selectPlace: (place: Place) => void
   clear: () => void
   setMode: (m: SearchMode) => void
   setRadius: (n: number) => void
@@ -40,32 +38,19 @@ export interface VesselLocationSearch {
  * the home and browse pages so the search semantics stay in one place.
  */
 export function useVesselLocationSearch(initial?: {
-  query?: string
   place?: Place | null
   mode?: SearchMode
   radius?: number
 }): VesselLocationSearch {
-  const [query, setQuery] = useState(initial?.query ?? '')
   const [place, setPlace] = useState<Place | null>(initial?.place ?? null)
   const [mode, setMode] = useState<SearchMode>(initial?.mode ?? 'last_port')
   const [radius, setRadius] = useState(initial?.radius ?? 250)
   const [match, setMatch] = useState<LocationMatch | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const onQueryChange = (v: string) => {
-    setQuery(v)
-    if (!v.trim()) setPlace(null)
-  }
-  const selectPlace = (r: Place) => {
-    setQuery(r.label)
-    setPlace(r)
-  }
-  const clear = () => {
-    setQuery('')
-    setPlace(null)
-  }
+  const clear = () => setPlace(null)
 
-  const radiusApplies = !!place
+  const radiusApplies = !!place && (place.kind !== 'country' || mode === 'operating_area')
 
   // Debounced search whenever place / mode / radius changes.
   useEffect(() => {
@@ -80,6 +65,7 @@ export function useVesselLocationSearch(initial?: {
       if (mode === 'operating_area') {
         params.set('radius', String(radius)) // within `radius` nm of the operating area
       } else {
+        if (place.kind === 'country' && place.country) params.set('country', place.country)
         if (place.bbox) params.set('bbox', place.bbox.join(','))
         params.set('radius', String(radius)) // box expanded by radius, or a circle for points
       }
@@ -93,7 +79,7 @@ export function useVesselLocationSearch(initial?: {
   }, [place, mode, radius])
 
   return {
-    query, place, mode, radius, match, loading, radiusApplies,
-    setQuery: onQueryChange, selectPlace, clear, setMode, setRadius,
+    place, mode, radius, match, loading, radiusApplies,
+    selectPlace: setPlace, clear, setMode, setRadius,
   }
 }

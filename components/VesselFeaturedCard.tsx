@@ -15,7 +15,7 @@ function Stat({ value, label }: { value: string | number; label: string }) {
 }
 
 // Richer card for the Featured view. Every field is guaranteed present (see
-// isFeatured in HomeClient), so the layout never shows a blank.
+// isFeaturedVessel), so the layout never shows a blank.
 export default function VesselFeaturedCard({ vessel, photoUrl }: { vessel: Vessel; photoUrl: string }) {
   const [src, setSrc] = useState(photoUrl)
   const activity = stripHtml(vessel.main_activity ?? '')
@@ -29,7 +29,7 @@ export default function VesselFeaturedCard({ vessel, photoUrl }: { vessel: Vesse
   return (
     <Link
       href={`/vessels/${vessel.id}`}
-      className="group block bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1"
+      className="vessel-card group block bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1"
     >
       <div className="relative h-48 sm:h-56 bg-lightblue-100 overflow-hidden">
         <img

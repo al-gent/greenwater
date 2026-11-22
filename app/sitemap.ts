@@ -14,8 +14,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     { url: base, changeFrequency: 'daily', priority: 1 },
+    { url: `${base}/vessels`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${base}/map`, changeFrequency: 'weekly', priority: 0.6 },
-    { url: `${base}/list-your-vessel`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${base}/researchers`, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/cruise-planning`, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/operators`, changeFrequency: 'monthly', priority: 0.5 },
     ...(vessels ?? []).map((v) => ({
       url: `${base}/vessels/${v.id}`,
       lastModified: v.last_updated ? new Date(v.last_updated) : undefined,

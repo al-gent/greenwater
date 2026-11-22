@@ -37,6 +37,8 @@ interface Props {
   onSelect: (r: PlaceResult) => void
   preferPorts?: boolean
   placeholder?: string
+  ariaLabel?: string
+  unavailableHint?: string
   className?: string
   /** When provided, the dropdown mixes name-matching vessels (client-side)
    *  above the Photon place results — one box searches both. */
@@ -67,12 +69,15 @@ export default function PlaceAutocomplete({
   onSelect,
   preferPorts = false,
   placeholder,
+  ariaLabel,
+  unavailableHint,
   className,
   vessels,
   onSelectVessel,
 }: Props) {
   const [results, setResults] = useState<any[]>([])
   const [placesLoading, setPlacesLoading] = useState(false)
+  const [placesFailed, setPlacesFailed] = useState(false)
   const [open, setOpen] = useState(false)
   const boxRef = useRef<HTMLDivElement>(null)
   const skipNext = useRef(false) // don't re-query right after a selection sets the value
@@ -100,10 +105,13 @@ export default function PlaceAutocomplete({
     // Vessel matches render instantly (client-side); the dropdown opens right
     // away with a "searching places…" row until Photon answers.
     setPlacesLoading(true)
-    if (vessels) setOpen(true)
+    setResults([])
+    setPlacesFailed(false)
+    const controller = new AbortController()
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`https://photon.komoot.io/api?q=${encodeURIComponent(q)}&limit=6`)
+        const res = await fetch(`https://photon.komoot.io/api?q=${encodeURIComponent(q)}&limit=6`, { signal: controller.signal })
+        if (!res.ok) throw new Error('Place search unavailable')
         const data = await res.json()
         let feats = data.features ?? []
         if (preferPorts) {
@@ -112,15 +120,14 @@ export default function PlaceAutocomplete({
             (a: any, b: any) => (portKind(b.properties) ? 1 : 0) - (portKind(a.properties) ? 1 : 0),
           )
         }
-        setResults(feats)
-        setOpen(true)
+        if (!controller.signal.aborted) setResults(feats)
       } catch {
-        setResults([])
+        if (!controller.signal.aborted) setPlacesFailed(true)
       } finally {
-        setPlacesLoading(false)
+        if (!controller.signal.aborted) setPlacesLoading(false)
       }
     }, 250)
-    return () => clearTimeout(t)
+    return () => { clearTimeout(t); controller.abort() }
   }, [value, preferPorts])
 
   useEffect(() => {
@@ -160,17 +167,37 @@ export default function PlaceAutocomplete({
   }
 
   return (
-    <div className="relative" ref={boxRef}>
+    <div className="relative" ref={boxRef}
+      onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}
+      onKeyDown={event => {
+        if (event.nativeEvent.isComposing) return
+        const input = event.currentTarget.querySelector('input')
+        if (event.key === 'Escape') { input?.focus(); setOpen(false); return }
+        if (!open) return
+        const options = Array.from(event.currentTarget.querySelectorAll('li button')) as HTMLButtonElement[]
+        if (!options.length) return
+        const index = options.indexOf(event.target as HTMLButtonElement)
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault()
+          const next = event.key === 'ArrowDown' ? Math.min(index + 1, options.length - 1) : index - 1
+          if (next < 0) input?.focus()
+          else options[next].focus()
+        } else if (event.key === 'Enter' && event.target === input) {
+          event.preventDefault()
+          options[0].click()
+        }
+      }}>
       <input
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => (results.length > 0 || vesselMatches.length > 0) && setOpen(true)}
+        onChange={(e) => { skipNext.current = false; onChange(e.target.value); setOpen(e.target.value.trim().length >= 2) }}
+        onFocus={() => setOpen(q.length >= 2)}
+        aria-label={ariaLabel}
         placeholder={placeholder}
         className={className}
         autoComplete="off"
       />
-      {open && (results.length > 0 || vesselMatches.length > 0 || (vessels && placesLoading)) && (
+      {open && q.length >= 2 && (
         <ul className="absolute z-[1000] mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-auto">
           {vesselMatches.length > 0 && (
             <li className="px-3.5 pt-2 pb-1 text-[10px] uppercase tracking-wide text-gray-400">Vessels</li>
@@ -205,6 +232,11 @@ export default function PlaceAutocomplete({
               </svg>
               Searching places…
             </li>
+          )}
+          {unavailableHint && <li className="px-3.5 py-2 text-sm text-gray-500">{unavailableHint}</li>}
+          {placesFailed && <li className="px-3.5 py-2 text-sm text-gray-500">Location search is temporarily unavailable.</li>}
+          {!placesFailed && !placesLoading && !unavailableHint && !results.length && !vesselMatches.length && (
+            <li className="px-3.5 py-2 text-sm text-gray-500">No matches found.</li>
           )}
           {results.map((f, i) => {
             const p = f.properties ?? {}

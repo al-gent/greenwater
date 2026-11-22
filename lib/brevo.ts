@@ -1,11 +1,11 @@
-interface EmailOptions {
-  to: string
+type EmailOptions = {
+  to: string | string[]
   subject: string
-  html: string
+  replyTo?: string
   /** Brevo tags — echoed back in webhook events (used to tie delivery/bounce
    *  events to a message thread, e.g. `inquiry-<threadId>`). */
   tags?: string[]
-}
+} & ({ html: string; text?: never } | { text: string; html?: never })
 
 /** True only on the real production deployment. Vercel preview deployments
  *  (the staging site) build with NODE_ENV=production, hence the VERCEL_ENV
@@ -14,12 +14,12 @@ export function isRealProd(): boolean {
   return process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV !== 'preview'
 }
 
-export async function sendEmail({ to, subject, html, tags }: EmailOptions) {
+export async function sendEmail({ to, subject, html, text, replyTo, tags }: EmailOptions) {
   const apiKey = process.env.BREVO_API_KEY
   const fromEmail = process.env.BREVO_FROM_EMAIL ?? 'noreply@greenwaterfoundation.org'
   if (!apiKey) {
     console.warn('BREVO_API_KEY not set — skipping email to', to)
-    return
+    return false
   }
   // Outside production NO email ever reaches a real recipient: everything is
   // redirected to ADMIN_NOTIFY_DEV_EMAIL (or dropped if it's unset). This is
@@ -28,7 +28,7 @@ export async function sendEmail({ to, subject, html, tags }: EmailOptions) {
     const devInbox = process.env.ADMIN_NOTIFY_DEV_EMAIL
     if (!devInbox) {
       console.log(`sendEmail [${process.env.NODE_ENV}] suppressed "${subject}" to ${to} — set ADMIN_NOTIFY_DEV_EMAIL to receive it`)
-      return
+      return false
     }
     if (to !== devInbox) {
       console.log(`sendEmail [${process.env.NODE_ENV}] redirecting "${subject}": ${to} → ${devInbox}`)
@@ -44,9 +44,10 @@ export async function sendEmail({ to, subject, html, tags }: EmailOptions) {
     },
     body: JSON.stringify({
       sender: { name: 'Greenwater Foundation', email: fromEmail },
-      to: [{ email: to }],
+      to: (Array.isArray(to) ? to : [to]).map(email => ({ email })),
+      ...(replyTo ? { replyTo: { email: replyTo } } : {}),
       subject,
-      htmlContent: html,
+      ...(text !== undefined ? { textContent: text } : { htmlContent: html }),
       ...(tags?.length ? { tags } : {}),
     }),
   })
@@ -55,6 +56,7 @@ export async function sendEmail({ to, subject, html, tags }: EmailOptions) {
     console.error('Brevo email failed:', res.status, text)
     throw new Error(`Brevo error ${res.status}: ${text}`)
   }
+  return true
 }
 
 // ── Email templates ──────────────────────────────────────────────────────────
@@ -147,8 +149,7 @@ export function scientistApprovedEmail(firstName: string, notes?: string) {
     <h2 style="color: #1B3A6B; margin-top: 0;">Your Greenwater account has been verified!</h2>
     <p>Hi ${firstName},</p>
     <p>
-      Your account has been reviewed and approved by the Greenwater Foundation team.
-      You can now contact vessel operators directly through the platform.
+      The VesselConnect team has verified your profile.
     </p>
     ${notes ? `<p><strong>Note from our team:</strong></p><p style="background: #f5f5f5; padding: 16px; border-radius: 8px;">${notes}</p>` : ''}
     <p>
@@ -183,8 +184,7 @@ export function scientistRejectedEmail(firstName: string, notes?: string) {
     <h2 style="color: #1B3A6B; margin-top: 0;">Update on your Greenwater verification</h2>
     <p>Hi ${firstName},</p>
     <p>
-      Thank you for signing up for Greenwater. After review, we were unable to approve your
-      account at this time.
+      The VesselConnect team was unable to verify your profile with the information provided.
     </p>
     ${notes ? `<p><strong>Notes from our team:</strong></p><p style="background: #f5f5f5; padding: 16px; border-radius: 8px;">${notes}</p>` : ''}
     <p style="color: #666;">
@@ -342,7 +342,6 @@ export function newClaimAdminEmail(
 export function newUserAdminEmail(
   name: string,
   email: string,
-  accountType: string,
   institution: string,
   title: string,
   adminUrl: string,
@@ -350,12 +349,10 @@ export function newUserAdminEmail(
   return adminBase('New signup', '#2A7B6F', `
     ${adminRows([
       ['Name', name],
-      ['Signed up as', accountType === 'vessel' ? 'vessel operator' : 'researcher'],
       ['Title', title],
       ['Institution', institution],
       ['Email', email],
     ])}
-    ${accountType !== 'vessel' ? '<p style="font-size: 14px; color: #667085; margin: 10px 0 0;">Researchers need verification before they can message operators.</p>' : ''}
     ${adminButton(adminUrl, 'Review signup')}
   `)
 }

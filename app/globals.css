@@ -5,11 +5,60 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .page-gutter {
+    @apply px-3;
+  }
+  .footer-field {
+    @apply block w-full rounded border border-white/20 bg-[#fff]/10 px-3 py-2 text-base text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-[#8bcac2] sm:text-sm;
+  }
+  .btn-primary, .btn-secondary {
+    @apply inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-semibold leading-5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply border-transparent bg-teal text-white hover:bg-teal-600;
+    outline-color: rgb(var(--accent, 42 123 111));
+  }
+  .btn-secondary {
+    @apply border-gray-300 bg-transparent text-navy hover:bg-gray-100;
+  }
+  .btn-secondary[aria-pressed='true'] {
+    @apply border-teal bg-teal-50 text-teal;
+  }
+}
+
 :root {
+  color-scheme: light;
   --navy: #1B3A6B;
   --gold: #F5A623;
   --teal: #2A7B6F;
   --lightblue: #B8D9E8;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: 14 23 33;
+  --panel: 23 35 48;
+  --raised: 31 47 62;
+  --inset: 47 65 82;
+  --heading: 231 240 248;
+  --copy: 204 216 227;
+  --secondary: 179 197 211;
+  --muted: 155 177 194;
+  --line: 54 73 90;
+  --strongLine: 136 157 176;
+  --accent: 115 218 195;
+  --link: 144 201 248;
+  --warning: 250 204 125;
+  --error: 255 160 164;
+  --sea: 22 52 52;
+  --ocean: 28 49 70;
+  --warm: 56 46 32;
+  --danger: 57 36 45;
+  --seaLine: 59 110 101;
+  --oceanLine: 62 93 124;
+  --warmLine: 114 90 48;
+  --dangerLine: 121 67 77;
 }
 
 * {
@@ -22,9 +71,18 @@ html {
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background: #ffffff;
-  color: #1a1a1a;
+  background: rgb(var(--canvas, 255 255 255));
+  color: rgb(var(--copy, 26 26 26));
   -webkit-font-smoothing: antialiased;
+}
+
+:root[data-theme='dark'] .vessel-card {
+  background-color: rgb(var(--raised));
+  border: 1px solid rgb(var(--strongLine) / 0.55);
+}
+
+:root[data-theme='dark'] .vessel-card:is(:hover, :focus-visible) {
+  border-color: rgb(var(--accent));
 }
 
 /* Leaflet popup customization */
@@ -64,7 +122,7 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: rgb(var(--strongLine, 209 213 219));
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -77,7 +135,7 @@ input[type='range'] {
   appearance: none;
   height: 4px;
   border-radius: 2px;
-  background: #e5e7eb;
+  background: rgb(var(--inset, 229 231 235));
   outline: none;
 }
 input[type='range']::-webkit-slider-thumb {
@@ -121,17 +179,14 @@ input[type='range']::-moz-range-thumb {
   -webkit-line-clamp: 3;
 }
 
-/* Teal color class overrides for Tailwind */
-.text-teal { color: var(--teal) !important; }
-.text-navy { color: var(--navy) !important; }
-.text-gold { color: var(--gold) !important; }
-.bg-teal { background-color: var(--teal) !important; }
-.bg-navy { background-color: var(--navy) !important; }
-.bg-gold { background-color: var(--gold) !important; }
-.bg-teal-50 { background-color: #e8f4f2 !important; }
-.bg-navy-50 { background-color: #eef2f9 !important; }
-.bg-lightblue-100 { background-color: #d8edf6 !important; }
-.border-teal { border-color: var(--teal) !important; }
-.ring-teal { --tw-ring-color: var(--teal) !important; }
-.hover\:bg-navy-600:hover { background-color: #162f56 !important; }
-.hover\:text-teal-500:hover { color: #21625a !important; }
+/* Labels on solid gold always use the original brand ink. */
+.bg-gold:is(.text-navy, .text-navy-800) { color: var(--navy); }
+
+:root[data-theme='dark'] .leaflet-container { background: rgb(var(--canvas)); color: rgb(var(--copy)); }
+:root[data-theme='dark'] :is(.leaflet-popup-content-wrapper, .leaflet-popup-tip, .leaflet-tooltip, .leaflet-control-attribution, .leaflet-bar a) {
+  color: rgb(var(--copy));
+  background-color: rgb(var(--panel));
+  border-color: rgb(var(--line));
+}
+:root[data-theme='dark'] .leaflet-control-attribution a { color: rgb(var(--link)); }
+:root[data-theme='dark'] .leaflet-control-zoom a:hover { background-color: rgb(var(--raised)); }

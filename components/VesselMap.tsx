@@ -16,9 +16,10 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Tooltip, GeoJSON, Polyline, CircleMarker, useMap } from 'react-leaflet'
+import ThemedTileLayer from './ThemedTileLayer'
+import { MapContainer, Marker, Popup, Tooltip, GeoJSON, Polyline, CircleMarker, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { CARTO_TILE_URL, CARTO_ATTRIBUTION } from '@/lib/vessel-utils'
+import { CARTO_ATTRIBUTION } from '@/lib/vessel-utils'
 import '@geoman-io/leaflet-geoman-free'
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
 
@@ -351,9 +352,8 @@ export default function VesselMap({
         scrollWheelZoom={scroll}
         worldCopyJump
       >
-        <TileLayer
+        <ThemedTileLayer
           attribution={CARTO_ATTRIBUTION}
-          url={CARTO_TILE_URL}
           maxZoom={19}
         />
 

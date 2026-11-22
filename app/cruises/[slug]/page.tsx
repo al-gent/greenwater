@@ -1,7 +1,6 @@
 import { notFound, permanentRedirect } from 'next/navigation'
 import Link from 'next/link'
 import { getCruiseBySlug, getCruiseById, isUuid, cruiseStage, STAGE_LABEL, STAGE_CLASS, fmtDate, fmtDateRange, cruiseDays } from '@/lib/cruises'
-import BackButton from '@/components/BackButton'
 import ShareButton from '@/components/ShareButton'
 import CruiseMapSection from '@/components/CruiseMapSection'
 import VesselTimelineStrip from '@/components/VesselTimelineStrip'
@@ -53,19 +52,13 @@ export default async function CruisePage({ params }: { params: { slug: string } 
     <div className="pt-[88px] bg-white min-h-screen">
       {stage === 'cancelled' && (
         <div className="bg-amber-50 border-b border-amber-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="page-gutter py-3">
             <p className="text-sm text-amber-800 font-medium">This cruise has been cancelled.</p>
           </div>
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-2">
-        <nav className="flex items-center justify-between gap-2 text-sm text-gray-400">
-          <BackButton fallbackHref={vessel ? `/vessels/${vessel.id}` : '/'} />
-        </nav>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-8">
+      <div className="page-gutter pt-5 pb-16 space-y-8">
         {cruise.source === 'demo' && <DemoNotice />}
         {/* Title */}
         <div>
@@ -81,7 +74,6 @@ export default async function CruisePage({ params }: { params: { slug: string } 
                 vesselName={vessel.name}
                 compact
                 label="Message the operator"
-                className="bg-navy text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-navy-600 transition-colors"
                 prefill={{ startDate: cruise.departure_at.slice(0, 10), endDate: cruise.arrival_at.slice(0, 10), context: `${cruise.title} (${fmtDateRange(cruise.departure_at, cruise.arrival_at)})`, message: `Hi — I'm interested in ${cruise.title} (${fmtDateRange(cruise.departure_at, cruise.arrival_at)}) on ${vessel.name}. ` }}
                 next={`/cruises/${cruise.slug}`}
               />

@@ -74,7 +74,7 @@ export default function RequestModal({ vesselId, vesselName, user: _user, profil
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-navy">{prefill?.context ? 'Message the operator' : 'Connect with this Vessel'}</h2>
+            <h2 className="text-lg font-semibold text-navy">Message the operator</h2>
             <p className="text-sm text-gray-500 mt-0.5">{vesselName}{prefill?.context ? ` · ${prefill.context}` : ''}</p>
           </div>
           <button

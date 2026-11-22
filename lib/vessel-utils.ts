@@ -375,6 +375,21 @@ export function getPhotoUrl(vessel: Vessel): string {
   return getFallbackPhotoUrl(vessel)
 }
 
+// "Featured" = complete enough to render a rich card with no blanks. The required
+// fields ARE the fields the featured card shows (see VesselFeaturedCard).
+export function isFeaturedVessel(v: Vessel): boolean {
+  return (
+    (v.photo_urls?.length ?? 0) > 0 &&
+    v.length != null &&
+    v.scientists != null &&
+    v.draft != null &&
+    !!(v.endurance ?? '').trim() &&
+    !!(v.last_port_city || v.port_city) &&
+    !!v.affiliation &&
+    !!stripHtml(v.main_activity ?? '').trim()
+  )
+}
+
 /** Fallback photo URL */
 export function getFallbackPhotoUrl(_vessel: Vessel): string {
   return 'https://jmpxcsihkmyotidxjuyv.supabase.co/storage/v1/object/public/vessel-photos/thumbs/placeholder.jpg'
@@ -409,6 +424,8 @@ export function filterVessels(vessels: Vessel[], filters: FilterState): Vessel[]
 // CARTO raster basemap (Voyager). Keyless requests still work but are
 // watermarked "API KEY REQUIRED"; free key from carto.com/basemaps/apikey.
 const cartoKey = process.env.NEXT_PUBLIC_CARTO_BASEMAPS_KEY
-export const CARTO_TILE_URL = `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png${cartoKey ? `?key=${cartoKey}` : ''}`
+const tilePath = `{z}/{x}/{y}{r}.png${cartoKey ? `?key=${cartoKey}` : ''}`
+export const CARTO_TILE_URL = `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/${tilePath}`
+export const CARTO_DARK_TILE_URL = `https://{s}.basemaps.cartocdn.com/dark_all/${tilePath}`
 export const CARTO_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'

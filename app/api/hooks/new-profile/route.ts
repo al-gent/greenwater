@@ -41,25 +41,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unexpected payload' }, { status: 400 })
   }
 
-  // account_type and pending_claim live in auth metadata, not on profiles
-  const { data: userData } = await supabaseAdmin.auth.admin.getUserById(record.id)
-  const metadata = userData?.user?.user_metadata ?? {}
-
-  const name = [record.first_name, record.last_name].filter(Boolean).join(' ') || 'Unknown'
-  const email = record.email ?? userData?.user?.email ?? ''
-  const accountType = String(metadata.account_type ?? 'researcher')
+  const name = [record.first_name, record.last_name].filter(Boolean).join(' ') || 'A new member'
+  const email = record.email ?? ''
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 
   await notifyAdmins(
     'new_signup',
-    `${name} signed up as a ${accountType === 'vessel' ? 'vessel operator' : 'researcher'}`,
+    `${name} joined VesselConnect`,
     newUserAdminEmail(
       name,
       email,
-      accountType,
       record.institution ?? '',
       record.title ?? '',
-      `${siteUrl}/admin${accountType !== 'vessel' ? '?tab=scientists' : ''}`,
+      `${siteUrl}/admin?tab=scientists`,
     ),
   )
 

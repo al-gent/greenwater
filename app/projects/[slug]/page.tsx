@@ -51,7 +51,7 @@ export default async function ProjectPage({ params }: { params: { slug: string }
 
   return (
     <div className="pt-[88px] bg-white min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 space-y-8">
+      <div className="page-gutter pt-8 pb-16 space-y-8">
         {project.source === 'demo' && <DemoNotice />}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -59,11 +59,11 @@ export default async function ProjectPage({ params }: { params: { slug: string }
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${project.cruise_id ? 'bg-teal/10 text-teal border-teal/30' : project.published_at ? 'bg-navy-50 text-navy border-navy/10' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{status}</span>
           </div>
           <div className="flex items-center gap-2">
-            {canDecide && <Link href={`/projects/${project.slug}/edit`} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-navy hover:border-navy/30">Edit</Link>}
+            {canDecide && <Link href={`/dashboard/projects/${project.slug}/edit`} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-navy hover:border-navy/30">Edit</Link>}
             {/* Anyone who operates a vessel can bid, including the author scheduling it on their own boat. */}
             {project.source !== 'demo' && project.published_at && !project.cruise_id && (
               isOperator
-                ? <Link href={`/projects/${project.slug}/bid`} className="px-4 py-2 rounded-xl bg-navy text-white text-sm font-semibold hover:bg-navy-600">{myOpenBid ? 'Update your bid' : 'Bid on this project'}</Link>
+                ? <Link href={`/dashboard/projects/${project.slug}/bid`} className="px-4 py-2 rounded-xl bg-navy text-white text-sm font-semibold hover:bg-navy-600">{myOpenBid ? 'Update your bid' : 'Bid on this project'}</Link>
                 : !user && <Link href={`/auth/signin?next=/projects/${project.slug}`} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-navy hover:border-navy/30">Sign in to bid</Link>
             )}
           </div>

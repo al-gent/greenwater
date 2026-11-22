@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import ClaimModal from './ClaimModal'
+import { authLink } from '@/lib/auth-navigation'
 
 interface Profile {
   first_name: string | null
@@ -40,7 +41,7 @@ export default function ClaimButton({ vesselId, vesselName }: ClaimButtonProps) 
 
   const handleClick = () => {
     if (!userId) {
-      router.push(`/auth/signin?next=/vessels/${vesselId}`)
+      router.push(authLink('/get-started', `/dashboard/listings/claim?vessel=${vesselId}`))
       return
     }
     setOpen(true)

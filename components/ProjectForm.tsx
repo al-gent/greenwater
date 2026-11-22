@@ -99,7 +99,8 @@ export default function ProjectForm({ project, gear: initialGear = [], people: i
     const data = await res.json().catch(() => ({}))
     setSaving(null)
     if (!res.ok) { setError(data.error ?? 'Could not save. Try again.'); return }
-    router.push(`/projects/${p?.slug ?? data.slug}`)
+    const destination = !p && !publish ? '/dashboard?tab=projects' : `/projects/${p?.slug ?? data.slug}`
+    router.push(destination)
     router.refresh()
   }
 

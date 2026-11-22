@@ -6,11 +6,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase-browser'
 
+import { authDestination, authLink } from '@/lib/auth-navigation'
+
 function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const nextParam = searchParams.get('next')
-  const next = nextParam ?? '/'
+  const next = authDestination(searchParams.get('next'))
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -33,20 +34,17 @@ function SignInForm() {
       return
     }
 
-    // No explicit destination: admins land on the admin dashboard, everyone else on theirs.
-    // Everyone lands on the dashboard; admins open on its Analytics section.
-    const dest = nextParam ?? '/dashboard'
-    router.push(dest)
+    router.push(next)
     router.refresh()
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 pt-[88px]">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 pt-16">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 mb-6">
             <div className="relative w-10 h-10">
-              <Image src="/logo.jpg" alt="Greenwater Foundation" fill className="object-contain" />
+              <Image src="/logo.svg" alt="" fill className="object-contain" />
             </div>
             <div className="text-left">
               <span className="font-bold text-navy text-lg leading-tight block">Greenwater</span>
@@ -80,7 +78,7 @@ function SignInForm() {
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@institution.edu"
+                placeholder="you@example.com"
                 className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition"
               />
             </div>
@@ -116,7 +114,7 @@ function SignInForm() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Don&apos;t have an account?{' '}
-            <Link href={`/auth/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-teal font-medium hover:underline">
+            <Link href={authLink('/get-started', next)} className="text-teal font-medium hover:underline">
               Sign up
             </Link>
           </p>

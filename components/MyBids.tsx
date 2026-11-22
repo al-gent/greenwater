@@ -41,7 +41,7 @@ export default function MyBids({ bids }: { bids: MyBid[] }) {
                 {state === 'accepted' && (
                   <button disabled={busy === b.id} onClick={() => act(b, 'confirm')} className="px-4 py-2 rounded-xl bg-navy text-white text-sm font-semibold hover:bg-navy-600 disabled:opacity-60">{busy === b.id ? 'Scheduling…' : 'Confirm and schedule'}</button>
                 )}
-                {state === 'offered' && b.project && <Link href={`/projects/${b.project.slug}/bid`} className="text-sm font-medium text-teal hover:underline">Update</Link>}
+                {state === 'offered' && b.project && <Link href={`/dashboard/projects/${b.project.slug}/bid`} className="text-sm font-medium text-teal hover:underline">Update</Link>}
                 {(state === 'offered' || state === 'accepted') && <button disabled={busy === b.id} onClick={() => act(b, 'withdraw')} className="text-sm text-gray-400 hover:text-red-600">Withdraw</button>}
                 {state === 'confirmed' && b.cruise_slug && <Link href={`/cruises/${b.cruise_slug}`} className="text-sm font-medium text-teal hover:underline">View cruise</Link>}
               </div>

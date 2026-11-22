@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, GeoJSON, Rectangle, Circle, useMap } from 'react-leaflet'
+import ThemedTileLayer from './ThemedTileLayer'
+import { MapContainer, Marker, Popup, GeoJSON, Rectangle, Circle, useMap } from 'react-leaflet'
 import type { Vessel } from '@/lib/vessel-utils'
-import { stripHtml, getFallbackPhotoUrl, countryNameToFlag, CARTO_TILE_URL, CARTO_ATTRIBUTION } from '@/lib/vessel-utils'
+import { stripHtml, getFallbackPhotoUrl, countryNameToFlag, CARTO_ATTRIBUTION } from '@/lib/vessel-utils'
 import Link from 'next/link'
 import L from 'leaflet'
 
@@ -205,9 +206,8 @@ export default function HomeMap({ vessels, onVesselClick, view, operatingAreas, 
       worldCopyJump
     >
       <FixLeafletIcons />
-      <TileLayer
+      <ThemedTileLayer
         attribution={CARTO_ATTRIBUTION}
-        url={CARTO_TILE_URL}
         maxZoom={19}
       />
       <FlyToPlace place={searchPlace} skipFirst={!!initialView} />
@@ -245,7 +245,7 @@ export default function HomeMap({ vessels, onVesselClick, view, operatingAreas, 
             style={{ color: '#2A7B6F', weight: 1, fillColor: '#2A7B6F', fillOpacity: 0.1 }}
             onEachFeature={(_f, layer) => {
               layer.bindPopup(
-                `<a href="/vessels/${o.id}" style="color:#1B3A6B;font-weight:600;font-family:sans-serif;font-size:13px;">${o.name} →</a>`,
+                `<a href="/vessels/${o.id}" style="color:rgb(var(--heading, 27 58 107));font-weight:600;font-family:sans-serif;font-size:13px;">${o.name} →</a>`,
               )
             }}
           />

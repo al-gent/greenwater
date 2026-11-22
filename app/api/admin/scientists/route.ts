@@ -21,9 +21,7 @@ export async function GET() {
   const admin = await checkAdmin()
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Every non-admin user is listed: verification gates messaging for
-  // everyone. is_operator is derived from vessel_operators membership so the
-  // UI can badge operator accounts.
+  // List member profiles for review and show which members operate vessels.
   const [{ data, error }, { data: memberships }] = await Promise.all([
     supabaseAdmin
       .from('profiles')

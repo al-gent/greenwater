@@ -61,7 +61,8 @@ begin
 end $$;
 set local role authenticated;
 set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000001';
-select 1/((count(*)=0)::int) from public.vessel_people;
+-- This account may read the three assignments on its own confirmed directory record.
+select 1/((count(*)=3)::int) from public.vessel_people;
 select 1/((not has_function_privilege(current_user,'public.save_vessel_person(uuid,integer,uuid,jsonb,text,date,date)','execute'))::int);
 set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000002';
 select 1/((count(*)=3)::int) from public.vessel_people;

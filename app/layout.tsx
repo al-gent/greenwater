@@ -1,8 +1,14 @@
+import Image from 'next/image'
 import type { Metadata } from 'next'
 import './globals.css'
+import AppearanceControl from '@/components/AppearanceControl'
+import AppearanceProvider from '@/components/AppearanceProvider'
+import { initialThemeScript } from '@/lib/appearance'
 import Navbar from '@/components/Navbar'
 import TimeZoneCookie from '@/components/TimeZoneCookie'
 import AuthHashHandler from '@/components/AuthHashHandler'
+import FooterFormSection from '@/components/FooterFormSection'
+import ContactForm from '@/components/ContactForm'
 import NewsletterForm from '@/components/NewsletterForm'
 import { Analytics } from '@vercel/analytics/react'
 import PageViewTracker from '@/components/PageViewTracker'
@@ -50,68 +56,73 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: initialThemeScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body>
         <AuthHashHandler />
         <PageViewTracker />
-        <Navbar />
         <TimeZoneCookie />
-        <main className="min-h-screen">{children}</main>
+        <AppearanceProvider>
+          <Navbar />
+          <main className="min-h-screen">{children}</main>
 
-        {/* Footer */}
-        <footer className="bg-navy text-white mt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="mb-8 pb-8 border-b border-white/10 flex flex-col items-center gap-4">
-              <p className="text-sm font-semibold uppercase tracking-wider opacity-60">Stay up to date</p>
-              <NewsletterForm />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div className="md:col-span-2">
-                <a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="font-bold text-xl mb-2 hover:text-gold transition-colors inline-block">Greenwater Foundation</a>
-                <p className="text-lightblue-200 text-sm leading-relaxed max-w-sm opacity-80">
-                  Connecting the global marine science community with research vessels.
-                  Advancing ocean science, one voyage at a time.
-                </p>
-              </div>
+          {/* Footer */}
+          <footer className="bg-navy text-white">
+            <div className="page-gutter grid gap-y-8 py-9 xl:grid-cols-[1.35fr_1fr] xl:gap-x-10">
               <div>
-                <h3 className="font-semibold text-sm uppercase tracking-wider opacity-60 mb-3">
-                  Platform
-                </h3>
-                <ul className="space-y-2 text-sm opacity-80">
-                  <li><a href="/" className="hover:text-gold transition-colors">Vessels</a></li>
-                  <li><a href="/research" className="hover:text-gold transition-colors">Research</a></li>
-                  <li><a href="/research?view=timeline" className="hover:text-gold transition-colors">Fleet Timeline</a></li>
-                  <li><a href="/fleet" className="hover:text-gold transition-colors">My Fleet</a></li>
-                  <li><a href="/projects/new" className="hover:text-gold transition-colors">Post a Project</a></li>
-                  <li><a href="/list-your-vessel" className="hover:text-gold transition-colors">List Your Vessel</a></li>
-                </ul>
+                <div className="grid gap-x-5 gap-y-6 sm:grid-cols-[1.5fr_1fr_auto]">
+                  <div>
+                    <a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="mb-2 inline-flex items-center gap-2.5 text-xl font-bold leading-tight transition-colors hover:text-gold">
+                      <Image src="/logo.svg" alt="" width={40} height={40} className="shrink-0" />
+                      <span>Greenwater Foundation</span>
+                    </a>
+                    <p className="text-lightblue-200 text-sm leading-relaxed max-w-sm opacity-80">
+                      Connecting the global marine science community with research vessels.
+                      Advancing ocean science, one voyage at a time.
+                    </p>
+                    <AppearanceControl />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm uppercase tracking-wider opacity-60 mb-3">
+                      Platform
+                    </h3>
+                    <ul className="space-y-2 text-sm opacity-80">
+                      <li><a href="/vessels" className="hover:text-gold transition-colors">Vessels</a></li>
+                      <li><a href="/research" className="hover:text-gold transition-colors">Research</a></li>
+                      <li><a href="/cruise-planning" className="hover:text-gold transition-colors">Cruise planning</a></li>
+                      <li><a href="/research?view=timeline" className="hover:text-gold transition-colors">Fleet Timeline</a></li>
+                      <li><a href="/researchers" className="hover:text-gold transition-colors">For Researchers</a></li>
+                      <li><a href="/operators" className="hover:text-gold transition-colors">For Operators</a></li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm uppercase tracking-wider opacity-60 mb-3">
+                      Organization
+                    </h3>
+                    <ul className="space-y-2 text-sm opacity-80">
+                      <li><a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">About Us</a></li>
+                      <li className="hidden sm:list-item"><a href="#footer-contact" className="hover:text-gold transition-colors">Contact</a></li>
+                      <li><a href="https://www.paypal.com/donate?hosted_button_id=MA7NA6JPF9PBQ" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">Donate</a></li>
+                      <li><a href="/privacy" className="hover:text-gold transition-colors">Privacy Policy</a></li>
+                    </ul>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-sm uppercase tracking-wider opacity-60 mb-3">
-                  Organization
-                </h3>
-                <ul className="space-y-2 text-sm opacity-80">
-                  <li><a href="https://greenwaterfoundation.org" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">About Us</a></li>
-                  <li><a href="mailto:info@greenwaterfoundation.org" className="hover:text-gold transition-colors">Contact</a></li>
-                  <li><a href="https://www.paypal.com/donate?hosted_button_id=MA7NA6JPF9PBQ" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors">Donate</a></li>
-                  <li><a href="/privacy" className="hover:text-gold transition-colors">Privacy Policy</a></li>
-                </ul>
+              <div className="grid gap-3 sm:grid-cols-2 sm:gap-7 xl:gap-5">
+                <FooterFormSection id="footer-contact" title="Contact the team" mobileLabel="Contact">
+                  <ContactForm footer />
+                </FooterFormSection>
+                <FooterFormSection id="footer-newsletter" title="Stay up to date" mobileLabel="Subscribe to newsletter">
+                  <NewsletterForm />
+                </FooterFormSection>
               </div>
             </div>
-            <div className="border-t border-white/10 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-              <p className="text-xs opacity-40">
-                © {new Date().getFullYear()} Greenwater Foundation. All rights reserved.
-              </p>
-              <p className="text-xs opacity-40">
-                {new Date().getFullYear()} · Built for marine science
-              </p>
-            </div>
-          </div>
-        </footer>
+          </footer>
+        </AppearanceProvider>
         <Analytics />
         <GoogleAdsTag />
         <AdClickCapture />

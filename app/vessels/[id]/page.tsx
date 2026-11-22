@@ -14,7 +14,6 @@ import FleetButton from '@/components/FleetButton'
 import { inMyFleet } from '@/lib/fleet'
 import VesselTrackSection from '@/components/VesselTrackSection'
 import SignupNudge from '@/components/SignupNudge'
-import BackButton from '@/components/BackButton'
 import ShareButton from '@/components/ShareButton'
 
 // Per-vessel share cards: link previews show the vessel's name, its activity,
@@ -103,12 +102,12 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
   const showMap = hasCoords || hasPortCall || hasArea || initialWindow.events.length > 0
 
   return (
-    <div className="pt-[88px] bg-white min-h-screen">
+    <div className="vessel-profile pt-16 bg-white min-h-screen">
       <SignupNudge vesselId={id} isAuthenticated={!!user} />
       {/* Retired / inactive banner */}
       {(vessel.status === 'retired' || vessel.status === 'inactive') && (
         <div className="bg-amber-50 border-b border-amber-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2">
+          <div className="page-gutter py-3 flex items-center gap-2">
             <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -121,58 +120,42 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-2">
-        <nav className="flex items-center justify-between gap-2 text-sm text-gray-400">
-          <BackButton />
-          <span className="ml-auto flex items-center gap-2">
-            <FleetButton vesselId={vessel.id} initial={inFleet} signedIn={!!user} nextPath={`/vessels/${id}`} />
-            {(isOperator || isAdmin) && <AvailabilityButton vesselId={vessel.id} vesselName={vessel.name} />}
-          </span>
-          {isAdmin && (
-            <Link
-              href={`/admin/vessels/${id}/edit`}
-              className="flex items-center gap-1.5 text-xs font-medium text-teal hover:text-teal/80 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit vessel
-            </Link>
-          )}
-          {/* Operators edit from the listing itself — most look their vessel
-              up here rather than going through the dashboard. Same editor the
-              dashboard "Edit" links to; the update API enforces membership. */}
-          {isOperator && !isAdmin && (
-            <Link
-              href={`/dashboard/edit?vessel=${id}`}
-              className="inline-flex items-center gap-1.5 bg-navy text-white text-xs font-medium px-3.5 py-2 rounded-xl hover:bg-navy/90 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit your vessel
-            </Link>
-          )}
-        </nav>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+      <div className="page-gutter pt-5 pb-6">
         <div className="space-y-6">
 
             {/* Title + actions + quick badges */}
             <div>
               <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-                <h1 className="text-3xl font-bold text-navy leading-tight min-w-0">{vessel.name}</h1>
-                <div className="flex items-center gap-5 flex-shrink-0">
+                <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h1 className="text-3xl font-bold text-navy leading-tight">{vessel.name}</h1>
+                  {(vessel.affiliation || vessel.operator_name) && (
+                    <p className="text-sm text-gray-500">
+                      {[...new Set([vessel.affiliation, vessel.operator_name].filter(Boolean))].join(' · ')}
+                    </p>
+                  )}
+                </div>
+                <div role="group" aria-label="Vessel actions" className="flex flex-wrap items-center gap-2">
+                  {(isOperator || isAdmin) && (
+                    <>
+                      <AvailabilityButton vesselId={vessel.id} vesselName={vessel.name} />
+                      <Link
+                        href={isAdmin ? `/admin/vessels/${id}/edit` : `/dashboard/listings/edit?vessel=${id}`}
+                        className={isAdmin
+                          ? 'flex items-center gap-1.5 text-xs font-medium text-teal hover:text-teal/80 transition-colors'
+                          : 'inline-flex items-center gap-1.5 bg-navy text-white text-xs font-medium px-3.5 py-2 rounded-xl hover:bg-navy/90 transition-colors'}
+                      >
+                        <svg aria-hidden="true" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        {isAdmin ? 'Edit vessel' : 'Edit your vessel'}
+                      </Link>
+                    </>
+                  )}
                   <ShareButton title={vessel.name} />
+                  <FleetButton vesselId={vessel.id} initial={inFleet} signedIn={!!user} nextPath={`/vessels/${id}`} />
                   <RequestButton vesselId={vessel.id} vesselName={vessel.name} compact />
                 </div>
               </div>
-              {(vessel.affiliation || vessel.operator_name) && (
-                <p className="text-sm text-gray-500 mt-1">
-                  {[...new Set([vessel.affiliation, vessel.operator_name].filter(Boolean))].join(' · ')}
-                </p>
-              )}
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {vessel.vessel_of_opportunity === true && (
                   <span
@@ -193,7 +176,7 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             {/* Hero photo + map, side by side on wide viewports */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
               <div className={showMap ? '' : 'lg:col-span-2'}>
-                <VesselPhotoGallery photos={photos} vesselName={vessel.name} country={vessel.country} details={vessel.photo_details} />
+                <VesselPhotoGallery photos={photos} vesselName={vessel.name} details={vessel.photo_details} />
                 {activity && (
                   <p className="text-gray-600 text-sm leading-relaxed mt-3">{activity}</p>
                 )}
@@ -204,7 +187,11 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
                     vesselId={id}
                     vesselName={vessel.name}
                     homePort={hasCoords ? { lat: homeLat!, lng: homeLng! } : null}
-                    lastPort={hasPortCall ? { lat: portCallLat!, lng: portCallLng!, name: lastPort?.port_city, date: lastPort?.arrived_at } : null}
+                    lastPort={lastPort ? {
+                      name: [lastPort.port_city, lastPort.port_state || lastPort.port_country].filter(Boolean).join(', '),
+                      date: lastPort.arrived_at,
+                      position: hasPortCall ? { lat: portCallLat!, lng: portCallLng! } : null,
+                    } : null}
                     operatingArea={operatingArea}
                     initialDays={initialDays}
                     initialWindow={initialWindow}
@@ -221,16 +208,11 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
             {/* Specs */}
             <VesselDetailSpecs vessel={vessel} />
 
-            {(isOperator || isAdmin) && <Link href={`/vessels/${vessel.id}/people`} className="inline-block font-medium text-teal">Manage vessel people</Link>}
-
             <VesselProjects vesselId={vessel.id} vesselName={vessel.name} />
-
-            {/* Divider */}
-            <hr className="border-gray-100" />
 
             {/* Documents */}
             {docs.length > 0 && (
-              <div>
+              <div className="border-t border-gray-100 pt-6">
                 <h2 className="text-lg font-semibold text-navy mb-3">Documents</h2>
                 <div className="space-y-2">
                   {docs.map((doc, i) => {

@@ -7,7 +7,6 @@ import type { User } from '@supabase/supabase-js'
 import RequestModal from './RequestModal'
 
 interface Profile {
-  verified: boolean
   first_name: string | null
   last_name: string | null
   institution: string | null
@@ -16,7 +15,7 @@ interface Profile {
 
 export interface RequestPrefill { startDate?: string; endDate?: string; message?: string; context?: string }
 
-export default function RequestButton({ vesselId, vesselName, compact = false, label = 'Connect with this Vessel', className, prefill, next }: {
+export default function RequestButton({ vesselId, vesselName, compact = false, label, className, prefill, next }: {
   vesselId: number; vesselName: string; compact?: boolean
   label?: string; className?: string          // override the button's text / styling
   prefill?: RequestPrefill                    // seed the message form (e.g. from a cruise)
@@ -34,7 +33,7 @@ export default function RequestButton({ vesselId, vesselName, compact = false, l
       if (u) {
         supabase
           .from('profiles')
-          .select('verified, first_name, last_name, institution, title')
+          .select('first_name, last_name, institution, title')
           .eq('id', u.id)
           .single()
           .then(({ data }) => setProfile(data))
@@ -51,32 +50,20 @@ export default function RequestButton({ vesselId, vesselName, compact = false, l
     setOpen(true)
   }
 
-  // Verified gate: show inline message instead of opening modal
-  if (user && profile && !profile.verified && !open) {
-    return (
-      <div className={compact
-        ? 'bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-center'
-        : 'w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-center'}
-      >
-        <p className="text-sm font-medium text-gray-700">Verification pending</p>
-        {!compact && (
-          <p className="text-xs text-gray-400 mt-1">
-            Your account is awaiting admin verification. You'll receive an email once approved.
-          </p>
-        )}
-      </div>
-    )
-  }
-
   return (
     <>
       <button
         onClick={handleClick}
-        className={className ?? (compact
-          ? 'bg-navy text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-navy-600 transition-all hover:shadow-lg active:scale-[0.98] whitespace-nowrap'
-          : 'w-full bg-navy text-white py-4 rounded-2xl font-semibold text-base hover:bg-navy-600 transition-all hover:shadow-lg active:scale-[0.98]')}
+        className={className ?? (compact ? 'btn-primary' : 'btn-primary w-full')}
       >
-        {label}
+        {label ?? (
+          <span className="flex items-center justify-center gap-1.5">
+            <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 4.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-6 4v-4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z" />
+            </svg>
+            Message
+          </span>
+        )}
       </button>
       {open && user && profile && (
         <RequestModal

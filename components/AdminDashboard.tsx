@@ -1,5 +1,8 @@
 'use client'
 
+import { ADMIN_TABS, type AdminTab } from '@/lib/dashboard-navigation'
+import AdminProfileLinks from '@/components/AdminProfileLinks'
+
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AnalyticsTab from './AnalyticsTab'
@@ -108,15 +111,10 @@ const VESSEL_COLS: { key: VesselColKey; label: string }[] = [
   { key: 'year_built', label: 'Built' },
   { key: 'length', label: 'Length (m)' },
   { key: 'speed_cruise', label: 'Speed (kn)' },
-  { key: 'scientists', label: 'Scientists' },
+  { key: 'scientists', label: 'Users' },
 ]
 
-export type AdminTab = 'analytics' | 'submissions' | 'claims' | 'scientists' | 'vessels' | 'messages' | 'changes'
 type Tab = AdminTab
-export const ADMIN_TABS: { key: AdminTab; label: string }[] = [
-  { key: 'analytics', label: 'Analytics' }, { key: 'submissions', label: 'Submissions' }, { key: 'claims', label: 'Operators' },
-  { key: 'scientists', label: 'Users' }, { key: 'vessels', label: 'Vessels' }, { key: 'messages', label: 'All Messages' }, { key: 'changes', label: 'Changes' },
-]
 type ChangesWindow = 'hour' | 'day' | 'week' | 'month' | 'year' | 'all'
 const CHANGES_WINDOWS: { value: ChangesWindow; label: string }[] = [
   { value: 'hour', label: 'Hour' },
@@ -417,7 +415,7 @@ function ScientistActions({ scientist, onUpdate }: {
 
 // Standalone at /admin, or embedded in the user dashboard with the tab controlled by its sidebar
 // (`tab` + `onTabChange`); embedded, it renders only the header line and the active section.
-export default function AdminDashboard({ embedded = false, tab: controlledTab, onTabChange }: { embedded?: boolean; tab?: AdminTab; onTabChange?: (t: AdminTab) => void } = {}) {
+export default function AdminDashboard({ embedded = false, counts, tab: controlledTab, onTabChange }: { embedded?: boolean; counts?: Partial<Record<AdminTab, number>>; tab?: AdminTab; onTabChange?: (t: AdminTab) => void } = {}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const TABS: Tab[] = ADMIN_TABS.map((t) => t.key)
@@ -447,31 +445,38 @@ export default function AdminDashboard({ embedded = false, tab: controlledTab, o
   const [vesselCols, setVesselCols] = useState<Set<VesselColKey>>(new Set(['country', 'port_city', 'year_built']))
   const [vesselSort, setVesselSort] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'name', dir: 'asc' })
   const [showColPicker, setShowColPicker] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loadedTab, setLoadedTab] = useState<string>()
+  const [loadError, setLoadError] = useState(false)
+  const [retry, setRetry] = useState(0)
   const [expandedDesc, setExpandedDesc] = useState<Set<string>>(new Set())
+  const dataTab = embedded ? tab : 'all'
+  const needsRows = ['all', 'submissions', 'claims', 'scientists', 'vessels', 'messages'].includes(dataTab)
+  const loading = needsRows && loadedTab !== dataTab
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/admin/submissions').then((r) => r.json()),
-      fetch('/api/admin/claims').then((r) => r.json()),
-      fetch('/api/admin/scientists').then((r) => r.json()),
-      fetch('/api/admin/vessels').then((r) => r.json()),
-      fetch('/api/admin/messages').then((r) => r.json()),
-    ]).then(([subs, cls, sci, vess, msgs]) => {
-      setSubmissions(Array.isArray(subs) ? subs : [])
-      setClaims(Array.isArray(cls) ? cls : [])
-      setScientists(Array.isArray(sci) ? sci : [])
-      setVessels(Array.isArray(vess) ? vess : [])
-      setMessages(Array.isArray(msgs) ? msgs : [])
-      setLoading(false)
+    if (!needsRows) return
+    const controller = new AbortController()
+    const loaders = { submissions: setSubmissions, claims: setClaims, scientists: setScientists, vessels: setVessels, messages: setMessages }
+    setLoadError(false)
+    setLoadedTab(undefined)
+    Promise.all(Object.entries(loaders).filter(([key]) => dataTab === 'all' || key === dataTab).map(async ([key, save]) => {
+      const res = await fetch(`/api/admin/${key}`, { signal: controller.signal })
+      if (!res.ok) throw new Error()
+      const rows = await res.json()
+      if (!controller.signal.aborted) save(rows)
+    })).then(() => {
+      if (!controller.signal.aborted) setLoadedTab(dataTab)
+    }).catch(() => {
+      if (!controller.signal.aborted) setLoadError(true)
     })
-  }, [])
-
+    return () => controller.abort()
+  }, [dataTab, needsRows, retry])
 
   // Server-side fetch: the time window + committed search term go to the API
   // (which searches values, fields, batches, vessel names, and actor names in
   // SQL). Search runs on button/Enter only — no per-keystroke queries.
   useEffect(() => {
+    if (tab !== 'changes') return
     const controller = new AbortController()
     ;(async () => {
       setChangesLoading(true)
@@ -485,11 +490,11 @@ export default function AdminDashboard({ embedded = false, tab: controlledTab, o
       } catch {
         /* aborted or failed — keep current rows */
       } finally {
-        setChangesLoading(false)
+        if (!controller.signal.aborted) setChangesLoading(false)
       }
     })()
     return () => controller.abort()
-  }, [changesQuery, changesWindow])
+  }, [tab, changesQuery, changesWindow])
 
   const sortedChanges = useMemo(() => {
     const key = (c: DataChange): string => {
@@ -567,9 +572,9 @@ export default function AdminDashboard({ embedded = false, tab: controlledTab, o
     notifyPendingChanged()
   }
 
-  const pendingSubs = submissions.filter((s) => s.status === 'pending').length
-  const pendingClaims = claims.filter(needsReview).length
-  const pendingScientists = scientists.filter((s) => !s.verified).length
+  const pendingSubs = counts?.submissions ?? submissions.filter((s) => s.status === 'pending').length
+  const pendingClaims = counts?.claims ?? claims.filter(needsReview).length
+  const pendingScientists = counts?.scientists ?? scientists.filter((s) => !s.verified).length
 
   const filteredSubs = filter === 'all' ? submissions : submissions.filter((s) => s.status === filter)
   // Operator pills reuse the shared Filter values with mapped meanings:
@@ -593,10 +598,7 @@ export default function AdminDashboard({ embedded = false, tab: controlledTab, o
               {pendingSubs} pending submission{pendingSubs !== 1 ? 's' : ''} · {pendingClaims} operator claim{pendingClaims !== 1 ? 's' : ''} to review · {pendingScientists} unverified user{pendingScientists !== 1 ? 's' : ''}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {!embedded && <NotificationPrefsMenu />}
-            <a href="/admin/vessels/new" className="bg-navy text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-navy-600 transition-colors">+ Add Vessel</a>
-          </div>
+          {!embedded && <NotificationPrefsMenu />}
         </div>
 
         {/* Tabs (standalone only; embedded, the dashboard sidebar switches sections) */}
@@ -630,7 +632,7 @@ export default function AdminDashboard({ embedded = false, tab: controlledTab, o
         </div>}
 
         {/* Filter pills */}
-        {tab !== 'vessels' && tab !== 'analytics' && tab !== 'messages' && tab !== 'changes' && (
+        {['submissions', 'claims', 'scientists'].includes(tab) && (
           <div className="flex items-center gap-2 mb-6">
             {(['all', 'pending', 'approved', 'rejected'] as Filter[]).map((f) => (
               <button
@@ -664,10 +666,13 @@ export default function AdminDashboard({ embedded = false, tab: controlledTab, o
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
+            <a href="/admin/vessels/new" className="ml-auto bg-navy text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-navy-600 transition-colors">+ Add Vessel</a>
           </div>
         )}
 
-        {loading ? (
+        {tab === 'profileLinks' ? <AdminProfileLinks /> : loading && loadError ? (
+          <p role="alert">This section couldn’t load. <button className="btn-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></p>
+        ) : loading ? (
           <div className="text-center py-16 text-gray-400">Loading…</div>
         ) : (
           <div className="space-y-4">
@@ -1227,7 +1232,7 @@ export default function AdminDashboard({ embedded = false, tab: controlledTab, o
 
             {tab === 'scientists' && (
               filteredScientists.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">No scientists to show.</div>
+                <div className="text-center py-16 text-gray-400">No members to show.</div>
               ) : filteredScientists.map((scientist) => (
                 <div key={scientist.id} className="bg-white rounded-2xl shadow-card p-6">
                   <div className="flex items-start justify-between gap-4">
@@ -1278,8 +1283,8 @@ export default function AdminDashboard({ embedded = false, tab: controlledTab, o
   )
   if (embedded) return <div>{inner}</div>
   return (
-    <div className="pt-[88px] min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{inner}</div>
+    <div className="pt-16 min-h-screen bg-gray-50">
+      <div className="page-gutter py-8">{inner}</div>
     </div>
   )
 }

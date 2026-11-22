@@ -25,7 +25,7 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
   return (
     <Link
       href={`/vessels/${vessel.id}`}
-      className="group block bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1"
+      className="vessel-card group block bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1"
     >
       {/* Photo */}
       <div className="relative h-28 sm:h-48 bg-lightblue-100 overflow-hidden">

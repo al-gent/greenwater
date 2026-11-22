@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import VesselPeopleForm, { type VesselAssignment } from '@/components/VesselPeopleForm'
 import { canOperateVessel } from '@/lib/operators'
@@ -18,9 +17,8 @@ export default async function VesselPeoplePage({ params }: { params: { id: strin
   ])
   if (vessel.error || roster.error) throw Error('Could not load vessel people')
   if (!vessel.data) notFound()
-  return <main className="mx-auto max-w-3xl px-4 pb-12 pt-28">
-    <Link href={`/vessels/${vesselId}`} className="text-sm text-teal">← {vessel.data.name}</Link>
-    <h1 className="mt-4 text-3xl font-bold text-navy">Vessel people</h1>
+  return <main className="page-gutter max-w-3xl pb-12 pt-28">
+    <h1 className="text-3xl font-bold text-navy">Vessel people</h1>
     <p className="mt-2 text-sm text-gray-600">Record crew and contacts for {vessel.data.name}. Platform access is managed separately.</p>
     <VesselPeopleForm vesselId={vesselId} assignments={roster.data ?? []} />
   </main>

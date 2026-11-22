@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 
 export function createServerSupabaseClient() {
@@ -26,8 +27,8 @@ export function createServerSupabaseClient() {
 }
 
 /** Returns the current session user, or null if not authenticated. */
-export async function getServerUser() {
+export const getServerUser = cache(async () => {
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user
-}
+})

@@ -1,5 +1,24 @@
 # Future Work
 
+## Public page map
+
+| URL | Purpose and links |
+| --- | --- |
+| `/` | Introduce VesselConnect and Greenwater’s mission. “Find a research vessel” opens `/vessels`. Also link to the researcher guide, operator page, and research page. |
+| `/vessels` | Search and filter the fleet, open a vessel profile, then inquire about fieldwork. |
+| `/researchers` | Landing page for researcher outreach and search. Answer common questions in plain language for search and answer engines. Link directly into the directory or a filtered search. |
+| `/operators` | Operator landing page. Explain how to list a new vessel or claim an existing profile. Redirect the former `/list-your-vessel` landing URL here. |
+| `/research` | Browse proposed projects and scheduled or past research. |
+
+- [x] Move the vessel directory and its search links to `/vessels`.
+- [x] Build the general homepage at `/` with vessel previews, research projects, and a home-port map.
+- [ ] Add a contextual tutorial on `/vessels` for using location and equipment filters. Make help available while searching and easy to reopen.
+- [ ] Carry historical operator landing visits forward in analytics when releasing the `/operators` URL.
+
+## Admin
+
+- [ ] Enable profile-link review on the shared site. The Admin → Profile links screen is built. Set up storage for requests and decisions, then check that an admin can confirm or decline a request and the member can see the result in My Profile.
+
 ## Messaging
 
 - **SQL RPC for thread fetching**: The current two-query approach (fetch all messages, split in JS) works for V1. Replace with a `get_threads(p_vessel_id)` and `get_inbox(p_user_id)` SQL RPC once message volume warrants more efficient queries.
