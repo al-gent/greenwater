@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, stripHtml, nextPhotoFallback, countryNameToFlag, portAgeLabel } from '@/lib/vessel-utils'
+import OrgName from './OrgName'
+import { fmt, stripHtml, nextPhotoFallback, countryNameToFlag, portAgeLabel, primaryOrganization } from '@/lib/vessel-utils'
 
 function Stat({ value, label }: { value: string | number; label: string }) {
   return (
@@ -48,7 +49,10 @@ export default function VesselFeaturedCard({ vessel, photoUrl }: { vessel: Vesse
         <h3 className="font-semibold text-navy text-lg leading-tight group-hover:text-teal transition-colors line-clamp-1">
           {vessel.name}
         </h3>
-        {vessel.affiliation && <p className="text-xs text-gray-400 truncate mt-0.5">{vessel.affiliation}</p>}
+        {/* Institution: operator, else owner, else an affiliation */}
+        {primaryOrganization(vessel) && (
+          <p className="text-xs text-gray-400 truncate mt-0.5"><OrgName org={primaryOrganization(vessel)!} /></p>
+        )}
 
         <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1.5">
           <svg className="w-3.5 h-3.5 text-teal flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

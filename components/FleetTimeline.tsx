@@ -19,7 +19,7 @@ interface Props {
   scale?: string                             // from the page's searchParams
   at?: string
   toolbarStart?: React.ReactNode             // extra controls on the left of the toolbar (e.g. a view toggle)
-  vessels?: { id: number; name: string; operator_name?: string | null; affiliation?: string | null }[]   // fixed rows instead of the ARF fleet (My fleet, shared links)
+  vessels?: { id: number; name: string; institution?: string | null }[]   // fixed rows instead of the ARF fleet (My fleet, shared links)
 }
 
 export default async function FleetTimeline({ basePath, baseParams = {}, scale: scaleParam, at: atParam, toolbarStart, vessels }: Props) {
@@ -34,7 +34,7 @@ export default async function FleetTimeline({ basePath, baseParams = {}, scale: 
     getVesselTimeline({ from: indexToDate(isoDateIndex(span.start)), to: indexToDate(isoDateIndex(span.end)), vesselIds }),
     vessels ? Promise.resolve(null) : getArfFleet(),
   ])
-  const resources = fleet ? fleetToResources(fleet) : (vessels ?? []).map((v) => ({ id: `vessel:${v.id}`, label: v.name, kind: 'vessel' as const, href: `/vessels/${v.id}`, sublabel: v.operator_name ?? v.affiliation ?? undefined }))
+  const resources = fleet ? fleetToResources(fleet) : (vessels ?? []).map((v) => ({ id: `vessel:${v.id}`, label: v.name, kind: 'vessel' as const, href: `/vessels/${v.id}`, sublabel: v.institution ?? undefined }))
 
   const href = (q: { scale?: TimelineScale; at?: string }) => {
     const p = new URLSearchParams(baseParams)

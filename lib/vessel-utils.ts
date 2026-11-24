@@ -242,13 +242,24 @@ export function isCurrentLink(link: DatedLink, today = new Date().toISOString().
   return (!link.starts_on || link.starts_on <= today) && (!link.ends_on || link.ends_on >= today)
 }
 
-/** Organizations to name next to a vessel: operators, then affiliations; owners only if nothing else. */
-export function displayOrganizations(v: Pick<Vessel, 'organizations'>): VesselOrganization[] {
+const uniqueOrgs = (list: VesselOrganization[]) => list.filter((o, i) => list.findIndex(x => x.id === o.id) === i)
+
+/** The institutions running a vessel: its operators, or its owners when no operator is recorded. */
+export function vesselInstitutions(v: Pick<Vessel, 'organizations'>): VesselOrganization[] {
   const links = v.organizations ?? []
-  const order: OrganizationRole[] = ['operator', 'affiliation']
-  const picked = order.flatMap(role => links.filter(o => o.role === role))
-  const list = picked.length ? picked : links.filter(o => o.role === 'owner')
-  return list.filter((o, i) => list.findIndex(x => x.id === o.id) === i)
+  const operators = links.filter(o => o.role === 'operator')
+  return uniqueOrgs(operators.length ? operators : links.filter(o => o.role === 'owner'))
+}
+
+/** Networks and programs the vessel belongs to (UNOLS, GLASS…), minus its institutions. */
+export function vesselAffiliations(v: Pick<Vessel, 'organizations'>): VesselOrganization[] {
+  const institutions = new Set(vesselInstitutions(v).map(o => o.id))
+  return uniqueOrgs((v.organizations ?? []).filter(o => o.role === 'affiliation' && !institutions.has(o.id)))
+}
+
+/** One organization for compact displays (cards, lists): institution first, else an affiliation. */
+export function primaryOrganization(v: Pick<Vessel, 'organizations'>): VesselOrganization | null {
+  return vesselInstitutions(v)[0] ?? vesselAffiliations(v)[0] ?? null
 }
 
 /**
@@ -438,7 +449,7 @@ export function isFeaturedVessel(v: Vessel): boolean {
     v.draft != null &&
     !!(v.endurance ?? '').trim() &&
     !!(v.last_port_city || v.port_city) &&
-    !!v.affiliation &&
+    !!primaryOrganization(v) &&
     !!stripHtml(v.main_activity ?? '').trim()
   )
 }

@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import type { Vessel } from '@/lib/vessel-utils'
-import { countryNameToFlag, portAgeLabel } from '@/lib/vessel-utils'
+import { countryNameToFlag, portAgeLabel, primaryOrganization } from '@/lib/vessel-utils'
+import OrgName from './OrgName'
 
 export type SortKey = 'name' | 'flag' | 'affiliation' | 'location' | 'length' | 'scientists' | 'draft' | 'endurance'
 export type SortDir = 'asc' | 'desc'
@@ -20,7 +21,7 @@ function sortVal(v: Vessel, key: SortKey): string | number | null {
   switch (key) {
     case 'name': return v.name.toLowerCase()
     case 'flag': return (v.country ?? '').toLowerCase() || null
-    case 'affiliation': return (v.affiliation ?? '').toLowerCase() || null
+    case 'affiliation': { const o = primaryOrganization(v); return o ? (o.short_name ?? o.name).toLowerCase() : null }
     case 'location': return locationOf(v).toLowerCase() || null
     case 'length': return v.length ?? null
     case 'scientists': return v.scientists ?? null
@@ -43,10 +44,10 @@ export function sortVessels(list: Vessel[], key: SortKey, dir: SortDir): Vessel[
   })
 }
 
-const COLUMNS: { key: SortKey; label: string; align: 'left' | 'right'; render: (v: Vessel) => string }[] = [
+const COLUMNS: { key: SortKey; label: string; align: 'left' | 'right'; render: (v: Vessel) => React.ReactNode }[] = [
   { key: 'name', label: 'Name', align: 'left', render: (v) => v.name },
   { key: 'flag', label: 'Flag', align: 'left', render: (v) => `${countryNameToFlag(v.country) ?? ''} ${v.country ?? ''}`.trim() },
-  { key: 'affiliation', label: 'Affiliation', align: 'left', render: (v) => v.affiliation ?? '—' },
+  { key: 'affiliation', label: 'Institution', align: 'left', render: (v) => { const o = primaryOrganization(v); return o ? <OrgName org={o} /> : '—' } },
   { key: 'location', label: 'Location', align: 'left', render: (v) => {
     const loc = locationOf(v)
     if (!loc) return '—'

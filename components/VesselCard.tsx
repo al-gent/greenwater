@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { Vessel } from '@/lib/vessel-utils'
-import { fmt, nextPhotoFallback, countryNameToFlag, portAgeLabel } from '@/lib/vessel-utils'
+import OrgName from './OrgName'
+import { fmt, nextPhotoFallback, countryNameToFlag, portAgeLabel, primaryOrganization } from '@/lib/vessel-utils'
 
 function relativeDate(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
@@ -50,9 +51,9 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
           {vessel.name}
         </h3>
 
-        {/* Affiliation / operator */}
-        {vessel.affiliation && (
-          <p className="text-[11px] sm:text-xs text-gray-400 truncate mb-0.5 sm:mb-1">{vessel.affiliation}</p>
+        {/* Institution: operator, else owner, else an affiliation */}
+        {primaryOrganization(vessel) && (
+          <p className="text-[11px] sm:text-xs text-gray-400 truncate mb-0.5 sm:mb-1"><OrgName org={primaryOrganization(vessel)!} /></p>
         )}
 
         {/* Location — home or last port */}
