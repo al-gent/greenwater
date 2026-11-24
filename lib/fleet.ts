@@ -4,14 +4,14 @@ import { isCurrentLink, primaryOrganization, type OrganizationRole } from './ves
 
 export interface FleetVesselRow { id: number; name: string; photo_urls: string[] | null; country: string | null; institution: string | null; added_at: string }
 
-const FLEET_COLS = 'id, name, photo_urls, country, vessel_organizations(role, starts_on, ends_on, organization:organizations(id, name, short_name))'
-type LinkRow = { role: OrganizationRole; starts_on: string | null; ends_on: string | null; organization: { id: string; name: string; short_name: string | null } | null }
+const FLEET_COLS = 'id, name, photo_urls, country, vessel_organizations(role, starts_on, ends_on, organization:organizations(id, name, short_name, display_name))'
+type LinkRow = { role: OrganizationRole; starts_on: string | null; ends_on: string | null; organization: { id: string; name: string; short_name: string | null; display_name: string | null } | null }
 
-// Timeline rows are narrow: the institution's acronym when it has one.
+// Timeline rows show what the site shows on cards: display_name, else the full name.
 function toRow(v: any, added_at: string): FleetVesselRow {
   const organizations = ((v.vessel_organizations ?? []) as LinkRow[]).filter(l => l.organization && isCurrentLink(l)).map(l => ({ ...l.organization!, role: l.role }))
   const org = primaryOrganization({ organizations })
-  return { id: v.id, name: v.name, photo_urls: v.photo_urls, country: v.country, institution: org ? org.short_name ?? org.name : null, added_at }
+  return { id: v.id, name: v.name, photo_urls: v.photo_urls, country: v.country, institution: org ? org.display_name ?? org.name : null, added_at }
 }
 
 export async function getMyFleet(userId: string): Promise<FleetVesselRow[]> {

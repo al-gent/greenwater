@@ -2313,3 +2313,7 @@ language sql stable security invoker set search_path = '' as $$
   order by count(distinct vo.vessel_id) desc, o.name
 $$;
 grant execute on function public.organization_search_index() to anon, authenticated, service_role;
+
+-- 20261124000300_organization_display_name.sql
+alter table public.organizations
+  add column display_name text check (display_name = trim(display_name) and length(display_name) between 1 and 80);

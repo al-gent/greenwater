@@ -32,6 +32,8 @@ export interface VesselOrganization {
   id: string
   name: string
   short_name: string | null
+  /** Shown in compact places when set (NOAA, UNOLS); otherwise the full name. */
+  display_name: string | null
   role: OrganizationRole
 }
 
@@ -270,11 +272,11 @@ export function primaryOrganization(v: Pick<Vessel, 'organizations'>): VesselOrg
 export function organizationFilter(vessels: Pick<Vessel, 'organizations'>[], query: string): ((v: Pick<Vessel, 'organizations'>) => boolean) | null {
   const q = orgKey(query)
   if (!q) return null
-  const keysOf = (o: VesselOrganization) => [orgKey(o.name), o.short_name ? orgKey(o.short_name) : ''].filter(Boolean)
+  const keysOf = (o: VesselOrganization) => [o.name, o.short_name, o.display_name].filter((n): n is string => !!n).map(orgKey)
   const exact = new Set<string>()
   for (const v of vessels) for (const o of v.organizations ?? []) if (keysOf(o).includes(q)) exact.add(o.id)
   if (exact.size) return v => (v.organizations ?? []).some(o => exact.has(o.id))
-  return v => (v.organizations ?? []).some(o => orgNameMatches(o.name, q) || (!!o.short_name && orgNameMatches(o.short_name, q)))
+  return v => (v.organizations ?? []).some(o => [o.name, o.short_name, o.display_name].some(n => !!n && orgNameMatches(n, q)))
 }
 
 export function stripHtml(html: string | null | undefined): string {

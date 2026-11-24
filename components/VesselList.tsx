@@ -21,7 +21,7 @@ function sortVal(v: Vessel, key: SortKey): string | number | null {
   switch (key) {
     case 'name': return v.name.toLowerCase()
     case 'flag': return (v.country ?? '').toLowerCase() || null
-    case 'affiliation': { const o = primaryOrganization(v); return o ? (o.short_name ?? o.name).toLowerCase() : null }
+    case 'affiliation': { const o = primaryOrganization(v); return o ? (o.display_name ?? o.name).toLowerCase() : null }
     case 'location': return locationOf(v).toLowerCase() || null
     case 'length': return v.length ?? null
     case 'scientists': return v.scientists ?? null

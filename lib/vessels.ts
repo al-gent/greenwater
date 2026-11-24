@@ -27,10 +27,10 @@ const LISTING_COLUMNS = [
   'ctd_cap', 'aquis_multibeam',
   'underwater_vehicles_rov', 'underwater_vehicles_auv',
   'diving_cap', 'dpos', 'core_capable',
-  'vessel_organizations(role, starts_on, ends_on, organization:organizations(id, name, short_name))',
+  'vessel_organizations(role, starts_on, ends_on, organization:organizations(id, name, short_name, display_name))',
 ].join(', ')
 
-type OrganizationLinkRow = { role: OrganizationRole; starts_on: string | null; ends_on: string | null; organization: { id: string; name: string; short_name: string | null } | null }
+type OrganizationLinkRow = { role: OrganizationRole; starts_on: string | null; ends_on: string | null; organization: { id: string; name: string; short_name: string | null; display_name: string | null } | null }
 
 function withOrganizations<T extends { vessel_organizations?: OrganizationLinkRow[] | null }>(row: T): Omit<T, 'vessel_organizations'> & { organizations: VesselOrganization[] } {
   const { vessel_organizations: links, ...rest } = row
@@ -62,7 +62,7 @@ export const getAllVessels = unstable_cache(
       last_port_date: portMap.get(v.id)?.arrived_at ?? null,
     }))
   },
-  ['all-vessels-v7'], // bump when LISTING_COLUMNS changes
+  ['all-vessels-v8'], // bump when LISTING_COLUMNS changes
   { revalidate: 3600 }
 )
 
@@ -70,7 +70,7 @@ export const getAllVessels = unstable_cache(
 // the page both call this, but only one DB query runs per request.
 export const getVesselById = cache(async (id: number): Promise<Vessel | null> => {
   const { data } = await supabase.from('vessels')
-    .select('*, vessel_organizations(role, starts_on, ends_on, organization:organizations(id, name, short_name))')
+    .select('*, vessel_organizations(role, starts_on, ends_on, organization:organizations(id, name, short_name, display_name))')
     .eq('id', id).single()
   return data ? withOrganizations(data) as unknown as Vessel : null
 })
