@@ -5,8 +5,8 @@
 import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { supabase } from './supabase'
-import type { Vessel } from './vessel-utils'
-import { stripHtml } from './vessel-utils'
+import type { OrganizationRole, Vessel, VesselOrganization } from './vessel-utils'
+import { isCurrentLink, stripHtml } from './vessel-utils'
 
 // Re-export everything from vessel-utils for convenience in server components
 export * from './vessel-utils'
@@ -27,7 +27,19 @@ const LISTING_COLUMNS = [
   'ctd_cap', 'aquis_multibeam',
   'underwater_vehicles_rov', 'underwater_vehicles_auv',
   'diving_cap', 'dpos', 'core_capable',
+  'vessel_organizations(role, starts_on, ends_on, organization:organizations(id, name, short_name))',
 ].join(', ')
+
+type OrganizationLinkRow = { role: OrganizationRole; starts_on: string | null; ends_on: string | null; organization: { id: string; name: string; short_name: string | null } | null }
+
+function withOrganizations<T extends { vessel_organizations?: OrganizationLinkRow[] | null }>(row: T): Omit<T, 'vessel_organizations'> & { organizations: VesselOrganization[] } {
+  const { vessel_organizations: links, ...rest } = row
+  const today = new Date().toISOString().slice(0, 10)
+  const organizations = (links ?? [])
+    .filter(l => l.organization && isCurrentLink(l, today))
+    .map(l => ({ ...l.organization!, role: l.role }))
+  return { ...rest, organizations }
+}
 
 export const getAllVessels = unstable_cache(
   async (): Promise<Vessel[]> => {
@@ -40,7 +52,7 @@ export const getAllVessels = unstable_cache(
     for (const p of ports ?? []) {
       portMap.set(p.vessel_id, { port_city: p.port_city, port_state: p.port_state, port_country: p.port_country, lat: p.lat, lon: p.lon, arrived_at: p.arrived_at })
     }
-    return (data as unknown as Vessel[]).map((v) => ({
+    return (data as unknown as (Vessel & { vessel_organizations: OrganizationLinkRow[] })[]).map(withOrganizations).map((v) => ({
       ...v,
       last_port_city: portMap.get(v.id)?.port_city ?? null,
       last_port_state: portMap.get(v.id)?.port_state ?? null,
@@ -50,15 +62,17 @@ export const getAllVessels = unstable_cache(
       last_port_date: portMap.get(v.id)?.arrived_at ?? null,
     }))
   },
-  ['all-vessels-v6'], // bump when LISTING_COLUMNS changes
+  ['all-vessels-v7'], // bump when LISTING_COLUMNS changes
   { revalidate: 3600 }
 )
 
 // React cache() dedupes within a single request render — generateMetadata and
 // the page both call this, but only one DB query runs per request.
 export const getVesselById = cache(async (id: number): Promise<Vessel | null> => {
-  const { data } = await supabase.from('vessels').select('*').eq('id', id).single()
-  return data as Vessel | null
+  const { data } = await supabase.from('vessels')
+    .select('*, vessel_organizations(role, starts_on, ends_on, organization:organizations(id, name, short_name))')
+    .eq('id', id).single()
+  return data ? withOrganizations(data) as unknown as Vessel : null
 })
 
 /** Get unique, clean country list for filter dropdown */

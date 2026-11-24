@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getVesselById, fmt, fmtDailyRate, stripHtml } from '@/lib/vessels'
+import { getVesselById, fmt, fmtDailyRate, stripHtml, displayOrganizations } from '@/lib/vessels'
 import { getTrackWindow } from '@/lib/track'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getServerUser } from '@/lib/supabase-server'
@@ -128,9 +128,14 @@ export default async function VesselDetailPage({ params }: { params: { id: strin
               <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
                   <h1 className="text-3xl font-bold text-navy leading-tight">{vessel.name}</h1>
-                  {(vessel.affiliation || vessel.operator_name) && (
+                  {displayOrganizations(vessel).length > 0 && (
                     <p className="text-sm text-gray-500">
-                      {[...new Set([vessel.affiliation, vessel.operator_name].filter(Boolean))].join(' · ')}
+                      {displayOrganizations(vessel).map((org, i) => (
+                        <span key={org.id}>
+                          {i > 0 && ' · '}
+                          <Link href={`/vessels?view=card&affiliation=${encodeURIComponent(org.name)}`} className="hover:text-teal hover:underline underline-offset-4" title={`All vessels from ${org.name}`}>{org.name}</Link>
+                        </span>
+                      ))}
                     </p>
                   )}
                 </div>

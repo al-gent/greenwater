@@ -120,8 +120,8 @@ export default function AdvancedSearch({ value, onChange, onClear, countries = [
             <input type="text" value={value.activity} onChange={(e) => set({ activity: e.target.value })} placeholder="fisheries, seismic…" className={input} />
           </div>
           <div>
-            <label className={label}>Affiliation</label>
-            <input type="text" value={value.affiliation} onChange={(e) => set({ affiliation: e.target.value })} placeholder="NOAA, Ifremer…" className={input} />
+            <label className={label}>Organization</label>
+            <input type="text" value={value.affiliation} onChange={(e) => set({ affiliation: e.target.value })} placeholder="NOAA, TDI-Brooks…" className={input} />
           </div>
         </div>
       </VesselFilterGroup>

@@ -11,6 +11,20 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { orgKey, orgNameMatches } from '@/lib/vessel-utils'
+
+// Name, acronym, or any recorded spelling. Exact acronym/name hits first, then by fleet size.
+function matchOrganizations(organizations: OrganizationOption[], query: string): OrganizationOption[] {
+  const q = orgKey(query)
+  if (!q) return []
+  const scored: [OrganizationOption, number][] = []
+  for (const o of organizations) {
+    const primary = [o.name, o.short_name ?? ''].map(orgKey).filter(Boolean)
+    if (primary.includes(q)) scored.push([o, 0])
+    else if ([o.name, o.short_name ?? '', ...o.aliases].some(n => n && orgNameMatches(n, q))) scored.push([o, 1])
+  }
+  return scored.sort((a, b) => a[1] - b[1] || b[0].vessel_count - a[0].vessel_count).slice(0, 4).map(([o]) => o)
+}
 
 export interface PlaceResult {
   name: string
@@ -31,6 +45,14 @@ export interface VesselOption {
   name: string
 }
 
+export interface OrganizationOption {
+  id: string
+  name: string
+  short_name: string | null
+  aliases: string[]
+  vessel_count: number
+}
+
 interface Props {
   value: string
   onChange: (v: string) => void
@@ -44,6 +66,9 @@ interface Props {
    *  above the Photon place results — one box searches both. */
   vessels?: VesselOption[]
   onSelectVessel?: (v: VesselOption) => void
+  /** Organizations listed after vessels; selecting one opens its fleet in the directory. */
+  organizations?: OrganizationOption[]
+  onSelectOrganization?: (o: OrganizationOption) => void
 }
 
 // Photon `type` values that are administrative areas — only these get a bbox, so
@@ -74,6 +99,8 @@ export default function PlaceAutocomplete({
   className,
   vessels,
   onSelectVessel,
+  organizations,
+  onSelectOrganization,
 }: Props) {
   const [results, setResults] = useState<any[]>([])
   const [placesLoading, setPlacesLoading] = useState(false)
@@ -89,6 +116,7 @@ export default function PlaceAutocomplete({
     vessels && q.length >= 2
       ? vessels.filter((v) => v.name.toLowerCase().includes(q)).slice(0, 5)
       : []
+  const organizationMatches = q.length >= 2 && organizations ? matchOrganizations(organizations, q) : []
 
   useEffect(() => {
     if (skipNext.current) {
@@ -221,7 +249,30 @@ export default function PlaceAutocomplete({
               </button>
             </li>
           ))}
-          {vesselMatches.length > 0 && (results.length > 0 || placesLoading) && (
+          {organizationMatches.length > 0 && (
+            <li className={`px-3.5 pt-2 pb-1 text-[10px] uppercase tracking-wide text-gray-400${vesselMatches.length ? ' border-t border-gray-50' : ''}`}>Organizations</li>
+          )}
+          {organizationMatches.map((o) => (
+            <li key={`org-${o.id}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  skipNext.current = true
+                  onChange(o.name)
+                  onSelectOrganization?.(o)
+                  setOpen(false)
+                }}
+                className="w-full text-left px-3.5 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+              >
+                <span className="flex-1 min-w-0 text-navy">
+                  {o.name}
+                  {o.short_name && o.short_name !== o.name && <span className="text-gray-500"> ({o.short_name})</span>}
+                </span>
+                <span className="shrink-0 text-xs text-gray-500">{o.vessel_count} {o.vessel_count === 1 ? 'vessel' : 'vessels'}</span>
+              </button>
+            </li>
+          ))}
+          {(vesselMatches.length > 0 || organizationMatches.length > 0) && (results.length > 0 || placesLoading) && (
             <li className="px-3.5 pt-2 pb-1 text-[10px] uppercase tracking-wide text-gray-400 border-t border-gray-50">Places</li>
           )}
           {placesLoading && results.length === 0 && (
@@ -235,7 +286,7 @@ export default function PlaceAutocomplete({
           )}
           {unavailableHint && <li className="px-3.5 py-2 text-sm text-gray-500">{unavailableHint}</li>}
           {placesFailed && <li className="px-3.5 py-2 text-sm text-gray-500">Location search is temporarily unavailable.</li>}
-          {!placesFailed && !placesLoading && !unavailableHint && !results.length && !vesselMatches.length && (
+          {!placesFailed && !placesLoading && !unavailableHint && !results.length && !vesselMatches.length && !organizationMatches.length && (
             <li className="px-3.5 py-2 text-sm text-gray-500">No matches found.</li>
           )}
           {results.map((f, i) => {

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import type { Vessel } from '@/lib/vessel-utils'
-import { getPhotoUrl, isFeaturedVessel, stripHtml } from '@/lib/vessel-utils'
+import { getPhotoUrl, isFeaturedVessel, organizationFilter, stripHtml } from '@/lib/vessel-utils'
 import LocationFilters from './LocationFilters'
 import AdvancedSearch, { type AdvancedFilters, EMPTY_ADVANCED, advancedActive, advancedCount, normalizeHull } from './AdvancedSearch'
 import { useVesselLocationSearch, type Place, type SearchMode } from './useVesselLocationSearch'
@@ -42,7 +42,7 @@ const FEATURE_CHECKS: Record<string, (v: Vessel) => boolean> = {
 function applySearch(vessels: Vessel[], advanced: AdvancedFilters, locationIds: Set<number> | null): Vessel[] {
   const nameKw = advanced.name.trim().toLowerCase()
   const activityKw = advanced.activity.trim().toLowerCase()
-  const affiliationKw = advanced.affiliation.trim().toLowerCase()
+  const matchesOrganization = organizationFilter(vessels, advanced.affiliation)
   const flag = advanced.flag.trim().toLowerCase()
   const exactFlag = flag && vessels.some(v => v.country?.toLowerCase() === flag)
   return vessels.filter((v) => {
@@ -54,7 +54,7 @@ function applySearch(vessels: Vessel[], advanced: AdvancedFilters, locationIds: 
     if (advanced.hull && normalizeHull(v.hull_material) !== advanced.hull) return false
     if (nameKw && !v.name.toLowerCase().includes(nameKw)) return false
     if (activityKw && !stripHtml(v.main_activity ?? '').toLowerCase().includes(activityKw)) return false
-    if (affiliationKw && !(v.affiliation ?? '').toLowerCase().includes(affiliationKw)) return false
+    if (matchesOrganization && !matchesOrganization(v)) return false
     if (advanced.minBerths > 0 && (!v.scientists || v.scientists < advanced.minBerths)) return false
     if (advanced.minEndurance > 0) {
       const endurance = parseInt(v.endurance ?? '', 10)

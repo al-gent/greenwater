@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import PlaceAutocomplete, { type PlaceResult, type VesselOption } from './PlaceAutocomplete'
+import PlaceAutocomplete, { type OrganizationOption, type PlaceResult, type VesselOption } from './PlaceAutocomplete'
 
 function SearchIcon() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -15,15 +15,18 @@ export default function HeaderSearch({ onOpen }: { onOpen: () => void }) {
   const pathname = usePathname()
   const [query, setQuery] = useState('')
   const [vessels, setVessels] = useState<VesselOption[]>([])
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([])
   const [namesUnavailable, setNamesUnavailable] = useState(false)
   const namesRequest = useRef<Promise<void> | null>(null)
 
   function loadNames() {
     if (namesRequest.current) return
     setNamesUnavailable(false)
-    namesRequest.current = fetch('/api/vessels/names').then(async response => {
-      if (!response.ok) throw new Error('Vessel names unavailable')
-      setVessels(await response.json())
+    namesRequest.current = fetch('/api/search-index').then(async response => {
+      if (!response.ok) throw new Error('Search index unavailable')
+      const index = await response.json()
+      setVessels(index.vessels)
+      setOrganizations(index.organizations)
     }).catch(() => { namesRequest.current = null; setNamesUnavailable(true) })
   }
 
@@ -52,7 +55,8 @@ export default function HeaderSearch({ onOpen }: { onOpen: () => void }) {
     onKeyDown={event => { if (event.key === 'Escape') setQuery('') }}>
     <span className="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center text-gray-500"><SearchIcon /></span>
     <PlaceAutocomplete value={query} onChange={value => { setQuery(value); if (value.trim().length >= 2) loadNames() }} vessels={vessels} onSelect={openPlace}
-      onSelectVessel={vessel => navigate(`/vessels/${vessel.id}`)} placeholder="Search VesselConnect" ariaLabel="Search vessels and locations"
+      onSelectVessel={vessel => navigate(`/vessels/${vessel.id}`)}
+      organizations={organizations} onSelectOrganization={org => navigate(`/vessels?view=card&affiliation=${encodeURIComponent(org.name)}`)} placeholder="Search VesselConnect" ariaLabel="Search vessels, organizations, and locations"
       unavailableHint={namesUnavailable ? 'Vessel names are temporarily unavailable.' : undefined}
       className="h-10 w-full rounded-full bg-gray-100 pl-10 pr-3 text-base text-navy placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-teal lg:text-sm" />
   </div>

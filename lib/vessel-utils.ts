@@ -26,8 +26,19 @@ export interface PhotoDetail {
   rights_asserted_at?: string
 }
 
+export type OrganizationRole = 'owner' | 'operator' | 'affiliation'
+
+export interface VesselOrganization {
+  id: string
+  name: string
+  short_name: string | null
+  role: OrganizationRole
+}
+
 export interface Vessel {
   id: number
+  /** Current organization links (vessel_organizations), attached by lib/vessels. */
+  organizations?: VesselOrganization[]
   name: string
   status: string
   country: string | null
@@ -213,6 +224,48 @@ export interface FilterState {
 }
 
 /** Strip HTML tags and decode basic entities */
+// Matching key for organization names, mirroring public.org_key() in SQL:
+// case, punctuation, and legal suffixes ignored.
+const ORG_SUFFIXES = /\b(inc|incorporated|llc|ltd|limited|corp|corporation|co|gmbh|plc|pty)\b\.?/gi
+export function orgKey(name: string): string {
+  return name.toLowerCase().replace(ORG_SUFFIXES, ' ').replace(/[^\p{L}\p{N}]/gu, '')
+}
+
+/** True when the query key starts at a word boundary of the name ("brooks" hits "TDI-Brooks", "tdi" doesn't hit "Fleet Division"). */
+export function orgNameMatches(name: string, queryKey: string): boolean {
+  const words = name.toLowerCase().replace(ORG_SUFFIXES, ' ').split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+  return words.some((_, i) => words.slice(i).join('').startsWith(queryKey))
+}
+
+type DatedLink = { starts_on: string | null; ends_on: string | null }
+export function isCurrentLink(link: DatedLink, today = new Date().toISOString().slice(0, 10)): boolean {
+  return (!link.starts_on || link.starts_on <= today) && (!link.ends_on || link.ends_on >= today)
+}
+
+/** Organizations to name next to a vessel: operators, then affiliations; owners only if nothing else. */
+export function displayOrganizations(v: Pick<Vessel, 'organizations'>): VesselOrganization[] {
+  const links = v.organizations ?? []
+  const order: OrganizationRole[] = ['operator', 'affiliation']
+  const picked = order.flatMap(role => links.filter(o => o.role === role))
+  const list = picked.length ? picked : links.filter(o => o.role === 'owner')
+  return list.filter((o, i) => list.findIndex(x => x.id === o.id) === i)
+}
+
+/**
+ * Directory filter. A query that names an organization exactly (name or acronym)
+ * matches only that organization, so "Marine Institute" isn't also Memorial's.
+ * Anything else matches organizations whose name or acronym contains it.
+ */
+export function organizationFilter(vessels: Pick<Vessel, 'organizations'>[], query: string): ((v: Pick<Vessel, 'organizations'>) => boolean) | null {
+  const q = orgKey(query)
+  if (!q) return null
+  const keysOf = (o: VesselOrganization) => [orgKey(o.name), o.short_name ? orgKey(o.short_name) : ''].filter(Boolean)
+  const exact = new Set<string>()
+  for (const v of vessels) for (const o of v.organizations ?? []) if (keysOf(o).includes(q)) exact.add(o.id)
+  if (exact.size) return v => (v.organizations ?? []).some(o => exact.has(o.id))
+  return v => (v.organizations ?? []).some(o => orgNameMatches(o.name, q) || (!!o.short_name && orgNameMatches(o.short_name, q)))
+}
+
 export function stripHtml(html: string | null | undefined): string {
   if (!html) return ''
   return html
