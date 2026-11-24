@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import type { Vessel } from '@/lib/vessel-utils'
-import { countryNameToFlag, portAgeLabel, primaryOrganization } from '@/lib/vessel-utils'
-import OrgName from './OrgName'
+import { countryNameToFlag, portAgeLabel, primaryOrganization, type VesselOrganization } from '@/lib/vessel-utils'
+import VesselOrgLine from './VesselOrgLine'
 
 export type SortKey = 'name' | 'flag' | 'affiliation' | 'location' | 'length' | 'scientists' | 'draft' | 'endurance'
 export type SortDir = 'asc' | 'desc'
@@ -44,10 +44,10 @@ export function sortVessels(list: Vessel[], key: SortKey, dir: SortDir): Vessel[
   })
 }
 
-const COLUMNS: { key: SortKey; label: string; align: 'left' | 'right'; render: (v: Vessel) => React.ReactNode }[] = [
+const COLUMNS: { key: SortKey; label: string; align: 'left' | 'right'; render: (v: Vessel, matched?: VesselOrganization[]) => React.ReactNode }[] = [
   { key: 'name', label: 'Name', align: 'left', render: (v) => v.name },
   { key: 'flag', label: 'Flag', align: 'left', render: (v) => `${countryNameToFlag(v.country) ?? ''} ${v.country ?? ''}`.trim() },
-  { key: 'affiliation', label: 'Institution', align: 'left', render: (v) => { const o = primaryOrganization(v); return o ? <OrgName org={o} /> : '—' } },
+  { key: 'affiliation', label: 'Institution', align: 'left', render: (v, matched) => (primaryOrganization(v) || matched?.length) ? <VesselOrgLine vessel={v} matched={matched} /> : '—' },
   { key: 'location', label: 'Location', align: 'left', render: (v) => {
     const loc = locationOf(v)
     if (!loc) return '—'
@@ -65,9 +65,11 @@ interface Props {
   sortKey: SortKey
   sortDir: SortDir
   onSort: (key: SortKey) => void
+  /** Organization search matches per vessel, to explain matches in the Institution column. */
+  orgMatch?: ((v: Vessel) => VesselOrganization[]) | null
 }
 
-export default function VesselList({ vessels, sortKey, sortDir, onSort }: Props) {
+export default function VesselList({ vessels, sortKey, sortDir, onSort, orgMatch }: Props) {
   const router = useRouter()
 
   return (
@@ -105,7 +107,7 @@ export default function VesselList({ vessels, sortKey, sortDir, onSort }: Props)
                   key={c.key}
                   className={`border-b border-gray-100 px-3 py-2.5 whitespace-nowrap ${c.align === 'right' ? 'text-right tabular-nums text-gray-600' : 'text-left'} ${c.key === 'name' ? 'font-medium text-navy' : 'text-gray-600'} ${c.key === 'affiliation' || c.key === 'location' ? 'max-w-[200px] truncate' : ''}`}
                 >
-                  {c.render(v)}
+                  {c.render(v, orgMatch?.(v))}
                 </td>
               ))}
             </tr>

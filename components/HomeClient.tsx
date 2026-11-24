@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import type { Vessel } from '@/lib/vessel-utils'
-import { getPhotoUrl, isFeaturedVessel, organizationFilter, stripHtml } from '@/lib/vessel-utils'
+import { getPhotoUrl, isFeaturedVessel, organizationMatcher, stripHtml } from '@/lib/vessel-utils'
 import LocationFilters from './LocationFilters'
 import AdvancedSearch, { type AdvancedFilters, EMPTY_ADVANCED, advancedActive, advancedCount, normalizeHull } from './AdvancedSearch'
 import { useVesselLocationSearch, type Place, type SearchMode } from './useVesselLocationSearch'
@@ -42,7 +42,7 @@ const FEATURE_CHECKS: Record<string, (v: Vessel) => boolean> = {
 function applySearch(vessels: Vessel[], advanced: AdvancedFilters, locationIds: Set<number> | null): Vessel[] {
   const nameKw = advanced.name.trim().toLowerCase()
   const activityKw = advanced.activity.trim().toLowerCase()
-  const matchesOrganization = organizationFilter(vessels, advanced.affiliation)
+  const matchOrganizations = organizationMatcher(vessels, advanced.affiliation)
   const flag = advanced.flag.trim().toLowerCase()
   const exactFlag = flag && vessels.some(v => v.country?.toLowerCase() === flag)
   return vessels.filter((v) => {
@@ -54,7 +54,7 @@ function applySearch(vessels: Vessel[], advanced: AdvancedFilters, locationIds: 
     if (advanced.hull && normalizeHull(v.hull_material) !== advanced.hull) return false
     if (nameKw && !v.name.toLowerCase().includes(nameKw)) return false
     if (activityKw && !stripHtml(v.main_activity ?? '').toLowerCase().includes(activityKw)) return false
-    if (matchesOrganization && !matchesOrganization(v)) return false
+    if (matchOrganizations && !matchOrganizations(v).length) return false
     if (advanced.minBerths > 0 && (!v.scientists || v.scientists < advanced.minBerths)) return false
     if (advanced.minEndurance > 0) {
       const endurance = parseInt(v.endurance ?? '', 10)
@@ -254,6 +254,7 @@ export default function HomeClient({ vessels }: HomeClientProps) {
   )
 
   const filtered = useMemo(() => applySearch(vessels, advanced, loc.match?.ids ?? null), [vessels, advanced, loc.match])
+  const orgMatch = useMemo(() => organizationMatcher(vessels, advanced.affiliation), [vessels, advanced.affiliation])
 
   // photos-first so the grid looks good above the fold
   const sorted = useMemo(() => {
@@ -371,14 +372,14 @@ export default function HomeClient({ vessels }: HomeClientProps) {
               </div>
             ) : view === 'list' ? (
               <>
-                <VesselList vessels={visible} sortKey={listSort.key} sortDir={listSort.dir} onSort={onSort} />
+                <VesselList vessels={visible} sortKey={listSort.key} sortDir={listSort.dir} onSort={onSort} orgMatch={orgMatch} />
                 {visible.length < displayed.length && <div ref={sentinelRef} className="h-10" />}
               </>
             ) : view === 'featured' ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                   {visible.map((v) => (
-                    <VesselFeaturedCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} />
+                    <VesselFeaturedCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} matchedOrganizations={orgMatch?.(v)} />
                   ))}
                 </div>
                 {visible.length < displayed.length && <div ref={sentinelRef} className="h-10" />}
@@ -387,7 +388,7 @@ export default function HomeClient({ vessels }: HomeClientProps) {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                   {visible.map((v) => (
-                    <VesselCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} />
+                    <VesselCard key={v.id} vessel={v} photoUrl={getPhotoUrl(v)} matchedOrganizations={orgMatch?.(v)} />
                   ))}
                 </div>
                 {visible.length < displayed.length && <div ref={sentinelRef} className="h-10" />}

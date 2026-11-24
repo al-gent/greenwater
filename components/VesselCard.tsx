@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import type { Vessel } from '@/lib/vessel-utils'
-import OrgName from './OrgName'
+import type { Vessel, VesselOrganization } from '@/lib/vessel-utils'
+import VesselOrgLine from './VesselOrgLine'
 import { fmt, nextPhotoFallback, countryNameToFlag, portAgeLabel, primaryOrganization } from '@/lib/vessel-utils'
 
 function relativeDate(iso: string): string {
@@ -18,9 +18,11 @@ function relativeDate(iso: string): string {
 interface VesselCardProps {
   vessel: Vessel
   photoUrl: string
+  /** Organizations this vessel matched in the directory's organization search. */
+  matchedOrganizations?: VesselOrganization[]
 }
 
-export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
+export default function VesselCard({ vessel, photoUrl, matchedOrganizations }: VesselCardProps) {
   const [imgSrc, setImgSrc] = useState(photoUrl)
 
   return (
@@ -51,9 +53,9 @@ export default function VesselCard({ vessel, photoUrl }: VesselCardProps) {
           {vessel.name}
         </h3>
 
-        {/* Institution: operator, else owner, else an affiliation */}
-        {primaryOrganization(vessel) && (
-          <p className="text-[11px] sm:text-xs text-gray-400 truncate mb-0.5 sm:mb-1"><OrgName org={primaryOrganization(vessel)!} /></p>
+        {/* Institution (operator, else owner, else an affiliation), plus why it matched an organization search */}
+        {(primaryOrganization(vessel) || !!matchedOrganizations?.length) && (
+          <p className="text-[11px] sm:text-xs text-gray-400 truncate mb-0.5 sm:mb-1"><VesselOrgLine vessel={vessel} matched={matchedOrganizations} /></p>
         )}
 
         {/* Location — home or last port */}

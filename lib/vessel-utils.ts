@@ -265,18 +265,29 @@ export function primaryOrganization(v: Pick<Vessel, 'organizations'>): VesselOrg
 }
 
 /**
- * Directory filter. A query that names an organization exactly (name or acronym)
- * matches only that organization, so "Marine Institute" isn't also Memorial's.
- * Anything else matches organizations whose name or acronym contains it.
+ * Directory organization search: returns, per vessel, the linked organizations
+ * that match (empty = no match). A query that names an organization exactly
+ * (name, acronym, or display name) matches only that organization, so
+ * "Marine Institute" isn't also Memorial's; anything else matches at word starts.
  */
-export function organizationFilter(vessels: Pick<Vessel, 'organizations'>[], query: string): ((v: Pick<Vessel, 'organizations'>) => boolean) | null {
+export function organizationMatcher(vessels: Pick<Vessel, 'organizations'>[], query: string): ((v: Pick<Vessel, 'organizations'>) => VesselOrganization[]) | null {
   const q = orgKey(query)
   if (!q) return null
-  const keysOf = (o: VesselOrganization) => [o.name, o.short_name, o.display_name].filter((n): n is string => !!n).map(orgKey)
+  const namesOf = (o: VesselOrganization) => [o.name, o.short_name, o.display_name].filter((n): n is string => !!n)
   const exact = new Set<string>()
-  for (const v of vessels) for (const o of v.organizations ?? []) if (keysOf(o).includes(q)) exact.add(o.id)
-  if (exact.size) return v => (v.organizations ?? []).some(o => exact.has(o.id))
-  return v => (v.organizations ?? []).some(o => [o.name, o.short_name, o.display_name].some(n => !!n && orgNameMatches(n, q)))
+  for (const v of vessels) for (const o of v.organizations ?? []) if (namesOf(o).map(orgKey).includes(q)) exact.add(o.id)
+  const hit = exact.size ? (o: VesselOrganization) => exact.has(o.id) : (o: VesselOrganization) => namesOf(o).some(n => orgNameMatches(n, q))
+  return v => (v.organizations ?? []).filter(hit)
+}
+
+export const ROLE_PHRASE: Record<OrganizationRole, string> = { operator: 'operated by', owner: 'owned by', affiliation: 'affiliated with' }
+
+/** Why a vessel matched an organization search, when its card wouldn't otherwise show it. */
+export function organizationMatchReason(v: Pick<Vessel, 'organizations'>, matched: VesselOrganization[]): VesselOrganization | null {
+  const shown = primaryOrganization(v)
+  if (!matched.length || matched.some(m => m.id === shown?.id)) return null
+  const order: OrganizationRole[] = ['operator', 'owner', 'affiliation']
+  return [...matched].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role))[0]
 }
 
 export function stripHtml(html: string | null | undefined): string {

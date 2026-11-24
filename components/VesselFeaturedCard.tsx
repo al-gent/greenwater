@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import type { Vessel } from '@/lib/vessel-utils'
-import OrgName from './OrgName'
+import type { Vessel, VesselOrganization } from '@/lib/vessel-utils'
+import VesselOrgLine from './VesselOrgLine'
 import { fmt, stripHtml, nextPhotoFallback, countryNameToFlag, portAgeLabel, primaryOrganization } from '@/lib/vessel-utils'
 
 function Stat({ value, label }: { value: string | number; label: string }) {
@@ -17,7 +17,7 @@ function Stat({ value, label }: { value: string | number; label: string }) {
 
 // Richer card for the Featured view. Every field is guaranteed present (see
 // isFeaturedVessel), so the layout never shows a blank.
-export default function VesselFeaturedCard({ vessel, photoUrl }: { vessel: Vessel; photoUrl: string }) {
+export default function VesselFeaturedCard({ vessel, photoUrl, matchedOrganizations }: { vessel: Vessel; photoUrl: string; matchedOrganizations?: VesselOrganization[] }) {
   const [src, setSrc] = useState(photoUrl)
   const activity = stripHtml(vessel.main_activity ?? '')
   const location = vessel.last_port_city
@@ -49,9 +49,9 @@ export default function VesselFeaturedCard({ vessel, photoUrl }: { vessel: Vesse
         <h3 className="font-semibold text-navy text-lg leading-tight group-hover:text-teal transition-colors line-clamp-1">
           {vessel.name}
         </h3>
-        {/* Institution: operator, else owner, else an affiliation */}
-        {primaryOrganization(vessel) && (
-          <p className="text-xs text-gray-400 truncate mt-0.5"><OrgName org={primaryOrganization(vessel)!} /></p>
+        {/* Institution (operator, else owner, else an affiliation), plus why it matched an organization search */}
+        {(primaryOrganization(vessel) || !!matchedOrganizations?.length) && (
+          <p className="text-xs text-gray-400 truncate mt-0.5"><VesselOrgLine vessel={vessel} matched={matchedOrganizations} /></p>
         )}
 
         <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1.5">
